@@ -1,0 +1,69 @@
+# docker-compose.yml — 3-container deployment for 1C AI Assistant.
+# См. ADR-0015 (deployment strategy) и ADR-0017 (VectorStoreProtocol).
+
+version: '3.8'
+
+services:
+  # ─── Python приложение: orchestrator + 4 MCP + Facade ───────────────────
+  1c-ai-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+    container_name: 1c-ai-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      1c-ai-bsl-ls:
+        condition: service_started
+    volumes:
+      - ./data:/app/data
+      - ./derived:/app/derived
+      - ./runtime:/app/runtime
+      - ./knowledge-base:/app/knowledge-base:ro
+    environment:
+      - DATABASE_URL=postgresql://agent:agent@postgres:5432/agent
+      - BSL_LS_HTTP_URL=http://1c-ai-bsl-ls:8080
+      - VECTOR_STORE=pgvector
+      - LOG_FORMAT=json
+    stdin_open: true  # для MCP stdio
+    ports:
+      - "8000:8000"  # зарезервировано для REST API (спринт 5+)
+    restart: unless-stopped
+
+  # ─── BSL Language Server: JVM + HTTP API ────────────────────────────────
+  1c-ai-bsl-ls:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.bsl-ls
+    container_name: 1c-ai-bsl-ls
+    environment:
+      - BSL_LS_JAR=/opt/bsl-ls/bsl-language-server.jar
+      - BSL_LS_TIMEOUT=60
+      - JAVA_OPTS=-Xmx512m
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  # ─── PostgreSQL 16 + pgvector: persistence + vector search ──────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: 1c-ai-postgres
+    environment:
+      - POSTGRES_DB=agent
+      - POSTGRES_USER=agent
+      - POSTGRES_PASSWORD=agent
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent -d agent"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local

@@ -1,0 +1,114 @@
+# ─── Секреты ─────────────────────────────────────────────────────────────
+# НИКОГДА не коммитить токены и секреты
+.github-token
+*.token
+*.key
+*.pem
+.env
+.env.local
+.env.*.local
+.secrets.baseline
+.git-credentials
+
+# ─── Данные пользователя (gitignored по архитектуре) ─────────────────────
+data/
+derived/
+runtime/
+
+# Сюда попадают тестовые данные, если запускаем тесты локально
+testdata/
+*.testdata
+
+# ─── Python ──────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.eggs/
+build/
+develop-eggs/
+dist/
+downloads/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# uv
+.uv-cache/
+uv.lock.bak
+
+# ─── IDE ─────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Testing ─────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+.cache/
+benchmarks.json
+
+# ─── Type checking ───────────────────────────────────────────────────────
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+
+# ─── Generated files ────────────────────────────────────────────────────
+# SDBL parser генерируется из .g4 (vendor/bsl-parser-grammar)
+packages/parsers/src/parsers/bsl/sdbl/generated/
+!packages/parsers/src/parsers/bsl/sdbl/generated/__init__.py
+
+# Snapshot tests обновляются через --snapshot-update
+tests/snapshots/*.bak
+
+# ─── Docker ─────────────────────────────────────────────────────────────
+docker/data/
+docker/derived/
+
+# ─── Logs ────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── OS ──────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ─── Временные файлы ────────────────────────────────────────────────────
+*.tmp
+*.temp
+*.bak
+*.orig
+*~

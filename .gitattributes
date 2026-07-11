@@ -1,0 +1,26 @@
+# Default text attributes
+* text=auto eol=lf
+
+# Specific files
+*.bsl text eol=lf
+*.xml text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.toml text eol=lf
+*.env text eol=lf
+*.j2 text eol=lf
+*.sql text eol=lf
+*.sh text eol=lf
+
+# Binary files
+*.epf binary
+*.cf binary
+*.cfe binary
+*.hbk binary
+*.zip binary
+*.png binary
+*.jpg binary
+*.pdf binary

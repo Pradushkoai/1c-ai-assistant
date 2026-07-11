@@ -1,0 +1,40 @@
+# docker/Dockerfile.bsl-ls
+# BSL Language Server контейнер.
+# Содержит: Python (HTTP server) + JVM 17 + bsl-language-server.jar.
+# BSL LS запускается как long-running subprocess, переиспользуется через stdin/stdout.
+
+FROM python:3.12-slim AS base
+
+# JVM 17 + утилиты
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-17-jre-headless \
+    curl \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python-зависимости для HTTP server
+RUN pip install --no-cache-dir fastapi uvicorn httpx
+
+# Скачивание BSL Language Server v1.0.1
+ARG BSL_LS_VERSION=1.0.1
+RUN mkdir -p /opt/bsl-ls && \
+    curl -L "https://github.com/1c-syntax/bsl-language-server/releases/download/v${BSL_LS_VERSION}/bsl-language-server_nix.zip" \
+        -o /tmp/bsl-ls.zip && \
+    unzip /tmp/bsl-ls.zip -d /opt/bsl-ls && \
+    rm /tmp/bsl-ls.zip && \
+    chmod +x /opt/bsl-ls/bsl-language-server.jar
+
+ENV BSL_LS_JAR=/opt/bsl-ls/bsl-language-server.jar \
+    BSL_LS_TIMEOUT=60 \
+    JAVA_OPTS="-Xmx512m"
+
+WORKDIR /app
+
+# HTTP server (будет реализован в спринте 2)
+# COPY src/bsl_ls_http_server.py /app/
+
+EXPOSE 8080
+
+# Точка входа — будет реализована в спринте 2
+# Сейчас — заглушка, которая просто держит JVM запущенной
+CMD ["python", "-c", "import time; print('BSL LS container (Sprint 2)'); time.sleep(3600)"]

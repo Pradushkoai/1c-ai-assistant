@@ -1,0 +1,91 @@
+# Workspace root pyproject.toml for 1C AI Assistant.
+# Подробнее: docs/architecture/01-monorepo-structure.md
+
+[project]
+name = "1c-ai-assistant-workspace"
+version = "0.1.0"
+requires-python = ">=3.12"
+description = "Multi-agent system for solving 1C:Enterprise 8.3 development tasks"
+
+[tool.uv.workspace]
+members = [
+    "packages/parsers",
+    "packages/data_layer",
+    "packages/mcp_servers",
+    "packages/orchestrator",
+    "packages/agent",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0,<9.0",
+    "pytest-cov>=4.0,<6.0",
+    "pytest-asyncio>=0.23,<1.0",
+    "pytest-snapshot>=0.9,<1.0",
+    "hypothesis>=6.0,<7.0",
+    "ruff>=0.5,<1.0",
+    "mypy>=1.10,<2.0",
+    "pip-audit>=2.0,<3.0",
+]
+
+# ─── Ruff ────────────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = [
+    "data/",
+    "derived/",
+    "runtime/",
+    "vendor/",
+    "build/",
+    "dist/",
+]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "C4", "SIM"]
+ignore = ["E501", "B008", "SIM117"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F401", "F811", "F841", "SIM102", "SIM105", "SIM108", "E402", "E741", "I001"]
+
+# ─── Mypy ────────────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+ignore_missing_imports = true
+exclude = ["data/", "derived/", "runtime/", "vendor/", "build/"]
+
+# ─── Pytest ──────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "smoke: critical path tests (run with: pytest -m smoke)",
+    "snapshot: MCP contract snapshot tests",
+    "golden: end-to-end pipeline tests",
+    "benchmark: performance benchmarks (not run by default)",
+]
+benchmark_min_rounds = 5
+benchmark_min_time = "0.000005"
+benchmark_warmup = "off"
+benchmark_sort = "name"
+
+# ─── Coverage ────────────────────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["packages"]
+omit = ["*/tests/*", "*/vendor/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+fail_under = 80
+show_missing = true

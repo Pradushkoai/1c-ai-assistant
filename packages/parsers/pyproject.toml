@@ -1,0 +1,21 @@
+[project]
+name = "parsers"
+version = "0.1.0"
+requires-python = ">=3.12"
+description = "Pure library for parsing 1C formats: XML metadata, BSL modules, HBK syntax help"
+dependencies = [
+    "pydantic>=2.5,<3.0",
+    "lxml>=5.0,<6.0",
+    "pyyaml>=6.0,<7.0",
+]
+
+[project.optional-dependencies]
+ast = ["tree-sitter>=0.25,<1.0", "tree-sitter-bsl>=0.1,<1.0"]
+sdbl = ["antlr4-python3-runtime>=4.13,<5.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/parsers"]
