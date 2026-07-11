@@ -9,6 +9,7 @@ ADR-0009 (Pipeline contracts), docs/architecture/10-prompts-spec.md.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,10 @@ from ..state import FSMState, Iteration, TaskState
 log = get_logger(__name__)
 
 # Путь к Jinja2 промпту
-PROMPT_PATH = str(Path(__file__).parent.parent.parent.parent.parent / "knowledge-base" / "prompts" / "coder.system.j2")
+PROMPT_PATH = os.environ.get(
+    "CODER_PROMPT_PATH",
+    str(Path(__file__).parent.parent.parent.parent.parent.parent / "knowledge-base" / "prompts" / "coder.system.j2"),
+)
 
 
 async def code_node(state: TaskState, llm: Any = None) -> dict[str, Any]:

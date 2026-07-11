@@ -21,7 +21,7 @@ from ..state import FSMState, Subtask, TaskState
 log = get_logger(__name__)
 
 PROMPT_PATH = str(
-    Path(__file__).parent.parent.parent.parent.parent / "knowledge-base" / "prompts" / "planner.system.j2"
+    Path(__file__).parent.parent.parent.parent.parent.parent / "knowledge-base" / "prompts" / "planner.system.j2"
 )
 
 

@@ -134,7 +134,7 @@ def build_graph(checkpointer: Any = None) -> Any:
     graph.add_conditional_edges(
         "commit",
         route_after_commit,
-        {"next_subtask": "next_subtask", "__end__": END},
+        {"next_subtask": "next_subtask", "end": END},
     )
 
     # next_subtask → gather (новая подзадача)

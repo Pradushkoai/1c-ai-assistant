@@ -18,7 +18,7 @@ from ..state import FSMState, TaskState
 log = get_logger(__name__)
 
 PROMPT_PATH = str(
-    Path(__file__).parent.parent.parent.parent.parent / "knowledge-base" / "prompts" / "reviewer.system.j2"
+    Path(__file__).parent.parent.parent.parent.parent.parent / "knowledge-base" / "prompts" / "reviewer.system.j2"
 )
 
 

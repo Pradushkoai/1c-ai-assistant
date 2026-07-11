@@ -48,8 +48,10 @@ async def preflight_node(state: TaskState) -> dict[str, Any]:
         )
 
     # 2. Проверка свежести индексов
+    # Внимание: проверяем только unified_metadata, так как api_reference,
+    # call_graph, dependency_graph строятся в других спринтах.
     freshness = pm.freshness_check(state.config_name, state.config_version)
-    stale = [k for k, v in freshness.items() if not v]
+    stale = [k for k, v in freshness.items() if not v and k == "unified_metadata"]
     if stale:
         log.warning("preflight_stale_indexes", stale=stale)
         raise IndexStaleError(
