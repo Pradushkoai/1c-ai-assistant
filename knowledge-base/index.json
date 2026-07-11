@@ -107,7 +107,8 @@
   ],
   "prompts": [
     {"role": "CODER", "file": "prompts/coder.system.j2"},
-    {"role": "REVIEWER", "file": "prompts/reviewer.system.j2"}
+    {"role": "REVIEWER", "file": "prompts/reviewer.system.j2"},
+    {"role": "PLANNER", "file": "prompts/planner.system.j2"}
   ],
   "standards": []
 }
