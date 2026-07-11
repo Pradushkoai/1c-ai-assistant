@@ -61,7 +61,11 @@ def with_regions_bsl(bsl_samples_dir: Path) -> str:
 def tmp_paths(tmp_path: Path) -> Any:
     """PathManager с временными директориями.
 
-    Возвращает кортеж (PathManager, paths_env_path).
+    Создаёт paths.env во временной директории, возвращает PathManager.
+    Директории data/, derived/, runtime/ НЕ создаются (для тестов validate()).
+
+    Returns:
+        PathManager, настроенный на tmp_path.
     """
     from data_layer.path_manager import PathManager
 
