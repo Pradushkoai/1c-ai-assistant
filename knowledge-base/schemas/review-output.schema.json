@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReviewOutput",
+  "description": "Результат ревью — decision + findings",
+  "required": ["decision", "findings", "rationale"],
+  "properties": {
+    "decision": {"type": "string", "enum": ["proceed", "retry", "escalate"]},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "category", "message", "recommendation"],
+        "properties": {
+          "severity": {"type": "string", "enum": ["critical", "warning", "info"]},
+          "category": {
+            "type": "string",
+            "enum": ["antipattern", "context_violation", "pattern_mismatch", "style"]
+          },
+          "code": {"type": "string"},
+          "message": {"type": "string"},
+          "line": {"type": "integer", "minimum": 1},
+          "recommendation": {"type": "string"}
+        }
+      }
+    },
+    "rationale": {"type": "string", "minLength": 20}
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Subtask",
+  "description": "Подзадача — результат декомпозиции Plan'а",
+  "type": "object",
+  "required": ["id", "name", "target_module", "description", "acceptance_criteria"],
+  "properties": {
+    "id": {"type": "string", "format": "uuid"},
+    "name": {"type": "string", "minLength": 3, "maxLength": 100},
+    "target_module": {
+      "type": "string",
+      "pattern": "^(Catalog|Document|CommonModule|InformationRegister|DataProcessor|Report)\\.[A-Za-zА-Яа-я0-9]+(\\.(ObjectModule|ManagerModule|FormModule|CommonModule))?$"
+    },
+    "description": {"type": "string", "minLength": 20},
+    "inputs": {"type": "array", "items": {"type": "string"}},
+    "outputs": {"type": "array", "items": {"type": "string"}},
+    "acceptance_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 10}
+    },
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "dont_list": {"type": "array", "items": {"type": "string"}},
+        "must_list": {"type": "array", "items": {"type": "string"}},
+        "available_modules": {"type": "array", "items": {"type": "string"}},
+        "target_context": {"type": "string", "enum": ["server", "thin_client", "mobile_client"]}
+      }
+    },
+    "max_iterations": {"type": "integer", "minimum": 1, "maximum": 5, "default": 3}
+  }
+}

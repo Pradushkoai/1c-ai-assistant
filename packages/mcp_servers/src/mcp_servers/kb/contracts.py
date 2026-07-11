@@ -68,7 +68,7 @@ class GetPatternOutput(BaseModel):
     title: str
     when_to_use: str
     code_template: str | None
-    variables: list[str]
+    variables: list[dict[str, Any]]
     example_good: str
 
 

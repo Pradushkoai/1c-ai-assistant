@@ -1,0 +1,33 @@
+id: select-star
+title: "SELECT * в запросе"
+category: queries
+severity: warning
+applicable_to:
+  - module_object
+  - module_form
+  - module_common
+  - module_manager
+detect:
+  regex:
+    pattern: 'ВЫБРАТЬ\s+\*'
+    flags: mi
+    context_lines: 2
+example_bad: |
+  Запрос = Новый Запрос;
+  Запрос.Текст = "ВЫБРАТЬ * FROM Справочник.Товары";
+  Результат = Запрос.Выполнить();
+example_good: |
+  Запрос = Новый Запрос;
+  Запрос.Текст = "ВЫБРАТЬ Код, Наименование, Артикул FROM Справочник.Товары";
+  Результат = Запрос.Выполнить();
+recommendation_for_llm: |
+  SELECT * в запросе:
+  1. Увеличивает объём передаваемых данных (лишние поля).
+  2. Снижает производительность (особенно при соединениях).
+  3. Делает код хрупким (при добавлении полей меняется структура результата).
+  Замените на явный список полей: ВЫБРАТЬ Поле1, Поле2, ...
+recommendation_for_reviewer: |
+  Проверьте, что в запросах нет SELECT *. Если есть — warning finding.
+tags:
+  - queries
+  - performance

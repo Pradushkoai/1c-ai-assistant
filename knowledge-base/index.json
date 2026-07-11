@@ -1,8 +1,112 @@
 {
-  "version": "0.1.0",
-  "generated_at": "2026-07-11T00:00:00Z",
-  "patterns": [],
-  "antipatterns": [],
-  "prompts": [],
+  "version": "0.3.0",
+  "generated_at": "2026-07-11T16:00:00Z",
+  "patterns": [
+    {
+      "id": "transaction-wrapper",
+      "title": "Транзакционный wrapper",
+      "category": "transaction",
+      "file": "patterns/transaction-wrapper.yaml"
+    },
+    {
+      "id": "posting-handler",
+      "title": "Обработчик проведения документа",
+      "category": "posting",
+      "file": "patterns/posting-handler.yaml"
+    },
+    {
+      "id": "session-cache",
+      "title": "Кэширование данных в сеансе",
+      "category": "caching",
+      "file": "patterns/session-cache.yaml"
+    },
+    {
+      "id": "deferred-modal",
+      "title": "Отложенное модальное окно",
+      "category": "form",
+      "file": "patterns/deferred-modal.yaml"
+    },
+    {
+      "id": "bsp-value-retrieval",
+      "title": "Получение значения через БСП",
+      "category": "validation",
+      "file": "patterns/bsp-value-retrieval.yaml"
+    }
+  ],
+  "antipatterns": [
+    {
+      "id": "query-in-loop",
+      "title": "Запрос в цикле",
+      "category": "performance",
+      "severity": "critical",
+      "file": "antipatterns/query-in-loop.yaml"
+    },
+    {
+      "id": "try-catch-silent",
+      "title": "Молчаливый catch",
+      "category": "transactions",
+      "severity": "critical",
+      "file": "antipatterns/try-catch-silent.yaml"
+    },
+    {
+      "id": "point-access-in-loop",
+      "title": "Точечный доступ к данным в цикле",
+      "category": "performance",
+      "severity": "warning",
+      "file": "antipatterns/point-access-in-loop.yaml"
+    },
+    {
+      "id": "hardcoded-predefined",
+      "title": "Хардкод предопределённых значений",
+      "category": "style",
+      "severity": "warning",
+      "file": "antipatterns/hardcoded-predefined.yaml"
+    },
+    {
+      "id": "modal-call-in-client",
+      "title": "Модальный вызов в клиентском коде",
+      "category": "client_server",
+      "severity": "critical",
+      "file": "antipatterns/modal-call-in-client.yaml"
+    },
+    {
+      "id": "select-star",
+      "title": "SELECT * в запросе",
+      "category": "queries",
+      "severity": "warning",
+      "file": "antipatterns/select-star.yaml"
+    },
+    {
+      "id": "function-in-where",
+      "title": "Функция в условии WHERE",
+      "category": "queries",
+      "severity": "warning",
+      "file": "antipatterns/function-in-where.yaml"
+    },
+    {
+      "id": "commit-in-loop",
+      "title": "Запись в цикле",
+      "category": "performance",
+      "severity": "critical",
+      "file": "antipatterns/commit-in-loop.yaml"
+    },
+    {
+      "id": "transaction-without-try",
+      "title": "Транзакция без Try/Catch",
+      "category": "transactions",
+      "severity": "critical",
+      "file": "antipatterns/transaction-without-try.yaml"
+    },
+    {
+      "id": "metadata-on-client",
+      "title": "Обращение к Метаданные на клиенте",
+      "category": "client_server",
+      "severity": "critical",
+      "file": "antipatterns/metadata-on-client.yaml"
+    }
+  ],
+  "prompts": [
+    {"role": "CODER", "file": "prompts/coder.system.j2"}
+  ],
   "standards": []
 }

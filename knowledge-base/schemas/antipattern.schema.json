@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Antipattern",
+  "description": "Антипаттерн 1С-разработки с детект-правилами",
+  "type": "object",
+  "required": [
+    "id", "title", "category", "severity", "applicable_to",
+    "detect", "example_bad", "example_good",
+    "recommendation_for_llm", "recommendation_for_reviewer"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Уникальный id (kebab-case)"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 100
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "queries", "transactions", "client_server", "style",
+        "architecture", "security", "performance", "metadata"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "warning", "info"]
+    },
+    "applicable_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "module_object", "module_form", "module_manager",
+          "module_common", "module_command"
+        ]
+      },
+      "minItems": 1
+    },
+    "platform_versions": {
+      "type": "object",
+      "properties": {
+        "since": {"type": "string"},
+        "until": {"type": "string"}
+      }
+    },
+    "detect": {
+      "type": "object",
+      "oneOf": [
+        {"required": ["regex"]},
+        {"required": ["ast_pattern"]},
+        {"required": ["bsl_ls_rule"]}
+      ],
+      "properties": {
+        "regex": {
+          "type": "object",
+          "required": ["pattern"],
+          "properties": {
+            "pattern": {"type": "string"},
+            "flags": {"type": "string", "default": "m"},
+            "context_lines": {"type": "integer", "minimum": 0, "default": 2}
+          }
+        },
+        "ast_pattern": {
+          "type": "object",
+          "required": ["query"],
+          "properties": {
+            "query": {"type": "string"},
+            "language": {"type": "string", "default": "bsl"}
+          }
+        },
+        "bsl_ls_rule": {
+          "type": "object",
+          "required": ["code"],
+          "properties": {
+            "code": {"type": "string"},
+            "severity_override": {
+              "type": "string",
+              "enum": ["critical", "warning", "info"]
+            }
+          }
+        }
+      }
+    },
+    "example_bad": {
+      "type": "string",
+      "minLength": 10
+    },
+    "example_good": {
+      "type": "string",
+      "minLength": 10
+    },
+    "recommendation_for_llm": {
+      "type": "string",
+      "minLength": 20
+    },
+    "recommendation_for_reviewer": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}

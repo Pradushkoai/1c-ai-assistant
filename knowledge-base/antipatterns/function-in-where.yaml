@@ -1,0 +1,30 @@
+id: function-in-where
+title: "Функция в условии WHERE"
+category: queries
+severity: warning
+applicable_to:
+  - module_object
+  - module_form
+  - module_common
+  - module_manager
+detect:
+  regex:
+    pattern: 'ГДЕ\s+.*\(.*\)\s*[=<>]'
+    flags: mi
+    context_lines: 2
+example_bad: |
+  Запрос.Текст = "ВЫБРАТЬ * FROM Справочник.Товары ГДЕ ВЫРАЗИТЬ(Код КАК СТРОКА(9)) = &Код";
+example_good: |
+  Запрос.Текст = "ВЫБРАТЬ * FROM Справочник.Товары ГДЕ Код = &Код";
+recommendation_for_llm: |
+  Функции в условии WHERE:
+  1. Запрещают использование индексов.
+  2. Выполняются для каждой строки (full scan).
+  Замените на:
+  1. Преобразуйте параметр ДО запроса к нужному типу.
+  2. Или используйте вычисляемое поле в ВЫБРАТЬ, а не в ГДЕ.
+recommendation_for_reviewer: |
+  Проверьте, что в ГДЕ нет функций. Если есть — warning finding.
+tags:
+  - queries
+  - performance
