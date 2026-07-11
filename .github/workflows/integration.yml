@@ -1,0 +1,70 @@
+# .github/workflows/integration.yml
+# Integration tests — требуют Docker контейнеры (postgres, bsl-ls).
+# Запускаются вручную или nightly.
+# См. TESTING_POLICY.md раздел 10.2.
+
+name: Integration tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"  # nightly в 03:00 UTC
+
+jobs:
+  integration:
+    name: Integration (postgres + bsl-ls)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Start Docker containers
+        run: docker compose up -d --wait
+        timeout-minutes: 5
+
+      - name: Show container status
+        run: docker compose ps
+
+      - name: Wait for postgres
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U agent; then
+              echo "Postgres is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Postgres failed to start"
+          docker compose logs postgres
+          exit 1
+
+      - name: Run integration tests
+        run: uv run pytest tests/integration/ -m integration --tb=short -v
+        env:
+          DATABASE_URL: postgresql://agent:agent@localhost:5432/agent
+          BSL_LS_HTTP_URL: http://localhost:8080
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          echo "=== postgres logs ==="
+          docker compose logs postgres
+          echo "=== bsl-ls logs ==="
+          docker compose logs 1c-ai-bsl-ls
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

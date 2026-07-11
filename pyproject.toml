@@ -68,10 +68,6 @@ markers = [
     "golden: end-to-end pipeline tests",
     "benchmark: performance benchmarks (not run by default)",
 ]
-benchmark_min_rounds = 5
-benchmark_min_time = "0.000005"
-benchmark_warmup = "off"
-benchmark_sort = "name"
 
 # ─── Coverage ────────────────────────────────────────────────────────────────
 [tool.coverage.run]

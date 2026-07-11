@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MetaDataObject xmlns="http://v8.1c.ru/8.3/data/core" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.15">
+  <CommonModule uuid="33333333-3333-3333-3333-333333333333">
+    <Properties>
+      <Name>ОбщегоНазначения</Name>
+      <Synonym>
+        <v8:item>
+          <v8:lang>ru</v8:lang>
+          <v8:content>Общего назначения</v8:content>
+        </v8:item>
+      </Synonym>
+      <Comment>Общие функции</Comment>
+      <Global>false</Global>
+      <ClientManagedApplication>false</ClientManagedApplication>
+      <Server>true</Server>
+      <ExternalConnection>true</ExternalConnection>
+      <OrdinaryApplication>true</OrdinaryApplication>
+      <ServerCall>false</ServerCall>
+      <Privileged>false</Privileged>
+      <ReturnValuesExpansion>DontUse</ReturnValuesExpansion>
+      <Parallel computationsMode>Synchronous</Parallel computationsMode>
+      <CacheStoring>Cached</CacheStoring>
+      <CacheStoring>NotCached</CacheStoring>
+      <CacheStoring>Cached</CacheStoring>
+      <ClientManagedApplication>false</ClientManagedApplication>
+      <Server>true</Server>
+    </Properties>
+  </CommonModule>
+</MetaDataObject>

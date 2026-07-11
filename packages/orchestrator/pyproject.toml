@@ -10,13 +10,18 @@ dependencies = [
     "structlog>=24.0,<26.0",
     "jinja2>=3.1,<4.0",
     "parsers",
-    "data_layer",
-    "mcp_servers",
+    "data-layer",
+    "mcp-servers",
 ]
 
 [project.optional-dependencies]
-postgres = ["psycopg[binary]>=3.1,<4.0", "langgraph-checkpoint-postgres>=0.1,<1.0"]
+postgres = ["psycopg[binary]>=3.1,<4.0", "langgraph-checkpoint-postgres>=1.0,<2.0"]
 langsmith = ["langsmith>=0.1,<1.0"]
+
+[tool.uv.sources]
+parsers = { workspace = true }
+data_layer = { workspace = true }
+mcp_servers = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

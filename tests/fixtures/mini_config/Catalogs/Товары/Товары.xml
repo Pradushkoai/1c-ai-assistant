@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MetaDataObject xmlns="http://v8.1c.ru/8.3/data/core" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.15">
+  <Catalog uuid="11111111-1111-1111-1111-111111111111">
+    <InternalInfo>
+      <xr:ContainedObject>
+        <xr:ClassId>9cd510cd-abfc-11d4-9434-004095e12fc7</xr:ClassId>
+        <xr:ObjectId>11111111-1111-1111-1111-111111111112</xr:ObjectId>
+      </xr:ContainedObject>
+      <xr:ContainedObject>
+        <xr:ClassId>e3816ea6-11dc-4b32-9c8e-3a4c5c6c7c8c</xr:ClassId>
+        <xr:ObjectId>11111111-1111-1111-1111-111111111113</xr:ObjectId>
+      </xr:ContainedObject>
+      <xr:ContainedObject>
+        <xr:ClassId>fb8a6629-11dc-4b32-9c8e-3a4c5c6c7c8c</xr:ClassId>
+        <xr:ObjectId>11111111-1111-1111-1111-111111111114</xr:ObjectId>
+      </xr:ContainedObject>
+    </InternalInfo>
+    <Properties>
+      <Name>Товары</Name>
+      <Synonym>
+        <v8:item>
+          <v8:lang>ru</v8:lang>
+          <v8:content>Товары</v8:content>
+        </v8:item>
+      </Synonym>
+      <Comment>Справочник товаров</Comment>
+      <HierarchyType>HierarchyItems</HierarchyType>
+      <LimitLevelCount>false</LimitLevelCount>
+      <LevelCount>2</LevelCount>
+      <FoldersOnTop>true</FoldersOnTop>
+      <UseStandardCommands>true</UseStandardCommands>
+      <Owners/>
+      <SubordinationUseToFromIndex>false</SubordinationUseToFromIndex>
+      <CodeLength>9</CodeLength>
+      <DescriptionLength>50</DescriptionLength>
+      <CodeType>String</CodeType>
+      <CodeAllowedLength>Fixed</CodeAllowedLength>
+      <CodeSeries>WholeCatalog</CodeSeries>
+      <CheckUnique>true</CheckUnique>
+      <Autonumbering>true</Autonumbering>
+      <DefaultPresentation>AsDescription</DefaultPresentation>
+      <StandardAttributes>
+        <xr:StandardAttribute name="PredefinedDataName">
+          <xr:Edit>
+            <xr:UseForFoldersWithItems>false</xr:UseForFoldersWithItems>
+          </xr:Edit>
+        </xr:StandardAttribute>
+        <xr:StandardAttribute name="Predefined">
+          <xr:Edit>
+            <xr:UseForFoldersWithItems>false</xr:UseForFoldersWithItems>
+          </xr:Edit>
+        </xr:StandardAttribute>
+        <xr:StandardAttribute name="Ref">
+          <xr:Edit>
+            <xr:UseForFoldersWithItems>false</xr:UseForFoldersWithItems>
+          </xr:Edit>
+        </xr:StandardAttribute>
+        <xr:StandardAttribute name="DeletionMark">
+          <xr:Edit>
+            <xr:UseForFoldersWithItems>false</xr:UseForFoldersWithItems>
+          </xr:Edit>
+        </xr:StandardAttribute>
+        <xr:StandardAttribute name="IsFolder">
+          <xr:Edit>
+            <xr:UseForFoldersWithItems>false</xr:UseForFoldersWithItems>
+          </xr:Edit>
+        </xr:StandardAttribute>
+        <xr:StandardAttribute name="Owner">
+          <xr:Edit>
+            <xr:UseForFoldersWithItems>false</xr:UseForFoldersWithItems>
+          </xr:Edit>
+        </xr:StandardAttribute>
+        <xr:StandardAttribute name="Parent">
+          <xr:Edit>
+            <xr:UseForFoldersWithItems>false</xr:UseForFoldersWithItems>
+          </xr:Edit>
+        </xr:StandardAttribute>
+        <xr:StandardAttribute name="Description">
+          <xr:Edit>
+            <xr:UseForFoldersWithItems>false</xr:UseForFoldersWithItems>
+          </xr:Edit>
+        </xr:StandardAttribute>
+        <xr:StandardAttribute name="Code">
+          <xr:Edit>
+            <xr:UseForFoldersWithItems>false</xr:UseForFoldersWithItems>
+          </xr:Edit>
+        </xr:StandardAttribute>
+      </StandardAttributes>
+      <Characteristics/>
+      <PredefinedDataUpdate>Auto</PredefinedDataUpdate>
+      <EditType>InDialog</EditType>
+      <QuickChoice>false</QuickChoice>
+      <ChoiceMode>BothWays</ChoiceMode>
+      <InputByString>
+        <xr:Field>Catalog.Товары.StandardAttribute.Description</xr:Field>
+        <xr:Field>Catalog.Товары.StandardAttribute.Code</xr:Field>
+      </InputByString>
+      <SearchStringModeOnInputByString>Begin</SearchStringModeOnInputByString>
+      <FullTextSearchOnInputByString>DontUse</FullTextSearchOnInputByString>
+      <ChoiceDataGetModeOnInputByString>Directly</ChoiceDataGetModeOnInputByString>
+      <DefaultObjectForm/>
+      <DefaultFolderForm/>
+      <DefaultListForm/>
+      <DefaultChoiceForm/>
+      <DefaultFolderChoiceForm/>
+      <AuxiliaryObjectForm/>
+      <AuxiliaryFolderForm/>
+      <AuxiliaryListForm/>
+      <AuxiliaryChoiceForm/>
+      <AuxiliaryFolderChoiceForm/>
+      <IncludeHelpInContents>false</IncludeHelpInContents>
+      <BasedOn/>
+      <DataLockFields/>
+      <DataLockControlMode>Managed</DataLockControlMode>
+      <FullTextSearch>Use</FullTextSearch>
+      <ObjectPresentation/>
+      <ExtendedObjectPresentation/>
+      <ListPresentation/>
+      <ExtendedListPresentation/>
+      <Explanation/>
+      <CreateOnInput>Use</CreateOnInput>
+      <ChoiceHistoryOnInput>Auto</ChoiceHistoryOnInput>
+      <UseStandardCommands>true</UseStandardCommands>
+      <DefaultPresentation>AsDescription</DefaultPresentation>
+      <StandardAttributes>
+        <xr:StandardAttribute name="Code">
+          <xr:Edit>
+            <xr:UseForFoldersWithItems>true</xr:UseForFoldersWithItems>
+          </xr:Edit>
+        </xr:StandardAttribute>
+      </StandardAttributes>
+    </Properties>
+    <ChildObjects>
+      <Attribute uuid="11111111-1111-1111-1111-111111111121">
+        <Properties>
+          <Name>Артикул</Name>
+          <Synonym>
+            <v8:item>
+              <v8:lang>ru</v8:lang>
+              <v8:content>Артикул</v8:content>
+            </v8:item>
+          </Synonym>
+          <Comment>Артикул товара</Comment>
+          <Type>
+            <v8:Type>xs:string</v8:Type>
+            <v8:StringQualifiers>
+              <v8:Length>50</v8:Length>
+              <v8:AllowedLength>Variable</v8:AllowedLength>
+            </v8:StringQualifiers>
+          </Type>
+          <PasswordMode>false</PasswordMode>
+          <Format/>
+          <EditFormat/>
+          <ToolTip/>
+          <MarkNegatives>false</MarkNegatives>
+          <Mask/>
+          <MultiLine>false</MultiLine>
+          <ExtendedEdit>false</ExtendedEdit>
+          <MinValue xsi:nil="true"/>
+          <MaxValue xsi:nil="true"/>
+          <FillFromFillingValue>false</FillFromFillingValue>
+          <FillValue xsi:type="xs:string"/>
+          <FillChecking>Show</FillChecking>
+          <ChoiceFoldersAndItems>Items</ChoiceFoldersAndItems>
+          <ChoiceParameterLinks/>
+          <ChoiceParameters/>
+          <QuickChoice>Auto</QuickChoice>
+          <CreateOnInput>Use</CreateOnInput>
+          <ChoiceForm/>
+          <LinkByType/>
+          <ChoiceHistoryOnInput>Auto</ChoiceHistoryOnInput>
+          <Use>ForItem</Use>
+          <Indexing>DontIndex</Indexing>
+          <FullTextSearch>Use</FullTextSearch>
+          <DataHistory>Use</DataHistory>
+        </Properties>
+      </Attribute>
+      <Attribute uuid="11111111-1111-1111-1111-111111111122">
+        <Properties>
+          <Name>Цена</Name>
+          <Synonym>
+            <v8:item>
+              <v8:lang>ru</v8:lang>
+              <v8:content>Цена</v8:content>
+            </v8:item>
+          </Synonym>
+          <Comment>Цена товара</Comment>
+          <Type>
+            <v8:Type>xs:decimal</v8:Type>
+            <v8:NumberQualifiers>
+              <v8:Digits>15</v8:Digits>
+              <v8:FractionDigits>2</v8:FractionDigits>
+              <v8:AllowedSign>Nonnegative</v8:AllowedSign>
+            </v8:NumberQualifiers>
+          </Type>
+          <PasswordMode>false</PasswordMode>
+          <Format/>
+          <EditFormat/>
+          <ToolTip/>
+          <MarkNegatives>false</MarkNegatives>
+          <Mask/>
+          <MultiLine>false</MultiLine>
+          <ExtendedEdit>false</ExtendedEdit>
+          <MinValue xsi:nil="true"/>
+          <MaxValue xsi:nil="true"/>
+          <FillFromFillingValue>false</FillFromFillingValue>
+          <FillValue xsi:nil="true"/>
+          <FillChecking>DontCheck</FillChecking>
+          <ChoiceFoldersAndItems>Items</ChoiceFoldersAndItems>
+          <ChoiceParameterLinks/>
+          <ChoiceParameters/>
+          <QuickChoice>Auto</QuickChoice>
+          <CreateOnInput>Use</CreateOnInput>
+          <ChoiceForm/>
+          <LinkByType/>
+          <ChoiceHistoryOnInput>Auto</ChoiceHistoryOnInput>
+          <Use>ForItem</Use>
+          <Indexing>DontIndex</Indexing>
+          <FullTextSearch>Use</FullTextSearch>
+          <DataHistory>Use</DataHistory>
+        </Properties>
+      </Attribute>
+    </ChildObjects>
+  </Catalog>
+</MetaDataObject>

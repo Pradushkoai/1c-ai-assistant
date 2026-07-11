@@ -1,0 +1,124 @@
+# .github/workflows/ci.yml
+# CI pipeline для 1C AI Assistant.
+# Запускается на каждый push в main и на каждый PR.
+# См. TESTING_POLICY.md раздел 10.1.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Отменяет предыдущие запуски того же PR/branch при новом push
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Lint ────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint (ruff + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Ruff check
+        run: uv run ruff check packages/
+
+      - name: Ruff format check
+        run: uv run ruff format --check packages/
+
+      - name: Mypy
+        run: uv run mypy packages/
+
+  # ─── Package boundary check ──────────────────────────────────────────────
+  boundary-check:
+    name: Package boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check package boundaries
+        run: python scripts/check_package_boundaries.py
+
+  # ─── Smoke tests (быстрые, на каждый push) ──────────────────────────────
+  test-smoke:
+    name: Smoke tests
+    runs-on: ubuntu-latest
+    needs: [lint, boundary-check]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run smoke tests
+        run: uv run pytest tests/ -m "smoke" -x --tb=short -v
+
+  # ─── Full tests (на PR) ─────────────────────────────────────────────────
+  test-full:
+    name: Full tests with coverage
+    runs-on: ubuntu-latest
+    needs: [test-smoke]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run tests with coverage
+        run: |
+          uv run pytest tests/ \
+            -m "smoke or snapshot or property" \
+            --cov=packages \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=80 \
+            --tb=short
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false

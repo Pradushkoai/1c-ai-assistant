@@ -6,14 +6,20 @@ description = "CLI and entry points: 1c-ai command"
 dependencies = [
     "click>=8.1,<9.0",
     "orchestrator",
-    "mcp_servers",
-    "data_layer",
+    "mcp-servers",
+    "data-layer",
     "parsers",
 ]
 
 [project.scripts]
 1c-ai = "agent.cli:main"
 1c-ai-mcp = "mcp_servers.facade.server:run_sync"
+
+[tool.uv.sources]
+orchestrator = { workspace = true }
+mcp_servers = { workspace = true }
+data_layer = { workspace = true }
+parsers = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
