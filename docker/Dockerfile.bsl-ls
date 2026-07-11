@@ -30,11 +30,10 @@ ENV BSL_LS_JAR=/opt/bsl-ls/bsl-language-server.jar \
 
 WORKDIR /app
 
-# HTTP server (будет реализован в спринте 2)
-# COPY src/bsl_ls_http_server.py /app/
+# HTTP server
+COPY docker/bsl_ls_http_server.py /app/bsl_ls_http_server.py
 
 EXPOSE 8080
 
-# Точка входа — будет реализована в спринте 2
-# Сейчас — заглушка, которая просто держит JVM запущенной
-CMD ["python", "-c", "import time; print('BSL LS container (Sprint 2)'); time.sleep(3600)"]
+# Точка входа — HTTP server на :8080
+CMD ["python", "bsl_ls_http_server.py"]
