@@ -8,6 +8,7 @@ from __future__ import annotations
 
 __all__ = [
     "config",
+    "generate",
     "hbk",
     "init",
     "validate",

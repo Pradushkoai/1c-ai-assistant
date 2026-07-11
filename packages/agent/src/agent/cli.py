@@ -214,5 +214,52 @@ def hbk_load(platform_version: str, hbk_path: Path) -> None:
     sys.exit(cmd_hbk_load(platform_version=platform_version, hbk_path=hbk_path))
 
 
+@main.command()
+@click.option("--task", "-t", required=True, help="Описание задачи на естественном языке")
+@click.option("--config", "config_name", required=True, help="Имя конфигурации")
+@click.option("--version", "config_version", default=None, help="Версия конфигурации")
+@click.option(
+    "--platform",
+    "platform_version",
+    default="8.3.20",
+    help="Версия платформы 1С (по умолчанию 8.3.20)",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=None,
+    help="Сохранить результат в файл (по умолчанию — stdout)",
+)
+def generate(
+    task: str,
+    config_name: str,
+    config_version: str | None,
+    platform_version: str,
+    output: Path | None,
+) -> None:
+    """Сгенерировать BSL-код через pipeline.
+
+    Запускает полный pipeline: preflight → plan → gather → code → validate → review → commit.
+
+    Примеры:
+
+        1c-ai generate --task "Создать функцию Сложить(a, b)" --config mini --version 1.0
+
+        1c-ai generate -t "ОбработкаПроведения" --config ut11 --version 4.5.3 -o result.bsl
+    """
+    from .cli_commands.generate import cmd_generate
+
+    sys.exit(
+        cmd_generate(
+            task=task,
+            config_name=config_name,
+            config_version=config_version,
+            platform_version=platform_version,
+            output=str(output) if output else None,
+        )
+    )
+
+
 if __name__ == "__main__":
     main()
