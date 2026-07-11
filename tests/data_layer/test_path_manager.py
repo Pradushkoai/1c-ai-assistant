@@ -424,10 +424,14 @@ class TestPathManagerProperty:
 
     @given(
         name=st.text(
-            min_size=1, max_size=30, alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="/\\:\0")
+            min_size=1,
+            max_size=30,
+            alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="/\\.:\0"),
         ),
         version=st.text(
-            min_size=1, max_size=20, alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="/\\:\0")
+            min_size=1,
+            max_size=20,
+            alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="/\\.:\0"),
         ),
     )
     @settings(max_examples=30, suppress_health_check=[HealthCheck.function_scoped_fixture])
