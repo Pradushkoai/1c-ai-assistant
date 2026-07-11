@@ -290,8 +290,9 @@ class TestGraphStructure:
 
         assert len(NODES) == 10
 
-    def test_build_graph_raises(self):
+    def test_build_graph_compiles(self):
         from orchestrator.graph import build_graph
 
-        with pytest.raises(NotImplementedError):
-            build_graph()
+        graph = build_graph()
+        assert graph is not None
+        assert hasattr(graph, "nodes")

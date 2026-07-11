@@ -1,7 +1,9 @@
-"""Каркас главного StateGraph.
+"""Сборка главного StateGraph через LangGraph.
 
-В Sprint 1.5 (каркас) — только константы и stub build_graph().
-LangGraph integration — в Sprint 2.
+Детерминированный backbone:
+  preflight → plan → gather → code → validate → review → commit → end
+                                                   ↘ retry → code
+                                                   ↘ escalate → end
 
 См. ADR-0004 (Hierarchical orchestration) и ADR-0009 (Pipeline contracts).
 """
@@ -10,7 +12,29 @@ from __future__ import annotations
 
 from typing import Any
 
-# ─── Узлы графа ─────────────────────────────────────────────────────────────
+from langgraph.graph import END, StateGraph
+
+from .nodes import (
+    code_node,
+    commit_node,
+    escalate_node,
+    gather_node,
+    next_subtask_node,
+    plan_node,
+    preflight_node,
+    retry_node,
+    review_node,
+    validate_node,
+)
+from .routers import (
+    route_after_commit,
+    route_after_retry,
+    route_after_review,
+    route_after_validate,
+)
+from .state import TaskState
+
+# ─── Константы для документации ─────────────────────────────────────────────
 
 ENTRY_POINT = "preflight"
 
@@ -27,22 +51,14 @@ NODES: list[str] = [
     "next_subtask",
 ]
 
-# ─── Рёбра — детерминированный backbone ─────────────────────────────────────
-
 EDGES: list[tuple[str, str]] = [
     ("preflight", "plan"),
     ("plan", "gather"),
     ("gather", "code"),
     ("code", "validate"),
-    # validate → conditional (review | retry)
-    # review → conditional (commit | retry | escalate)
-    # retry → conditional (code | escalate)
-    # commit → conditional (next_subtask | end)
     ("next_subtask", "gather"),
     ("escalate", "__end__"),
 ]
-
-# ─── Conditional edges ──────────────────────────────────────────────────────
 
 CONDITIONAL_EDGES: dict[str, dict[str, list[str]]] = {
     "validate": {
@@ -63,23 +79,71 @@ CONDITIONAL_EDGES: dict[str, dict[str, list[str]]] = {
 def build_graph(checkpointer: Any = None) -> Any:
     """Собрать главный pipeline.
 
-    В Sprint 1.5 — stub, raise NotImplementedError.
-    В Sprint 2 — полная реализация с LangGraph StateGraph.
-
     Args:
         checkpointer: LangGraph checkpointer (MemorySaver или PostgresSaver).
+            Если None — используется MemorySaver.
 
     Returns:
         Compiled StateGraph.
-
-    Raises:
-        NotImplementedError: в Sprint 1.5 (каркас).
     """
-    raise NotImplementedError(
-        "build_graph — реализация в Sprint 2 (LangGraph integration). "
-        f"Каркас: ENTRY_POINT={ENTRY_POINT!r}, NODES={len(NODES)}, "
-        f"EDGES={len(EDGES)}, CONDITIONAL_EDGES={len(CONDITIONAL_EDGES)}"
+    from langgraph.checkpoint.memory import MemorySaver
+
+    graph = StateGraph(TaskState)
+
+    # Узлы
+    graph.add_node("preflight", preflight_node)
+    graph.add_node("plan", plan_node)
+    graph.add_node("gather", gather_node)
+    graph.add_node("code", code_node)
+    graph.add_node("validate", validate_node)
+    graph.add_node("review", review_node)
+    graph.add_node("retry", retry_node)
+    graph.add_node("commit", commit_node)
+    graph.add_node("escalate", escalate_node)
+    graph.add_node("next_subtask", next_subtask_node)
+
+    # Рёбра — детерминированный backbone
+    graph.set_entry_point("preflight")
+    graph.add_edge("preflight", "plan")
+    graph.add_edge("plan", "gather")
+    graph.add_edge("gather", "code")
+    graph.add_edge("code", "validate")
+
+    # Validate → {review | retry}
+    graph.add_conditional_edges(
+        "validate",
+        route_after_validate,
+        {"review": "review", "retry": "retry"},
     )
+
+    # Review → {commit | retry | escalate}
+    graph.add_conditional_edges(
+        "review",
+        route_after_review,
+        {"commit": "commit", "retry": "retry", "escalate": "escalate"},
+    )
+
+    # Retry → {code | escalate}
+    graph.add_conditional_edges(
+        "retry",
+        route_after_retry,
+        {"code": "code", "escalate": "escalate"},
+    )
+
+    # Commit → {next_subtask | end}
+    graph.add_conditional_edges(
+        "commit",
+        route_after_commit,
+        {"next_subtask": "next_subtask", "__end__": END},
+    )
+
+    # next_subtask → gather (новая подзадача)
+    graph.add_edge("next_subtask", "gather")
+
+    # Escalate → END
+    graph.add_edge("escalate", END)
+
+    return graph.compile(checkpointer=checkpointer or MemorySaver())
 
 
 def get_graph_structure() -> dict[str, Any]:

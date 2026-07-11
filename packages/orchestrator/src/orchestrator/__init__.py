@@ -54,6 +54,7 @@ from .errors import (
     ValidationFailedError,
     error_to_escalate_reason,
 )
+from .graph import build_graph, get_graph_structure
 from .routers import (
     route_after_commit,
     route_after_retry,
@@ -108,4 +109,7 @@ __all__ = [
     "EscalationRequestedError",
     "PersistenceError",
     "error_to_escalate_reason",
+    # graph
+    "build_graph",
+    "get_graph_structure",
 ]
