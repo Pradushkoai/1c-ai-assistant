@@ -5,12 +5,36 @@
 
 ---
 
+## Текущий статус
+
+**Sprint 1 завершён.** `1c-ai config build` работает end-to-end.
+344 теста проходят. CI зелёная (после фикса mypy).
+
+**Что готово:**
+- `parsers/models/` — 22 Pydantic v2 модели
+- `parsers/xml/` — 4 парсера + универсальный парсер
+- `parsers/indexers/` — metadata_indexer
+- `data_layer/` — PathManager, ConfigRegistry, freshness
+- `agent/` — CLI `1c-ai` (init, config add/build/list/remove, validate, hbk load)
+- `tests/` — 344 теста (smoke, property-based, persistence, end-to-end)
+- CI/CD — `.github/workflows/ci.yml` + `integration.yml`
+
+**Что не готово (Sprint 2+):**
+- `parsers/bsl/` — парсер .bsl файлов (Sprint 2)
+- `mcp_servers/` — все 5 MCP серверов (Sprint 2-4)
+- `orchestrator/` — LangGraph pipeline (Sprint 2)
+- `knowledge-base/` — KB-as-code (Sprint 3)
+- Docker — 3 контейнера (Sprint 4)
+
+---
+
 ## Перед началом работы
 
 1. **Прочитай AGENTS.md** (этот файл)
-2. **Прочитай [docs/architecture/CONCEPTUAL.md](docs/architecture/CONCEPTIAL.md)** — концептуальная архитектура
+2. **Прочитай [docs/architecture/CONCEPTUAL.md](docs/architecture/CONCEPTUAL.md)** — концептуальная архитектура
 3. **Прочитай [adr/](adr/)** — 17 ADR с обоснованием решений
-4. **Пойми контекст задачи** — какой спринт, какой компонент
+4. **Прочитай [CHANGELOG.md](CHANGELOG.md)** — история изменений
+5. **Пойми контекст задачи** — какой спринт, какой компонент
 
 ## Архитектурные правила (НЕ нарушать)
 
@@ -81,17 +105,37 @@ Entry Points → Orchestrator → MCP → Parsers → Data → KB
 2. Если нужно новое решение — создай ADR (см. шаблон в `adr/README.md`)
 3. Изменения ADR — через PR с меткой `adr`
 
+### Перед `1c-ai config build`
+- **ВСЕГДА** сначала проверяй свежесть: `1c-ai config build --name X --check-freshness`
+- Если индексы свежие — не пересобирай без `--force`
+- Если устарели — `1c-ai config build --name X` (без `--force`, пересоберёт автоматически)
+
 ### Перед коммитом
 ```bash
-uv run ruff check packages/
+# Полный чек-лист (см. CONTRIBUTING.md)
+uv run ruff check packages/ tests/
+uv run ruff format --check packages/ tests/
 uv run mypy packages/
 uv run pytest tests/ -m smoke
+python scripts/check_package_boundaries.py
 ```
 
 ### Коммиты
 - Формат: `<type>(<scope>): <description>`
 - Один коммит — одно логическое изменение
 - Перед push: тесты проходят
+
+### 1С XML namespace handling (ВАЖНО)
+- 1С XML использует `xmlns="http://v8.1c.ru/8.3/data/core"`, теги в lxml → `{ns}Catalog`
+- `elem.find('Catalog')` НЕ находит — нужно `elem.xpath('./*[local-name()="Catalog"]')`
+- В `parsers/xml/_xml_utils.py` все функции поиска используют xpath с local-name()
+- `_local_name(elem)` парсит tag вручную (работает с {ns}Name и prefix:Name)
+- **НЕ ИСПОЛЬЗОВАТЬ** `elem.find/findall` напрямую для 1С XML — только через `_xml_utils`
+
+### Pydantic strict + JSON round-trip
+- `strict=True` (ADR-0007) ломает `model_validate(dict)` для datetime полей
+- Решение: `model_validate_json(json.dumps(entry))` — паттерн для всех JSON-persistence
+- Для `model_dump(mode="json")` — оборачивай в `dict()`: `dict(obj.model_dump(mode="json"))`
 
 ## Структура BSL-модуля (для генерации)
 - Области: `ПрограммныйИнтерфейс` → `СлужебныйПрограммныйИнтерфейс` → `СлужебныеПроцедурыИФункции` → `ОбработчикиСобытийФормы`

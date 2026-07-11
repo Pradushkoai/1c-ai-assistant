@@ -174,13 +174,13 @@ def _parse_object(metadata_type: str, xml_path: Path) -> dict[str, Any] | None:
     """
     if metadata_type == "Catalog":
         obj = parse_catalog(xml_path)
-        return obj.model_dump(mode="json")
+        return dict(obj.model_dump(mode="json"))
     if metadata_type == "Document":
         obj_doc = parse_document(xml_path)
-        return obj_doc.model_dump(mode="json")
+        return dict(obj_doc.model_dump(mode="json"))
     if metadata_type == "CommonModule":
         obj_cm = parse_common_module(xml_path)
-        return obj_cm.model_dump(mode="json")
+        return dict(obj_cm.model_dump(mode="json"))
 
     # Универсальный парсер для остальных типов
     return _parse_generic_object(metadata_type, xml_path)
@@ -235,7 +235,7 @@ def _parse_generic_object(metadata_type: str, xml_path: Path) -> dict[str, Any] 
         synonym=synonym,
         comment=comment,
     )
-    return obj.model_dump(mode="json")
+    return dict(obj.model_dump(mode="json"))
 
 
 def save_metadata_index(

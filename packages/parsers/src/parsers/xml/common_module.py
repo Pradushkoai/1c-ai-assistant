@@ -71,7 +71,7 @@ def parse_common_module(xml_path: Path) -> CommonModuleMetadata:
     privileged = _get_bool("Privileged", default=False)
 
     # 'global' — Python keyword, используем alias через model_validate
-    return CommonModuleMetadata.model_validate(
+    result = CommonModuleMetadata.model_validate(
         {
             "object_ref": ObjectRef(type="CommonModule", name=name),
             "metadata_type": MetadataType.COMMON_MODULE,
@@ -86,3 +86,5 @@ def parse_common_module(xml_path: Path) -> CommonModuleMetadata:
             "privileged": privileged,
         }
     )
+    assert isinstance(result, CommonModuleMetadata)
+    return result
