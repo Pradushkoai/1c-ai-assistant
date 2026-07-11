@@ -127,7 +127,9 @@ class GetPattern:
     required_role: str = "GATHERER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError("kb.get_pattern — реализация в Sprint 3")
+        raise NotImplementedError(
+            "kb.get_pattern — контракт. Реализация в mcp_servers.kb.server.KbServer.get_pattern"
+        )
 
 
 class GetAntipattern:
@@ -143,7 +145,9 @@ class GetAntipattern:
     required_role: str = "REVIEWER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError("kb.get_antipattern — реализация в Sprint 3")
+        raise NotImplementedError(
+            "kb.get_antipattern — контракт. Реализация в mcp_servers.kb.server.KbServer.get_antipattern"
+        )
 
 
 class SearchKb:
@@ -159,7 +163,9 @@ class SearchKb:
     required_role: str = "PLANNER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError("kb.search_kb — реализация в Sprint 3")
+        raise NotImplementedError(
+            "kb.search_kb — контракт. Реализация в mcp_servers.kb.server.KbServer.search_kb"
+        )
 
 
 class CheckMethodAvailability:
@@ -179,7 +185,11 @@ class CheckMethodAvailability:
     required_role: str = "GATHERER"  # также VALIDATOR — см. MULTI_ROLE_OK
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError("kb.check_method_availability — реализация в Sprint 3")
+        raise NotImplementedError(
+            "kb.check_method_availability — контракт. "
+            "Реализация в mcp_servers.kb.server.KbServer.check_method_availability "
+            "(через platform-methods.db из .hbk, fallback на хардкод)"
+        )
 
 
 class CheckAntipatterns:
@@ -199,7 +209,9 @@ class CheckAntipatterns:
     required_role: str = "VALIDATOR"  # также REVIEWER
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError("kb.check_antipatterns — реализация в Sprint 3")
+        raise NotImplementedError(
+            "kb.check_antipatterns — контракт. Реализация в mcp_servers.kb.server.KbServer.check_antipatterns"
+        )
 
 
 KB_TOOLS: list[type[Any]] = [

@@ -3,6 +3,10 @@
 KBCollection — единая точка доступа к patterns и antipatterns.
 Используется kb-server'ом для реализации 5 MCP tools.
 
+Sprint 3.1 (2026-07-12): добавлена поддержка platform-methods.db (SQLite)
+для check_method_availability. Если БД загружена — используется она,
+иначе fallback на хардкод-список server-only/client-only методов.
+
 См. ADR-0012 (KB-as-code) и docs/architecture/07-kb-as-code.md.
 """
 
@@ -11,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -26,20 +31,29 @@ class KBCollection:
     Загружает YAML из knowledge-base/{patterns,antipatterns}/,
     валидирует по JSON Schema, предоставляет методы для поиска и детекции.
 
+    Опционально подключается к platform-methods.db (SQLite из .hbk) —
+    если БД передана и существует, check_method_availability использует её.
+    Иначе — fallback на хардкод-список (Sprint 3 логика).
+
     Attributes:
         patterns: {pattern_id: dict} — все паттерны.
         antipatterns: {antipattern_id: dict} — все антипаттерны.
+        platform_methods_db: путь к SQLite или None.
     """
 
-    def __init__(self, kb_dir: Path) -> None:
+    def __init__(self, kb_dir: Path, platform_methods_db: Path | None = None) -> None:
         """Загрузить KB из директории.
 
         Args:
             kb_dir: путь к knowledge-base/ директории.
+            platform_methods_db: путь к derived/platform/{version}/platform-methods.db.
+                Если None или файл не существует — fallback на хардкод-список.
         """
         self.kb_dir = kb_dir
         self.patterns: dict[str, dict[str, Any]] = {}
         self.antipatterns: dict[str, dict[str, Any]] = {}
+        self.platform_methods_db: Path | None = platform_methods_db
+        self._platform_methods_cache: dict[str, dict[str, Any]] | None = None
         self._schemas = self._load_schemas()
         self._load_all()
 
@@ -273,6 +287,49 @@ class KBCollection:
 
     # ─── Method availability ────────────────────────────────────────────────
 
+    def _load_platform_methods_from_db(self) -> dict[str, dict[str, Any]] | None:
+        """Загрузить методы платформы из SQLite БД.
+
+        Returns:
+            {method_name: {server, thin_client, web_client, mobile_client,
+                           external_connection, signature, description}} или None,
+            если БД не подключена или не существует.
+        """
+        if self._platform_methods_cache is not None:
+            return self._platform_methods_cache
+
+        if self.platform_methods_db is None or not self.platform_methods_db.exists():
+            return None
+
+        try:
+            with sqlite3.connect(self.platform_methods_db) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.execute(
+                    """SELECT name, signature, description,
+                              server, thin_client, web_client,
+                              mobile_client, external_connection
+                       FROM platform_methods"""
+                )
+                methods: dict[str, dict[str, Any]] = {}
+                for row in cursor:
+                    methods[row["name"]] = {
+                        "signature": row["signature"],
+                        "description": row["description"],
+                        "availability": {
+                            "server": bool(row["server"]),
+                            "thin_client": bool(row["thin_client"]),
+                            "web_client": bool(row["web_client"]),
+                            "mobile_client": bool(row["mobile_client"]),
+                            "external_connection": bool(row["external_connection"]),
+                        },
+                    }
+                self._platform_methods_cache = methods
+                log.info("Loaded %d platform methods from %s", len(methods), self.platform_methods_db)
+                return methods
+        except Exception as exc:
+            log.warning("Failed to load platform methods from %s: %s", self.platform_methods_db, exc)
+            return None
+
     def check_method_availability(
         self,
         method_name: str,
@@ -281,17 +338,46 @@ class KBCollection:
     ) -> dict[str, Any]:
         """Проверить доступность метода платформы в контексте.
 
-        Использует предопределённый список методов, недоступных на клиенте.
-        В Sprint 3 — упрощённая версия. Полная — с .hbk в Sprint 3 (после HBK parser).
+        Приоритет источников:
+        1. platform-methods.db (SQLite из .hbk) — если подключена и метод найден.
+        2. Хардкод-список server-only/client-only методов — fallback.
+        3. Если метод не найден ни в одном источнике — считаем доступным
+           (предполагаем, что это метод конфигурации, не платформы).
 
         Args:
             method_name: имя метода (например, 'ЗаписьЖурналаРегистрации').
-            target_context: 'server' | 'thin_client' | 'mobile_client'.
+            target_context: 'server' | 'thin_client' | 'mobile_client' | 'web_client'
+                | 'external_connection'.
             platform_version: версия платформы (например, '8.3.20').
 
         Returns:
-            {method_name, available, target_context, reason}.
+            {method_name, available, target_context, reason, platform_method}.
         """
+        # Источник 1: SQLite из .hbk (приоритетный)
+        db_methods = self._load_platform_methods_from_db()
+        if db_methods is not None and method_name in db_methods:
+            method_data = db_methods[method_name]
+            avail = method_data["availability"]
+            available = bool(avail.get(target_context, False))
+            reason = None if available else (
+                f"Метод '{method_name}' недоступен в контексте '{target_context}' "
+                f"(доступно: server={avail['server']}, thin_client={avail['thin_client']}, "
+                f"web_client={avail['web_client']}, mobile_client={avail['mobile_client']})"
+            )
+            return {
+                "method_name": method_name,
+                "available": available,
+                "target_context": target_context,
+                "reason": reason,
+                "platform_method": {
+                    "name": method_name,
+                    "signature": method_data["signature"],
+                    "description": method_data["description"],
+                    "availability": avail,
+                },
+            }
+
+        # Источник 2: хардкод-список (fallback)
         # Предопределённый список методов, недоступных на клиенте
         server_only_methods = {
             "ЗаписьЖурналаРегистрации",

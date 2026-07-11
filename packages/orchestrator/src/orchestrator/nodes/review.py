@@ -76,6 +76,7 @@ async def review_node(
     rationale: str
     review_passed: bool
     critical_findings: int
+    findings: list[Any]  # list[ReviewFinding], но Any для mypy в fallback-ветке
 
     try:
         if llm is None:
@@ -107,22 +108,27 @@ async def review_node(
 
         assert isinstance(response, ReviewResult)
 
+        # Берём ВСЕ поля из LLM-ответа, включая findings
+        # (раньше findings=[] терял все LLM-замечания — баг fix 2026-07-12)
         decision = response.decision
         rationale = response.rationale
         review_passed = response.passed
         critical_findings = response.critical_findings
+        findings = list(response.findings)
 
         log.info(
             "review_llm_done",
             task_id=state.task_id,
             decision=decision,
             critical_findings=critical_findings,
+            findings_count=len(findings),
         )
 
     except Exception as exc:
         log.warning("review_llm_fallback", error=str(exc)[:200])
 
         # Fallback: auto-proceed/retry (Sprint 2 логика)
+        # findings пустые — LLM недоступен, замечаний нет
         if state.validation_passed:
             decision = "proceed"
             rationale = "Fallback (LLM unavailable): auto-proceed (validation passed)"
@@ -133,11 +139,12 @@ async def review_node(
             rationale = "Fallback (LLM unavailable): auto-retry (validation failed)"
             review_passed = False
             critical_findings = 1
+        findings = []
 
     review_result = ReviewResult(
         subtask_id=subtask.id,
         iteration_number=current_iteration.number,
-        findings=[],  # LLM findings будут в response.findings при успехе
+        findings=findings,
         decision=decision,  # type: ignore[arg-type]
         rationale=rationale,
         critical_findings=critical_findings,

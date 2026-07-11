@@ -200,6 +200,204 @@ class TestCheckMethodAvailability:
         assert result["available"] is True
 
 
+# ─── KBCollection — check_method_availability с SQLite ──────────────────────
+
+
+class TestCheckMethodAvailabilityWithSQLite:
+    """Тесты для check_method_availability с подключённой platform-methods.db.
+
+    Sprint 3.1 (2026-07-12): проверка, что при подключении SQLite методы
+    берутся из БД, а не из хардкод-списка.
+    """
+
+    @pytest.fixture
+    def platform_db(self, tmp_path: Path) -> Path:
+        """Создаёт тестовую platform-methods.db с 3 методами.
+
+        Методы:
+        - Серверный метод: ЗаписьЖурналаРегистрации (server=1, thin_client=0)
+        - Клиентский метод: ПоказатьЗначение (server=0, thin_client=1)
+        - Универсальный метод: Сообщить (server=1, thin_client=1)
+        """
+        import sqlite3
+
+        db_path = tmp_path / "platform-methods.db"
+        with sqlite3.connect(db_path) as conn:
+            conn.executescript(
+                """
+                CREATE TABLE platform_methods (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    signature TEXT,
+                    description TEXT,
+                    is_procedure INTEGER DEFAULT 0,
+                    category TEXT,
+                    server INTEGER DEFAULT 1,
+                    thin_client INTEGER DEFAULT 1,
+                    web_client INTEGER DEFAULT 1,
+                    mobile_client INTEGER DEFAULT 0,
+                    external_connection INTEGER DEFAULT 1,
+                    source_file TEXT
+                );
+
+                CREATE TABLE platform_meta (
+                    key TEXT PRIMARY KEY,
+                    value TEXT
+                );
+                """
+            )
+            conn.executemany(
+                """INSERT INTO platform_methods
+                   (name, signature, description, server, thin_client,
+                    web_client, mobile_client, external_connection)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                [
+                    (
+                        "ЗаписьЖурналаРегистрации",
+                        "ЗаписьЖурналаРегистрации(ИмяСобытия, Уровень, ...)",
+                        "Записывает событие в журнал регистрации (только сервер)",
+                        1, 0, 0, 0, 1,
+                    ),
+                    (
+                        "ПоказатьЗначение",
+                        "ПоказатьЗначение(Значение)",
+                        "Показывает значение в отдельном окне (только клиент)",
+                        0, 1, 1, 1, 0,
+                    ),
+                    (
+                        "Сообщить",
+                        "Сообщить(Текст)",
+                        "Выводит текст в окно сообщений (везде)",
+                        1, 1, 1, 1, 1,
+                    ),
+                    # Метод из хардкод-списка, но с другими availability в БД
+                    # (БД приоритетнее хардкода)
+                    (
+                        "ОткрытьФорму",
+                        "ОткрытьФорму(ИмяФормы, ...)",
+                        "Открывает форму (в тесте БД: доступно и на сервере тоже)",
+                        1, 1, 1, 0, 1,
+                    ),
+                ],
+            )
+            conn.executemany(
+                "INSERT INTO platform_meta (key, value) VALUES (?, ?)",
+                [
+                    ("platform_version", "8.3.20"),
+                    ("methods_count", "4"),
+                ],
+            )
+            conn.commit()
+        return db_path
+
+    @pytest.fixture
+    def kb_collection_with_db(self, kb_dir: Path, platform_db: Path) -> KBCollection:
+        """KBCollection с подключённой SQLite БД."""
+        return KBCollection(kb_dir, platform_methods_db=platform_db)
+
+    def test_db_loaded(self, kb_collection_with_db: KBCollection):
+        """БД загружается и кэшируется."""
+        methods = kb_collection_with_db._load_platform_methods_from_db()
+        assert methods is not None
+        assert "ЗаписьЖурналаРегистрации" in methods
+        assert "ПоказатьЗначение" in methods
+        assert "Сообщить" in methods
+
+    def test_db_overrides_hardcoded_server_only(self, kb_collection_with_db: KBCollection):
+        """Метод из БД (server-only) недоступен на клиенте."""
+        result = kb_collection_with_db.check_method_availability(
+            "ЗаписьЖурналаРегистрации", "thin_client", "8.3.20"
+        )
+        assert result["available"] is False
+        assert "недоступен" in result["reason"].lower()
+        # Возвращается platform_method с деталями из БД
+        assert result["platform_method"] is not None
+        assert result["platform_method"]["name"] == "ЗаписьЖурналаРегистрации"
+        assert result["platform_method"]["availability"]["server"] is True
+        assert result["platform_method"]["availability"]["thin_client"] is False
+
+    def test_db_overrides_hardcoded_client_only(self, kb_collection_with_db: KBCollection):
+        """Клиентский метод из БД недоступен на сервере."""
+        result = kb_collection_with_db.check_method_availability(
+            "ПоказатьЗначение", "server", "8.3.20"
+        )
+        assert result["available"] is False
+        assert result["platform_method"] is not None
+
+    def test_db_universal_method_available_everywhere(self, kb_collection_with_db: KBCollection):
+        """Универсальный метод (Сообщить) доступен везде."""
+        for ctx in ("server", "thin_client", "web_client", "external_connection"):
+            result = kb_collection_with_db.check_method_availability("Сообщить", ctx, "8.3.20")
+            assert result["available"] is True, f"Сообщить должен быть доступен в {ctx}"
+
+    def test_db_priority_over_hardcoded(self, kb_collection_with_db: KBCollection):
+        """БД приоритетнее хардкода.
+
+        ОткрытьФорму в хардкоде = client_only (server=False),
+        но в тестовой БД server=1 → должно быть available=True на сервере.
+        """
+        result = kb_collection_with_db.check_method_availability(
+            "ОткрытьФорму", "server", "8.3.20"
+        )
+        assert result["available"] is True
+        assert result["platform_method"] is not None
+        # БД переопределила хардкод
+        assert result["platform_method"]["availability"]["server"] is True
+
+    def test_unknown_method_still_available(self, kb_collection_with_db: KBCollection):
+        """Метод, не найденный в БД, проверяется по хардкоду (или доступен)."""
+        result = kb_collection_with_db.check_method_availability(
+            "НекийНезнакомыйМетод", "server", "8.3.20"
+        )
+        assert result["available"] is True
+        assert result["platform_method"] is None  # нет в БД
+
+    def test_db_not_exists_falls_back_to_hardcoded(self, kb_dir: Path, tmp_path: Path):
+        """Если БД не существует — fallback на хардкод."""
+        nonexistent_db = tmp_path / "nonexistent.db"
+        kb = KBCollection(kb_dir, platform_methods_db=nonexistent_db)
+        # Хардкод-поведение: ЗаписьЖурналаРегистрации на клиенте недоступен
+        result = kb.check_method_availability(
+            "ЗаписьЖурналаРегистрации", "thin_client", "8.3.20"
+        )
+        assert result["available"] is False
+        # platform_method = None (т.к. использовался хардкод)
+        assert result["platform_method"] is None
+
+    def test_db_none_uses_hardcoded(self, kb_dir: Path):
+        """Если platform_methods_db=None — только хардкод."""
+        kb = KBCollection(kb_dir, platform_methods_db=None)
+        result = kb.check_method_availability(
+            "ЗаписьЖурналаРегистрации", "thin_client", "8.3.20"
+        )
+        assert result["available"] is False
+        assert result["platform_method"] is None
+
+    def test_db_cache_works(self, kb_collection_with_db: KBCollection):
+        """Повторный вызов использует кэш, не перечитывает БД."""
+        # Первый вызов — загрузка
+        methods1 = kb_collection_with_db._load_platform_methods_from_db()
+        assert methods1 is not None
+        # Второй вызов — кэш
+        methods2 = kb_collection_with_db._load_platform_methods_from_db()
+        assert methods2 is methods1  # тот же объект
+
+    @pytest.mark.asyncio
+    async def test_kb_server_uses_db(
+        self, kb_dir: Path, platform_db: Path
+    ):
+        """KbServer прокидывает platform_methods_db в KBCollection."""
+        from mcp_servers.kb import KbServer
+
+        server = KbServer(kb_dir=kb_dir, platform_methods_db=platform_db)
+        result = await server.check_method_availability(
+            "ЗаписьЖурналаРегистрации", "thin_client", "8.3.20"
+        )
+        assert result.available is False
+        assert result.platform_method is not None
+        assert result.platform_method.name == "ЗаписьЖурналаРегистрации"
+
+
 # ─── KbServer — MCP tools ────────────────────────────────────────────────────
 
 
