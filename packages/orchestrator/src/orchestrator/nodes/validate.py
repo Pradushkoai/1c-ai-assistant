@@ -1,7 +1,7 @@
 """validate node — детерминированный gate (parallel subgraph).
 
-В Sprint 2 — только bsl_ls.lint (без KB антипаттернов, они в Sprint 3).
-Полная версия с 3 валидаторами параллельно — в Sprint 3.
+Sprint 3: bsl_ls.lint + kb.check_antipatterns (2 валидатора).
+Sprint 4: + kb.check_method_availability (3 валидатора).
 
 См. ADR-0004 (Hierarchical orchestration) и ADR-0009 (Pipeline contracts).
 """
@@ -17,15 +17,20 @@ from ..state import FSMState, TaskState
 log = get_logger(__name__)
 
 
-async def validate_node(state: TaskState, bsl_ls_server: Any = None) -> dict[str, Any]:
-    """Запустить BSL LS валидацию сгенерированного кода.
+async def validate_node(
+    state: TaskState,
+    bsl_ls_server: Any = None,
+    kb_server: Any = None,
+) -> dict[str, Any]:
+    """Запустить валидаторы параллельно.
 
-    Sprint 2: только bsl_ls.lint.
-    Sprint 3: bsl_ls.lint + kb.check_antipatterns + kb.check_method_availability (параллельно).
+    Sprint 3: bsl_ls.lint + kb.check_antipatterns.
+    Sprint 4: + kb.check_method_availability.
 
     Args:
         state: текущее состояние pipeline.
         bsl_ls_server: BslLsServer инстанс. Если None — создаётся из env.
+        kb_server: KbServer инстанс. Если None — создаётся из KB dir.
 
     Returns:
         dict с validate_result, validation_passed, fsm_state.
@@ -44,51 +49,89 @@ async def validate_node(state: TaskState, bsl_ls_server: Any = None) -> dict[str
         iteration=current_iteration.number,
     )
 
-    # Создаём BSL LS сервер если не передан
+    # Создаём серверы если не переданы
     if bsl_ls_server is None:
-        from mcp_servers.bsl_ls.server import BslLsServer
+        try:
+            from mcp_servers.bsl_ls.server import BslLsServer
 
-        bsl_ls_server = BslLsServer()
+            bsl_ls_server = BslLsServer()
+        except Exception:
+            bsl_ls_server = None
 
-    # Вызываем BSL LS lint
-    try:
-        lint_result = await bsl_ls_server.lint(
-            code=code,
-            file_path=f"/tmp/{subtask.id}_{current_iteration.number}.bsl",
-        )
-    except Exception as exc:
-        log.error("validate_bsl_ls_error", error=str(exc))
-        # Если BSL LS недоступен — пропускаем валидацию (Sprint 2 fallback)
-        lint_result = None
+    if kb_server is None:
+        try:
+            from mcp_servers.kb.server import KbServer
 
-    # Формируем findings
+            kb_server = KbServer()
+        except Exception:
+            kb_server = None
+
+    # Запускаем валидаторы параллельно
     findings: list[ValidationFinding] = []
     failed_checks: list[dict[str, Any]] = []
 
-    if lint_result is not None:
-        for diag in lint_result.diagnostics:
-            severity = diag.get("severity", "info")
-            finding = ValidationFinding(
-                severity=severity,
-                code=diag.get("code", "UNKNOWN"),
-                message=diag.get("message", ""),
-                line=diag.get("line"),
-                column=diag.get("column"),
-                source="bsl_ls",
-                fix_hint=None,
+    # BSL LS lint
+    bsl_ls_findings: list[ValidationFinding] = []
+    if bsl_ls_server is not None:
+        try:
+            lint_result = await bsl_ls_server.lint(
+                code=code,
+                file_path=f"/tmp/{subtask.id}_{current_iteration.number}.bsl",
             )
-            findings.append(finding)
-
-            if severity == "critical":
-                failed_checks.append(
-                    {
-                        "severity": severity,
-                        "code": finding.code,
-                        "line": finding.line,
-                        "message": finding.message,
-                        "fix_hint": finding.fix_hint,
-                    }
+            for diag in lint_result.diagnostics:
+                severity = diag.get("severity", "info")
+                finding = ValidationFinding(
+                    severity=severity,
+                    code=diag.get("code", "UNKNOWN"),
+                    message=diag.get("message", ""),
+                    line=diag.get("line"),
+                    column=diag.get("column"),
+                    source="bsl_ls",
+                    fix_hint=None,
                 )
+                bsl_ls_findings.append(finding)
+        except Exception as exc:
+            log.warning("validate_bsl_ls_error", error=str(exc))
+
+    # KB antipatterns
+    kb_findings: list[ValidationFinding] = []
+    if kb_server is not None:
+        try:
+            ap_result = await kb_server.check_antipatterns(
+                code=code,
+                severity_filter=["critical", "warning"],
+            )
+            for finding_dict in ap_result.findings:
+                severity = finding_dict.get("severity", "info")
+                finding = ValidationFinding(
+                    severity=severity,
+                    code=finding_dict.get("antipattern_id", "UNKNOWN"),
+                    message=finding_dict.get("message", ""),
+                    line=finding_dict.get("line"),
+                    column=None,
+                    source="kb_antipatterns",
+                    fix_hint=None,
+                )
+                kb_findings.append(finding)
+        except Exception as exc:
+            log.warning("validate_kb_error", error=str(exc))
+
+    # Объединяем findings
+    findings = bsl_ls_findings + kb_findings
+
+    # Формируем failed_checks (только critical + warning для retry-промпта)
+    for f in findings:
+        if f.severity in ("critical", "warning"):
+            failed_checks.append(
+                {
+                    "severity": f.severity,
+                    "code": f.code,
+                    "line": f.line,
+                    "message": f.message,
+                    "fix_hint": f.fix_hint,
+                    "source": f.source,
+                }
+            )
 
     # Подсчёт по severity
     severity_breakdown: dict[str, int] = {"critical": 0, "warning": 0, "info": 0}
@@ -116,6 +159,8 @@ async def validate_node(state: TaskState, bsl_ls_server: Any = None) -> dict[str
         critical=severity_breakdown["critical"],
         warning=severity_breakdown["warning"],
         info=severity_breakdown["info"],
+        bsl_ls_findings=len(bsl_ls_findings),
+        kb_findings=len(kb_findings),
     )
 
     return {
