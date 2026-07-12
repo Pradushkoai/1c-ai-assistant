@@ -32,6 +32,13 @@ from ._xml_utils import (
 from .catalog import parse_catalog
 from .common_module import parse_common_module
 from .configuration import get_configuration_child_objects, parse_configuration
+from .dependency_graph import (
+    build_dependency_graph,
+    get_dependencies,
+    get_dependents,
+    load_dependency_graph,
+    save_dependency_graph,
+)
 from .document import parse_document
 from .form import parse_form
 from .subsystem_role import parse_role, parse_subsystem
@@ -46,6 +53,12 @@ __all__ = [
     "parse_subsystem",
     "parse_role",
     "get_configuration_child_objects",
+    # Dependency graph
+    "build_dependency_graph",
+    "save_dependency_graph",
+    "load_dependency_graph",
+    "get_dependencies",
+    "get_dependents",
     # Утилиты
     "parse_xml",
     "parse_xml_string",
