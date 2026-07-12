@@ -3,7 +3,7 @@
 > Architecture Decision Records. Каждое решение — отдельный файл.
 > Статус по умолчанию: Accepted. Изменения — через новый ADR с `supersedes`.
 
-## Индекс — 19 ADR
+## Индекс — 20 ADR
 
 | # | Тема | Статус | Дата |
 |---|---|---|---|
@@ -26,6 +26,7 @@
 | 0017 | VectorStoreProtocol — pgvector по умолчанию, Qdrant как опция | Accepted | 2026-07-11 |
 | 0018 | TaskState migration strategy | Accepted | 2026-07-11 |
 | 0019 | Observability strategy (LangSmith + structlog) | Accepted | 2026-07-11 |
+| 0020 | Embeddings strategy — гибридный поиск + multi-layer индексация | Accepted | 2026-07-13 |
 
 ## Шаблон ADR
 

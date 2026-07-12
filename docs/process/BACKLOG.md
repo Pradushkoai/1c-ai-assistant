@@ -24,19 +24,17 @@
 
 ## 🟡 Этап 2 (Поиск и качество)
 
-### TD-S4.2-01: ADR-0020 Embeddings strategy
-- **Этап:** 2 (Sprint 4.2)
-- **Приоритет:** CRITICAL (блокирует codebase MCP)
-- **Описание:** Решить: модель (BGE-M3 1024 / OpenAI 1536/3072), локально vs API,
-  chunking (по методам, 27,581 chunks), переиндексация.
-- **Метрики для решения:** в docs/architecture/12-real-data-validation.md
-- **Блокеры:** нет (после Этапа 1)
+### TD-S4.2-01: ADR-0020 Embeddings strategy — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit (pending)
+- **Решение:** ADR-0020 — гибридный BM25+pgvector+RRF, BGE-M3 1024 dim,
+  chunking по методам, 4-layer индексация (platform/library/config/KB).
 
 ### TD-S4.2-02: codebase MCP (BM25 + pgvector)
 - **Этап:** 2 (Sprint 4.2)
 - **Приоритет:** HIGH
-- **Описание:** pgvector + embeddings (после ADR-0020!). BM25+vector+RRF.
-  Перенос из старого репо: search_bm25.py, search_vector.py, search_hybrid.py.
+- **Описание:** pgvector + embeddings (по ADR-0020!). BM25+vector+RRF.
+  VectorStoreProtocol (ADR-0017). Multi-layer metadata.
 
 ### TD-S4.2-03: standards (1С СТО, БСП)
 - **Этап:** 2 (Sprint 4.2)
@@ -47,8 +45,26 @@
 ### TD-S4.2-04: BSL LS через Docker
 - **Этап:** 2 (Sprint 4.2)
 - **Приоритет:** MEDIUM
-- **Описание:** Реальная валидация через BSL LS Java-сервер. Сейчас
-  validate работает только на KB antipatterns (regex).
+- **Описание:** Реальная валидация через BSL LS Java-сервер.
+
+### TD-S4.2-05: `1c-ai library add` (БСП/БПО)
+- **Этап:** 2 (Sprint 4.2)
+- **Приоритет:** HIGH
+- **Описание:** Команда для индексации библиотек (БСП, БПО) как отдельного
+  слоя (source_layer=library). Шарится между конфигами. Embeddings с тегом.
+
+### TD-S4.2-06: Transitive closure для Planner/Reviewer
+- **Этап:** 2 (Sprint 4.2)
+- **Приоритет:** MEDIUM
+- **Описание:** get_transitive_dependents для dependency graph (blast radius
+  для Planner). Transitive call count для Reviewer (impact). Coder — 1-hop только.
+
+### TD-S4.2-07: api-reference в pipeline (Gatherer)
+- **Этап:** 2 (Sprint 4.2)
+- **Приоритет:** HIGH
+- **Описание:** Подключить build_api_reference к `1c-ai config build`.
+  Gatherer загружает api-reference и передаёт в context_summary.
+  Export-методы используются как chunk boundaries (ADR-0020).
 
 ---
 

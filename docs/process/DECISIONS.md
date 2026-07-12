@@ -12,6 +12,28 @@
 
 ## Записи (новые сверху)
 
+### D-2026-07-13-01: ADR-0020 — гибридный поиск + multi-layer индексация
+
+**Дата:** 2026-07-13
+**Тип:** architecture
+**Контекст:** Этап 1 завершён, нужен семантический поиск по коду для Coder.
+Пользователь дал 3 вводных: transitive closure, export-методы, множественные
+конфигурации (БСП/БПО/версии).
+
+**Решение:** ADR-0020 — гибридный BM25+pgvector+RRF, BGE-M3 1024 dim локально,
+chunking по export-методам (27,581 чанков), 4-layer индексация
+(platform/library/config/KB) с metadata-тегами.
+
+**Transitive closure:** Planner — да (blast radius), Reviewer — count, Coder — 1-hop.
+
+**Повлияло на:**
+- adr/0020-embeddings-strategy.md — НОВЫЙ
+- adr/README.md — 20 ADR
+- BACKLOG.md — TD-S4.2-01 закрыт, добавлены TD-S4.2-05/06/07
+- CURRENT_FOCUS.md — фокус на Этап 2
+
+---
+
 ### D-2026-07-12-09: Файлы состояния переносятся в git репозиторий (docs/process/)
 
 **Дата:** 2026-07-12
