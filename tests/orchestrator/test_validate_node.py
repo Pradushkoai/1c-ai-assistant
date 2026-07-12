@@ -426,11 +426,11 @@ class TestValidateNodeErrorHandling:
         assert len(validate_result["findings"]) == 0
 
 
-# ─── Тесты: _check_methods_availability helper ────────────────────────────────
+# ─── Тесты: _check_methods_availability_sync helper ────────────────────────────────
 
 
 class TestCheckMethodsAvailabilityHelper:
-    """Прямые тесты _check_methods_availability."""
+    """Прямые тесты _check_methods_availability_sync."""
 
     @pytest.mark.asyncio
     async def test_multiple_server_methods_on_client(
@@ -442,7 +442,7 @@ class TestCheckMethodsAvailabilityHelper:
         Метаданные/Константы — это свойства (через точку), они не парсятся
         regex'ом как вызовы (нужен AST-анализ, запланирован на Sprint 4).
         """
-        from orchestrator.nodes.validate import _check_methods_availability
+        from orchestrator.nodes.validate import _check_methods_availability_sync
 
         kb_server = _make_real_kb_server(kb_dir)
         code = (
@@ -453,7 +453,7 @@ class TestCheckMethodsAvailabilityHelper:
             'КонецПроцедуры'
         )
 
-        findings = _check_methods_availability(
+        findings = _check_methods_availability_sync(
             code=code,
             kb_server=kb_server,
             target_context="thin_client",
@@ -474,7 +474,7 @@ class TestCheckMethodsAvailabilityHelper:
         self, kb_dir: Path
     ):
         """Повторный вызов того же метода — только 1 finding (по первому вызову)."""
-        from orchestrator.nodes.validate import _check_methods_availability
+        from orchestrator.nodes.validate import _check_methods_availability_sync
 
         kb_server = _make_real_kb_server(kb_dir)
         code = (
@@ -485,7 +485,7 @@ class TestCheckMethodsAvailabilityHelper:
             'КонецПроцедуры'
         )
 
-        findings = _check_methods_availability(
+        findings = _check_methods_availability_sync(
             code=code,
             kb_server=kb_server,
             target_context="thin_client",
@@ -501,7 +501,7 @@ class TestCheckMethodsAvailabilityHelper:
         self, kb_dir: Path
     ):
         """Ключевые слова BSL (Если, Для, ...) не проверяются как методы."""
-        from orchestrator.nodes.validate import _check_methods_availability
+        from orchestrator.nodes.validate import _check_methods_availability_sync
 
         kb_server = _make_real_kb_server(kb_dir)
         code = (
@@ -514,7 +514,7 @@ class TestCheckMethodsAvailabilityHelper:
             'КонецПроцедуры'
         )
 
-        findings = _check_methods_availability(
+        findings = _check_methods_availability_sync(
             code=code,
             kb_server=kb_server,
             target_context="thin_client",
