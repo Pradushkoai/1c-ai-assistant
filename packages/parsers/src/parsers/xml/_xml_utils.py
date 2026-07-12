@@ -439,6 +439,10 @@ def extract_child_object_refs(
 def iter_metadata_files(config_dir: Path) -> Iterable[tuple[str, str, Path]]:
     """Итератор по XML файлам метаданных в распакованной конфигурации.
 
+    Sprint 3.2 (исправлено 2026-07-12): .xml файлы лежат в корне {Type}s/,
+    НЕ внутри подкаталогов. Имя файла = имя объекта.
+    Например: Catalogs/Заметки.xml (а Catalogs/Заметки/ — поддиректория с формами).
+
     Yields:
         Кортежи (metadata_type, object_name, xml_path).
     """
@@ -463,6 +467,7 @@ def iter_metadata_files(config_dir: Path) -> Iterable[tuple[str, str, Path]]:
         "CommonForms": "CommonForm",
         "CommonTemplates": "CommonTemplate",
         "CommonCommands": "CommonCommand",
+        "CommonAttributes": "CommonAttribute",
         "DefinedTypes": "DefinedType",
         "ExchangePlans": "ExchangePlan",
         "FilterCriteria": "FilterCriterion",
@@ -477,15 +482,22 @@ def iter_metadata_files(config_dir: Path) -> Iterable[tuple[str, str, Path]]:
         "Tasks": "Task",
         "Sequences": "Sequence",
         "DocumentJournals": "DocumentJournal",
+        "DocumentNumerators": "DocumentNumerator",
+        "Constants": "Constant",
+        "EventSubscriptions": "EventSubscription",
+        "ScheduledJobs": "ScheduledJob",
+        "Languages": "Language",
+        "SessionParameters": "SessionParameter",
+        "StyleItems": "StyleItem",
+        "Styles": "Style",
+        "CommandGroups": "CommandGroup",
+        "CommonPictures": "CommonPicture",
     }
 
     for dir_name, metadata_type in type_dirs.items():
         type_dir = config_dir / dir_name
         if not type_dir.exists():
             continue
-        for obj_dir in type_dir.iterdir():
-            if not obj_dir.is_dir():
-                continue
-            xml_path = obj_dir / f"{obj_dir.name}.xml"
-            if xml_path.exists():
-                yield (metadata_type, obj_dir.name, xml_path)
+        for xml_file in type_dir.glob("*.xml"):
+            object_name = xml_file.stem
+            yield (metadata_type, object_name, xml_file)

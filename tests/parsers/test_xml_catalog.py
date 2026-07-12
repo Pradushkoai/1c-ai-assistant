@@ -18,7 +18,7 @@ class TestParseCatalogSmoke:
 
     @pytest.mark.smoke
     def test_parse_returns_catalog_metadata(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert isinstance(cat, CatalogMetadata)
 
@@ -34,27 +34,27 @@ class TestCatalogFields:
     """Парсинг основных полей Catalog.xml."""
 
     def test_name(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert cat.name == "Товары"
 
     def test_synonym(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert cat.synonym == "Товары"
 
     def test_comment(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert cat.comment == "Справочник товаров"
 
     def test_metadata_type(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert cat.metadata_type == MetadataType.CATALOG
 
     def test_object_ref(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert cat.object_ref.type == "Catalog"
         assert cat.object_ref.name == "Товары"
@@ -67,22 +67,22 @@ class TestCatalogSpecific:
     """Поля, специфичные для справочника."""
 
     def test_code_length(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert cat.code_length == 9
 
     def test_description_length(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert cat.description_length == 50
 
     def test_hierarchy_type(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert cat.hierarchy_type == "HierarchyItems"
 
     def test_code_series(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert cat.code_series == "WholeCatalog"
 
@@ -94,19 +94,19 @@ class TestCatalogAttributes:
     """Парсинг атрибутов (реквизитов) справочника."""
 
     def test_has_attributes(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert len(cat.attributes) >= 2  # Артикул + Цена
 
     def test_attribute_names(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         names = [a.name for a in cat.attributes]
         assert "Артикул" in names
         assert "Цена" in names
 
     def test_attribute_types(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         attr_by_name = {a.name: a for a in cat.attributes}
 
@@ -116,7 +116,7 @@ class TestCatalogAttributes:
         assert attr_by_name["Цена"].type == "Число"
 
     def test_attribute_kind(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         for attr in cat.attributes:
             assert attr.kind == AttributeKind.ATTRIBUTE
@@ -124,7 +124,7 @@ class TestCatalogAttributes:
 
     def test_attribute_required(self, mini_config_dir: Path):
         """Артикул имеет FillChecking=Show → required=True."""
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         attr_by_name = {a.name: a for a in cat.attributes}
         assert attr_by_name["Артикул"].required is True
@@ -139,17 +139,17 @@ class TestCatalogChildObjects:
 
     def test_forms_empty_by_default(self, mini_config_dir: Path):
         """В мини-конфигурации у справочника Товары нет форм."""
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert cat.forms == []
 
     def test_templates_empty_by_default(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert cat.templates == []
 
     def test_commands_empty_by_default(self, mini_config_dir: Path):
-        path = mini_config_dir / "Catalogs" / "Товары" / "Товары.xml"
+        path = mini_config_dir / "Catalogs" / "Товары.xml"
         cat = parse_catalog(path)
         assert cat.commands == []
 

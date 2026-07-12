@@ -38,15 +38,10 @@ async def gather_node(
 
     log.info("gather_start", task_id=state.task_id, subtask_id=subtask.id)
 
-    # Создаём KbServer если не передан
+    # Sprint 3.2.1: kb_server должен передаваться через DI.
+    # Создание сервера — ответственность agent/facade, не orchestrator.
     if kb_server is None:
-        try:
-            from mcp_servers.kb.server import KbServer
-
-            kb_server = KbServer()
-        except Exception as exc:
-            log.warning("gather_kb_unavailable", error=str(exc))
-            kb_server = None
+        log.warning("gather_kb_not_provided", hint="Use build_graph(kb_server=...)")
 
     patterns: list[dict[str, Any]] = []
     antipatterns: list[dict[str, Any]] = []

@@ -18,7 +18,7 @@ class TestParseCommonModuleSmoke:
 
     @pytest.mark.smoke
     def test_parse_returns_common_module_metadata(self, mini_config_dir: Path):
-        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения" / "ОбщегоНазначения.xml"
+        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения.xml"
         cm = parse_common_module(path)
         assert isinstance(cm, CommonModuleMetadata)
 
@@ -34,27 +34,27 @@ class TestCommonModuleFields:
     """Парсинг основных полей CommonModule.xml."""
 
     def test_name(self, mini_config_dir: Path):
-        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения" / "ОбщегоНазначения.xml"
+        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения.xml"
         cm = parse_common_module(path)
         assert cm.name == "ОбщегоНазначения"
 
     def test_synonym(self, mini_config_dir: Path):
-        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения" / "ОбщегоНазначения.xml"
+        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения.xml"
         cm = parse_common_module(path)
         assert cm.synonym == "Общего назначения"
 
     def test_comment(self, mini_config_dir: Path):
-        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения" / "ОбщегоНазначения.xml"
+        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения.xml"
         cm = parse_common_module(path)
         assert cm.comment == "Общие функции"
 
     def test_metadata_type(self, mini_config_dir: Path):
-        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения" / "ОбщегоНазначения.xml"
+        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения.xml"
         cm = parse_common_module(path)
         assert cm.metadata_type == MetadataType.COMMON_MODULE
 
     def test_object_ref(self, mini_config_dir: Path):
-        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения" / "ОбщегоНазначения.xml"
+        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения.xml"
         cm = parse_common_module(path)
         assert cm.object_ref.type == "CommonModule"
         assert cm.object_ref.name == "ОбщегоНазначения"
@@ -68,29 +68,29 @@ class TestCommonModuleContextFlags:
 
     def test_server(self, mini_config_dir: Path):
         """В мини-конфиге ОбщегоНазначения.server=True."""
-        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения" / "ОбщегоНазначения.xml"
+        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения.xml"
         cm = parse_common_module(path)
         assert cm.server is True
 
     def test_global(self, mini_config_dir: Path):
-        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения" / "ОбщегоНазначения.xml"
+        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения.xml"
         cm = parse_common_module(path)
         # В мини-конфиге Global=false
         assert cm.global_ is False
 
     def test_client(self, mini_config_dir: Path):
-        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения" / "ОбщегоНазначения.xml"
+        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения.xml"
         cm = parse_common_module(path)
         assert cm.client is False
 
     def test_external_connection(self, mini_config_dir: Path):
-        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения" / "ОбщегоНазначения.xml"
+        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения.xml"
         cm = parse_common_module(path)
         # В мини-конфиге ExternalConnection=true
         assert cm.external_connection is True
 
     def test_privileged(self, mini_config_dir: Path):
-        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения" / "ОбщегоНазначения.xml"
+        path = mini_config_dir / "CommonModules" / "ОбщегоНазначения.xml"
         cm = parse_common_module(path)
         assert cm.privileged is False
 

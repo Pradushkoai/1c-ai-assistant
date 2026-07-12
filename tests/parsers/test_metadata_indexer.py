@@ -258,7 +258,7 @@ class TestGenericParser:
         """Информация о регистре сведений парсится через универсальный парсер."""
         # Создаём минимальный InformationRegister.xml
         config_dir = tmp_path / "config"
-        ir_dir = config_dir / "InformationRegisters" / "КурсыВалют"
+        ir_dir = config_dir / "InformationRegisters"
         ir_dir.mkdir(parents=True)
         (ir_dir / "КурсыВалют.xml").write_text(
             """<?xml version="1.0"?>
@@ -308,7 +308,7 @@ class TestGenericParser:
     def test_generic_object_no_synonym(self, tmp_path: Path):
         """Объект без синонима — synonym=None."""
         config_dir = tmp_path / "config"
-        enum_dir = config_dir / "Enums" / "СтатусыДокумента"
+        enum_dir = config_dir / "Enums"
         enum_dir.mkdir(parents=True)
         (enum_dir / "СтатусыДокумента.xml").write_text(
             """<?xml version="1.0"?>
@@ -349,7 +349,7 @@ class TestErrorHandling:
     def test_invalid_xml_recorded_in_errors(self, tmp_path: Path):
         """Повреждённый XML — не падает, записывается в parse_errors."""
         config_dir = tmp_path / "config"
-        bad_dir = config_dir / "Catalogs" / "Плохой"
+        bad_dir = config_dir / "Catalogs" # та же что good_dir
         bad_dir.mkdir(parents=True)
         # Полностью сломанный XML
         (bad_dir / "Плохой.xml").write_text(
@@ -379,7 +379,7 @@ class TestErrorHandling:
         config_dir = tmp_path / "config"
 
         # Хорошая конфигурация
-        good_dir = config_dir / "Catalogs" / "Хороший"
+        good_dir = config_dir / "Catalogs"
         good_dir.mkdir(parents=True)
         (good_dir / "Хороший.xml").write_text(
             """<?xml version="1.0"?>
@@ -392,10 +392,8 @@ class TestErrorHandling:
             encoding="utf-8",
         )
 
-        # Плохая конфигурация
-        bad_dir = config_dir / "Catalogs" / "Плохой"
-        bad_dir.mkdir(parents=True)
-        (bad_dir / "Плохой.xml").write_text("INVALID XML", encoding="utf-8")
+        # Плохая конфигурация (в той же директории Catalogs/, рядом с хорошим)
+        (good_dir / "Плохой.xml").write_text("INVALID XML", encoding="utf-8")
 
         (config_dir / "Configuration.xml").write_text(
             """<?xml version="1.0"?>

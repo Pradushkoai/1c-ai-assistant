@@ -20,14 +20,15 @@ class LLMConfig:
     """Конфигурация LLM из env vars.
 
     Поддерживаемые провайдеры:
+    - zai (default для MVP): z-ai CLI subprocess, не требует API ключа
     - openai: OPENAI_API_KEY + model (gpt-4o, gpt-4o-mini)
     - anthropic: ANTHROPIC_API_KEY + model (claude-sonnet)
     - ollama: OLLAMA_BASE_URL + model (local)
     """
 
     def __init__(self) -> None:
-        self.provider = os.environ.get("LLM_PROVIDER", "openai")
-        self.model_name = os.environ.get("LLM_MODEL", "gpt-4o-mini")
+        self.provider = os.environ.get("LLM_PROVIDER", "zai")
+        self.model_name = os.environ.get("LLM_MODEL", "glm-4-plus")
         self.api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY", "")
         self.base_url = os.environ.get("LLM_BASE_URL")
         self.temperature = float(os.environ.get("LLM_TEMPERATURE", "0.2"))
@@ -35,20 +36,20 @@ class LLMConfig:
 
 
 def create_llm(config: LLMConfig | None = None) -> BaseChatModel:
-    """Создать LLM инстанс по конфигурации.
-
-    Args:
-        config: конфигурация LLM. Если None — из env vars.
-
-    Returns:
-        BaseChatModel (LangChain).
-
-    Raises:
-        ImportError: если провайдер не установлен.
-        ValueError: если API key не указан.
-    """
+    """Создать LLM инстанс по конфигурации."""
     if config is None:
         config = LLMConfig()
+
+    # Sprint 3.3: zai — default для MVP. Не требует API ключа.
+    if config.provider == "zai":
+        from .zai_llm import ZaiLLM, ZaiLLMConfig
+
+        zai_config = ZaiLLMConfig(
+            model=config.model_name,
+            temperature=config.temperature,
+            max_tokens=config.max_tokens,
+        )
+        return ZaiLLM(config=zai_config)
 
     if config.provider == "openai":
         from langchain_openai import ChatOpenAI

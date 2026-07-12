@@ -1,16 +1,6 @@
 """Парсер .hbk файлов синтакс-помощника 1С.
 
-.hbk — бинарный формат (Container32), содержит структурированную справку
-по методам платформы 1С.
-
-Минимальная реализация для Sprint 3:
-- Чтение .hbk файлов из директории
-- Извлечение имён методов и их сигнатур через текстовый поиск
-- Загрузка в SQLite platform-methods.db
-
-Полная реализация (с ContextAvailability, version_since, и т.д.) — в Sprint 4.
-
-См. ADR-0006 (Data Layer) и ADR-0012 (KB-as-code).
+Использует container32.py для распаковки ZIP и HTML-парсинг для извлечения методов.
 """
 
 from __future__ import annotations
@@ -18,35 +8,34 @@ from __future__ import annotations
 import logging
 import re
 import sqlite3
+from datetime import UTC, datetime
 from pathlib import Path
 
 from parsers.models import ContextAvailability, PlatformMethod
 
+from .container32 import (
+    _AVAILABILITY_RE,
+    _AVAILABILITY_TEXT_RE,
+    _PAGETITLE_RE,
+    extract_method_name,
+    iter_html_entries,
+    parse_availability,
+    parse_hbk_file,
+    strip_html,
+)
+
 log = logging.getLogger(__name__)
 
-# Regex для поиска имён методов в текстовом содержимом .hbk
-# Ищем паттерны: ИмяМетода(параметры) — имя + скобки
-_METHOD_CALL_RE = re.compile(
-    r"\b([A-Za-zА-Яа-я_][A-Za-zА-Яа-я0-9_]*)\s*\(([^)]*)\)",
-    re.MULTILINE,
-)
+KEY_HBK_FILES = {
+    "shcntx_ru.hbk",
+    "shlang_ru.hbk",
+}
 
-# Сигнатуры методов (упрощённый поиск)
-_SIGNATURE_RE = re.compile(
-    r"([A-Za-zА-Яа-я_][A-Za-zА-Яа-я0-9_]*)\s*\(([^)]*)\)",
-    re.MULTILINE,
-)
+_V8SH_MARKER_RE = re.compile(r"V8SH_chapter|V8SH_pagetitle")
 
 
 def parse_hbk_directory(hbk_dir: Path) -> list[PlatformMethod]:
-    """Распарсить все .hbk файлы в директории.
-
-    Args:
-        hbk_dir: директория с .hbk файлами (обычно shcntx_ru/).
-
-    Returns:
-        Список PlatformMethod.
-    """
+    """Распарсить все .hbk файлы в директории."""
     methods: list[PlatformMethod] = []
     seen_names: set[str] = set()
 
@@ -59,11 +48,13 @@ def parse_hbk_directory(hbk_dir: Path) -> list[PlatformMethod]:
 
     for hbk_file in hbk_files:
         try:
-            file_methods = _parse_hbk_file(hbk_file)
+            is_key = hbk_file.name in KEY_HBK_FILES
+            file_methods = _parse_single_hbk(hbk_file, full=is_key)
             for method in file_methods:
-                if method.name not in seen_names:
+                key = method.name
+                if key not in seen_names:
                     methods.append(method)
-                    seen_names.add(method.name)
+                    seen_names.add(key)
         except Exception as exc:
             log.warning("Failed to parse %s: %s", hbk_file, exc)
 
@@ -71,215 +62,89 @@ def parse_hbk_directory(hbk_dir: Path) -> list[PlatformMethod]:
     return methods
 
 
-def _parse_hbk_file(hbk_path: Path) -> list[PlatformMethod]:
-    """Распарсить один .hbk файл.
+def _parse_single_hbk(hbk_path: Path, full: bool = True) -> list[PlatformMethod]:
+    """Распарсить один .hbk файл."""
+    entries = parse_hbk_file(hbk_path)
+    if not full and len(entries) > 1000:
+        entries = entries[:1000]
 
-    .hbk — бинарный формат, но содержит текстовые фрагменты.
-    Извлекаем текст и ищем имена методов.
+    html_entries = iter_html_entries(entries)
 
-    Args:
-        hbk_path: путь к .hbk файлу.
-
-    Returns:
-        Список PlatformMethod из этого файла.
-    """
     methods: list[PlatformMethod] = []
-
-    try:
-        raw = hbk_path.read_bytes()
-    except Exception as exc:
-        log.warning("Cannot read %s: %s", hbk_path, exc)
-        return methods
-
-    # Извлекаем текст из бинарных данных (UTF-16LE или UTF-8 фрагменты)
-    text = _extract_text(raw)
-    if not text:
-        return methods
-
-    # Ищем имена методов через паттерн Имя(параметры)
-    for match in _METHOD_CALL_RE.finditer(text):
-        name = match.group(1)
-        params = match.group(2).strip()
-
-        if not name or len(name) < 3:
-            continue
-
-        # Пропускаем ключевые слова и слишком короткие имена
-        skip_words = {
-            "Процедура",
-            "Функция",
-            "Procedure",
-            "Function",
-            "Возврат",
-            "Return",
-            "Если",
-            "Тогда",
-            "Иначе",
-            "ИначеЕсли",
-            "КонецЕсли",
-            "Для",
-            "Каждого",
-            "Из",
-            "Цикл",
-            "КонецЦикла",
-            "Пока",
-            "Новый",
-            "Попытка",
-            "Исключение",
-            "КонецПопытки",
-            "КонецПроцедуры",
-            "КонецФункции",
-            "Истина",
-            "Ложь",
-            "Неопределено",
-            "NULL",
-            "Экспорт",
-            "Знач",
-            "И",
-            "ИЛИ",
-            "НЕ",
-        }
-        if name in skip_words:
-            continue
-
-        # Сигнатура
-        signature = f"{name}({params})" if params else f"{name}()"
-
-        # Определяем is_procedure по контексту
-        context_before = text[max(0, match.start() - 30) : match.start()]
-        is_procedure = "Процедура" in context_before or "Procedure" in context_before
-
-        method = PlatformMethod(
-            name=name,
-            signature=signature,
-            description=f"Метод платформы 1С: {name}",
-            is_procedure=is_procedure,
-            availability=_guess_availability(name),
-        )
-        methods.append(method)
+    for name, html_text in html_entries:
+        method = _extract_method_from_html(html_text, source_file=name)
+        if method is not None:
+            methods.append(method)
 
     return methods
 
 
-def _extract_text(raw: bytes) -> str:
-    """Извлечь текст из бинарных данных .hbk.
+def _extract_method_from_html(
+    html_text: str,
+    source_file: str = "",
+) -> PlatformMethod | None:
+    """Извлечь информацию о методе из HTML-страницы."""
+    if not _V8SH_MARKER_RE.search(html_text):
+        return None
 
-    .hbk содержит текст в UTF-16LE и/или UTF-8.
-    Пытаемся UTF-8 сначала (более вероятно для текстовых fixture'ов),
-    затем UTF-16LE (реальные .hbk файлы).
-    """
-    # Попытка UTF-8 (приоритет — текстовые файлы и fixture'ы)
-    try:
-        text_utf8 = raw.decode("utf-8", errors="strict")
-        if len(text_utf8) > 10:
-            return text_utf8
-    except UnicodeDecodeError:
-        pass
+    m = _PAGETITLE_RE.search(html_text)
+    title = strip_html(m.group(1)) if m else ""
 
-    # UTF-8 с errors=ignore (для смешанных бинарно-текстовых файлов)
-    try:
-        text_utf8_loose = raw.decode("utf-8", errors="ignore")
-        if len(text_utf8_loose) > 50:
-            return text_utf8_loose
-    except Exception:
-        pass
+    if not title:
+        return None
 
-    # Попытка UTF-16LE (реальные .hbk файлы)
-    try:
-        text_utf16 = raw.decode("utf-16-le", errors="ignore")
-        if len(text_utf16) > 50:
-            return text_utf16
-    except Exception:
-        pass
+    name_ru, name_en, category = extract_method_name(title)
+    if not name_ru:
+        return None
 
-    # Fallback: latin-1 (не потеряем данные, но могут быть артефакты)
-    return raw.decode("latin-1", errors="ignore")
+    avail_text = ""
+    m = _AVAILABILITY_RE.search(html_text)
+    if not m:
+        m = _AVAILABILITY_TEXT_RE.search(html_text)
+    if m:
+        avail_text = strip_html(m.group(1))
+        if "." in avail_text:
+            avail_text = avail_text.split(".")[0] + "."
 
+    avail_flags = parse_availability(avail_text)
+    availability = ContextAvailability(
+        server=avail_flags["server"],
+        thin_client=avail_flags["thin_client"],
+        web_client=avail_flags["web_client"],
+        mobile_client=avail_flags["mobile_client"],
+        rich_client=avail_flags["thick_client"],
+        external_connection=avail_flags["external_connection"],
+        mobile_application=avail_flags["mobile_application"],
+        mobile_client_application=avail_flags["mobile_client_application"],
+    )
 
-def _find_signature_near(text: str, pos: int, method_name: str) -> str | None:
-    """Найти сигнатуру метода рядом с позицией.
+    signature = name_ru
+    syntax_match = re.search(
+        r'<p[^>]*class="V8SH_chapter">Синтаксис:</p>(.+?)(?:<p[^>]*class="V8SH_chapter">|<HR>|$)',
+        html_text,
+        re.DOTALL,
+    )
+    if syntax_match:
+        sig_text = strip_html(syntax_match.group(1))[:200]
+        if sig_text:
+            signature = sig_text
 
-    Args:
-        text: полный текст.
-        pos: позиция найденного имени метода.
-        method_name: имя метода.
+    description = f"Метод платформы 1С: {name_ru}"
+    if name_en:
+        description += f" (en: {name_en})"
+    if category:
+        description += f" | Категория: {category}"
 
-    Returns:
-        Сигнатура (например, "ЗаписьЖурналаРегистрации(ИмяСобытия, Уровень, ...)") или None.
-    """
-    # Ищем в окне ±200 символов
-    start = max(0, pos - 50)
-    end = min(len(text), pos + 200)
-    window = text[start:end]
+    is_procedure = signature.lower().startswith("процедура") or "процедура " in signature.lower()
 
-    # Ищем pattern: method_name(parameters)
-    pattern = re.escape(method_name) + r"\s*\(([^)]*)\)"
-    match = re.search(pattern, window)
-    if match:
-        params = match.group(1).strip()
-        return f"{method_name}({params})"
-
-    return None
-
-
-def _guess_availability(method_name: str) -> ContextAvailability:
-    """Угадать доступность метода по имени (эвристика).
-
-    Args:
-        method_name: имя метода.
-
-    Returns:
-        ContextAvailability с предположениями.
-    """
-    # Методы, доступные только на сервере
-    server_only = {
-        "ЗаписьЖурналаРегистрации",
-        "УровеньЖурналаРегистрации",
-        "Метаданные",
-        "ПараметрыСеанса",
-        "Константы",
-        "ФоновыеЗадания",
-        "РегламентныеЗадания",
-        "НайтиПоСсылкам",
-        "Заблокировать",
-        "Разблокировать",
-        "Выполнить",
-        "ВыполнитьПакет",
-    }
-
-    # Методы, доступные только на клиенте
-    client_only = {
-        "Асинх",
-        "Ждать",
-        "ПоказатьВопрос",
-        "ПоказатьПредупреждение",
-        "ОткрытьФорму",
-        "Закрыть",
-        "Оповестить",
-        "ПоказатьЗначение",
-        "ОткрытьЗначение",
-    }
-
-    if method_name in server_only:
-        return ContextAvailability(
-            server=True,
-            thin_client=False,
-            web_client=False,
-            mobile_client=False,
-            external_connection=True,
-        )
-
-    if method_name in client_only:
-        return ContextAvailability(
-            server=False,
-            thin_client=True,
-            web_client=True,
-            mobile_client=True,
-            external_connection=False,
-        )
-
-    # По умолчанию — доступно везде
-    return ContextAvailability()
+    return PlatformMethod(
+        name=name_ru,
+        signature=signature,
+        description=description,
+        is_procedure=is_procedure,
+        availability=availability,
+        category=category or "Uncategorized",
+    )
 
 
 def load_methods_to_sqlite(
@@ -287,16 +152,7 @@ def load_methods_to_sqlite(
     db_path: Path,
     platform_version: str,
 ) -> int:
-    """Загрузить методы платформы в SQLite.
-
-    Args:
-        methods: список PlatformMethod.
-        db_path: путь к .db файлу.
-        platform_version: версия платформы.
-
-    Returns:
-        Количество загруженных методов.
-    """
+    """Загрузить методы платформы в SQLite."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     with sqlite3.connect(db_path) as conn:
@@ -327,10 +183,8 @@ def load_methods_to_sqlite(
             """
         )
 
-        # Очищаем старые данные
         conn.execute("DELETE FROM platform_methods")
 
-        # Вставляем методы
         for method in methods:
             avail = method.availability
             conn.execute(
@@ -352,15 +206,14 @@ def load_methods_to_sqlite(
                 ),
             )
 
-        # Метаданные
-        from datetime import UTC, datetime
-
         conn.executemany(
             "INSERT OR REPLACE INTO platform_meta (key, value) VALUES (?, ?)",
             [
                 ("platform_version", platform_version),
                 ("loaded_at", datetime.now(UTC).isoformat()),
                 ("methods_count", str(len(methods))),
+                ("methods_loaded", str(len(methods))),
+                ("parser_status", "container32_html_parser"),
             ],
         )
         conn.commit()
@@ -374,15 +227,6 @@ def build_platform_methods_index(
     platform_version: str,
     db_path: Path,
 ) -> int:
-    """Полный цикл: распарсить .hbk → загрузить в SQLite.
-
-    Args:
-        hbk_dir: директория с .hbk файлами.
-        platform_version: версия платформы (например, '8.3.20').
-        db_path: путь к .db файлу.
-
-    Returns:
-        Количество загруженных методов.
-    """
+    """Полный цикл: распарсить .hbk → загрузить в SQLite."""
     methods = parse_hbk_directory(hbk_dir)
     return load_methods_to_sqlite(methods, db_path, platform_version)

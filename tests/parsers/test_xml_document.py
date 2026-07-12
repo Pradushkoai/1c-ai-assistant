@@ -18,7 +18,7 @@ class TestParseDocumentSmoke:
 
     @pytest.mark.smoke
     def test_parse_returns_document_metadata(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         assert isinstance(doc, DocumentMetadata)
 
@@ -34,27 +34,27 @@ class TestDocumentFields:
     """Парсинг основных полей Document.xml."""
 
     def test_name(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         assert doc.name == "Продажа"
 
     def test_synonym(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         assert doc.synonym == "Продажа"
 
     def test_comment(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         assert doc.comment == "Документ продажи"
 
     def test_metadata_type(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         assert doc.metadata_type == MetadataType.DOCUMENT
 
     def test_object_ref(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         assert doc.object_ref.type == "Document"
         assert doc.object_ref.name == "Продажа"
@@ -67,22 +67,22 @@ class TestDocumentSpecific:
     """Поля, специфичные для документа."""
 
     def test_number_length(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         assert doc.number_length == 9
 
     def test_number_type(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         assert doc.number_type == "String"
 
     def test_posting(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         assert doc.posting == "Allow"
 
     def test_realtime_posting(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         # В мини-конфиге RealTimePosting=Allow
         assert doc.realtime_posting == "Allow"
@@ -95,12 +95,12 @@ class TestDocumentRegisterRecords:
     """Регистры, по которым документ делает движения."""
 
     def test_has_register_records(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         assert len(doc.register_records) >= 1
 
     def test_register_records_content(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         # В мини-конфиге: <xr:Item>AccumulationRegister.Продажи</xr:Item>
         assert any("Продажи" in r for r in doc.register_records)
@@ -113,19 +113,19 @@ class TestDocumentAttributes:
     """Парсинг атрибутов документа."""
 
     def test_has_attributes(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         assert len(doc.attributes) >= 2  # Контрагент + Сумма
 
     def test_attribute_names(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         names = [a.name for a in doc.attributes]
         assert "Контрагент" in names
         assert "Сумма" in names
 
     def test_attribute_types(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         attr_by_name = {a.name: a for a in doc.attributes}
 
@@ -135,14 +135,14 @@ class TestDocumentAttributes:
         assert attr_by_name["Сумма"].type == "Число"
 
     def test_attribute_kind(self, mini_config_dir: Path):
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         for attr in doc.attributes:
             assert attr.kind == AttributeKind.ATTRIBUTE
 
     def test_attribute_required(self, mini_config_dir: Path):
         """Контрагент имеет FillChecking=Show → required=True."""
-        path = mini_config_dir / "Documents" / "Продажа" / "Продажа.xml"
+        path = mini_config_dir / "Documents" / "Продажа.xml"
         doc = parse_document(path)
         attr_by_name = {a.name: a for a in doc.attributes}
         assert attr_by_name["Контрагент"].required is True

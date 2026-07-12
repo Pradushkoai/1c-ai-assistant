@@ -160,11 +160,10 @@ class TestGoldenSimpleFunction:
             platform_version="8.3.20",
         )
 
-        graph = build_graph()
+        graph = build_graph(bsl_ls_server=mock_bsl_ls)
 
         with (
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
-            patch("mcp_servers.bsl_ls.server.BslLsServer", return_value=mock_bsl_ls),
         ):
             config = {"configurable": {"thread_id": "golden-1"}}
             final_state = await graph.ainvoke(initial_state.model_dump(), config=config)
@@ -204,11 +203,10 @@ class TestGoldenProcedure:
             platform_version="8.3.20",
         )
 
-        graph = build_graph()
+        graph = build_graph(bsl_ls_server=mock_bsl_ls)
 
         with (
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
-            patch("mcp_servers.bsl_ls.server.BslLsServer", return_value=mock_bsl_ls),
         ):
             config = {"configurable": {"thread_id": "golden-2"}}
             final_state = await graph.ainvoke(initial_state.model_dump(), config=config)
@@ -268,13 +266,12 @@ class TestGoldenRetry:
             platform_version="8.3.20",
         )
 
-        graph = build_graph()
+        graph = build_graph(bsl_ls_server=bsl_ls_server)
 
         with (
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
-            patch("mcp_servers.bsl_ls.server.BslLsServer", return_value=bsl_ls_server),
         ):
             config = {"configurable": {"thread_id": "golden-3"}}
             final_state = await graph.ainvoke(initial_state.model_dump(), config=config)
@@ -303,6 +300,10 @@ class TestGoldenKbAntipatterns:
         mock_llm = _make_mock_llm(code_with_select_star, decision="proceed")
         mock_bsl_ls = _make_mock_bsl_ls(diagnostics=[])
 
+        # Sprint 3.2.1: KbServer создаётся в тесте (DI)
+        from mcp_servers.kb.server import KbServer
+        kb_server = KbServer()
+
         from orchestrator.graph import build_graph
         from orchestrator.logging import configure_logging
 
@@ -316,13 +317,12 @@ class TestGoldenKbAntipatterns:
             platform_version="8.3.20",
         )
 
-        graph = build_graph()
+        graph = build_graph(bsl_ls_server=mock_bsl_ls, kb_server=kb_server)
 
         with (
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
-            patch("mcp_servers.bsl_ls.server.BslLsServer", return_value=mock_bsl_ls),
         ):
             config = {"configurable": {"thread_id": "golden-4"}}
             final_state = await graph.ainvoke(initial_state.model_dump(), config=config)
@@ -376,13 +376,12 @@ class TestGoldenEscalation:
             platform_version="8.3.20",
         )
 
-        graph = build_graph()
+        graph = build_graph(bsl_ls_server=bsl_ls_server)
 
         with (
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
-            patch("mcp_servers.bsl_ls.server.BslLsServer", return_value=bsl_ls_server),
         ):
             config = {"configurable": {"thread_id": "golden-5"}}
             final_state = await graph.ainvoke(initial_state.model_dump(), config=config)
@@ -449,6 +448,10 @@ class TestGoldenMethodAvailabilityViolation:
         # BSL LS — без ошибок (мы проверяем KB валидатор, не BSL LS)
         mock_bsl_ls = _make_mock_bsl_ls(diagnostics=[])
 
+        # Sprint 3.2.1: KbServer создаётся в тесте (DI)
+        from mcp_servers.kb.server import KbServer
+        kb_server = KbServer()
+
         from orchestrator.graph import build_graph
         from orchestrator.logging import configure_logging
 
@@ -462,13 +465,12 @@ class TestGoldenMethodAvailabilityViolation:
             platform_version="8.3.20",
         )
 
-        graph = build_graph()
+        graph = build_graph(bsl_ls_server=mock_bsl_ls, kb_server=kb_server)
 
         with (
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
             patch("orchestrator.llm.create_llm", return_value=mock_llm),
-            patch("mcp_servers.bsl_ls.server.BslLsServer", return_value=mock_bsl_ls),
         ):
             config = {"configurable": {"thread_id": "golden-6"}}
             final_state = await graph.ainvoke(initial_state.model_dump(), config=config)

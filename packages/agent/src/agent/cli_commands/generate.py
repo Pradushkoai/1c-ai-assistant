@@ -92,14 +92,8 @@ async def _run_pipeline(
 ) -> dict[str, Any]:
     """Запустить LangGraph pipeline.
 
-    Args:
-        task: описание задачи.
-        config_name: имя конфигурации.
-        config_version: версия.
-        platform_version: версия платформы.
-
-    Returns:
-        Финальный state как dict.
+    Sprint 3.2.1: серверы (BslLsServer, KbServer) создаются ЗДЕСЬ, в agent-слое,
+    и передаются в build_graph через DI. Это устраняет boundary violations.
     """
     from orchestrator.graph import build_graph
     from orchestrator.logging import configure_logging
@@ -107,7 +101,6 @@ async def _run_pipeline(
 
     configure_logging()
 
-    # Создаём начальный state
     initial_state = TaskState(
         task_id=f"task-{config_name}-{config_version}",
         description=task,
@@ -117,10 +110,31 @@ async def _run_pipeline(
         fsm_state=FSMState.INIT,
     )
 
-    # Собираем граф
-    graph = build_graph()
+    # Sprint 3.2.1: создаем MCP servers в agent-слое (вне orchestrator).
+    bsl_ls_server = None
+    try:
+        from mcp_servers.bsl_ls.server import BslLsServer
 
-    # Запускаем pipeline
+        bsl_ls_server = BslLsServer()
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("bsl_ls_server_init_failed: %s", exc)
+
+    kb_server = None
+    try:
+        from mcp_servers.kb.server import KbServer
+
+        kb_server = KbServer()
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("kb_server_init_failed: %s", exc)
+
+    # Собираем граф с DI
+    graph = build_graph(
+        bsl_ls_server=bsl_ls_server,
+        kb_server=kb_server,
+    )
+
     config: dict[str, Any] = {"configurable": {"thread_id": initial_state.task_id}}
     final_state = await graph.ainvoke(initial_state.model_dump(), config=config)
 
@@ -146,7 +160,13 @@ def _print_result(final_state: dict[str, Any], output: str | None) -> int:
         iterations = final_state.get("iterations", [])
         if iterations:
             last_iteration = iterations[-1]
-            code = last_iteration.get("code", "")
+            # Sprint 3.3: last_iteration может быть Iteration (Pydantic) или dict.
+            if hasattr(last_iteration, "code"):
+                code = last_iteration.code
+            elif isinstance(last_iteration, dict):
+                code = last_iteration.get("code", "")
+            else:
+                code = str(last_iteration)
 
             if output:
                 output_path = Path(output)
@@ -165,7 +185,13 @@ def _print_result(final_state: dict[str, Any], output: str | None) -> int:
             # Commit result
             commit_result = final_state.get("commit_result")
             if commit_result:
-                files = commit_result.get("files_changed", [])
+                # Sprint 3.3: commit_result может быть CommitResult (Pydantic) или dict.
+                if hasattr(commit_result, "files_changed"):
+                    files = commit_result.files_changed
+                elif isinstance(commit_result, dict):
+                    files = commit_result.get("files_changed", [])
+                else:
+                    files = []
                 if files:
                     click.echo(f"  Файлы: {', '.join(files)}")
 
@@ -188,7 +214,13 @@ def _print_result(final_state: dict[str, Any], output: str | None) -> int:
             # Сохраняем код последней итерации
             iterations = final_state.get("iterations", [])
             if iterations:
-                code = iterations[-1].get("code", "")
+                last_iter = iterations[-1]
+                if hasattr(last_iter, "code"):
+                    code = last_iter.code
+                elif isinstance(last_iter, dict):
+                    code = last_iter.get("code", "")
+                else:
+                    code = ""
                 if output:
                     output_path = Path(output)
                     output_path.parent.mkdir(parents=True, exist_ok=True)

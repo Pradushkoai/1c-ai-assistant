@@ -76,27 +76,31 @@ CONDITIONAL_EDGES: dict[str, dict[str, list[str]]] = {
 }
 
 
-def build_graph(checkpointer: Any = None) -> Any:
-    """Собрать главный pipeline.
+def build_graph(
+    checkpointer: Any = None,
+    bsl_ls_server: Any = None,
+    kb_server: Any = None,
+    llm: Any = None,
+) -> Any:
+    """Собрать главный pipeline с dependency injection.
 
-    Args:
-        checkpointer: LangGraph checkpointer (MemorySaver или PostgresSaver).
-            Если None — используется MemorySaver.
-
-    Returns:
-        Compiled StateGraph.
+    Sprint 3.2.1: устранены boundary violations (orchestrator → mcp_servers).
+    Серверы и LLM создаются ВНЕ orchestrator и передаются сюда через DI.
+    Соответствует CONCEPTUAL.md §1.1: «зависимости только вниз».
     """
+    from functools import partial
+
     from langgraph.checkpoint.memory import MemorySaver
 
     graph = StateGraph(TaskState)
 
-    # Узлы
+    # Узлы — с пробросом зависимостей через partial.
     graph.add_node("preflight", preflight_node)
-    graph.add_node("plan", plan_node)
-    graph.add_node("gather", gather_node)
-    graph.add_node("code", code_node)
-    graph.add_node("validate", validate_node)
-    graph.add_node("review", review_node)
+    graph.add_node("plan", partial(plan_node, llm=llm) if llm else plan_node)
+    graph.add_node("gather", partial(gather_node, kb_server=kb_server))
+    graph.add_node("code", partial(code_node, llm=llm) if llm else code_node)
+    graph.add_node("validate", partial(validate_node, bsl_ls_server=bsl_ls_server, kb_server=kb_server))
+    graph.add_node("review", partial(review_node, llm=llm, kb_server=kb_server) if llm else partial(review_node, kb_server=kb_server))
     graph.add_node("retry", retry_node)
     graph.add_node("commit", commit_node)
     graph.add_node("escalate", escalate_node)

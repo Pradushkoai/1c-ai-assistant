@@ -84,22 +84,12 @@ async def validate_node(
         iteration=current_iteration.number,
     )
 
-    # Создаём серверы если не переданы
+    # Sprint 3.2.1: серверы должны передаваться через DI.
+    # Создание серверов — ответственность agent/facade, не orchestrator.
     if bsl_ls_server is None:
-        try:
-            from mcp_servers.bsl_ls.server import BslLsServer
-
-            bsl_ls_server = BslLsServer()
-        except Exception:
-            bsl_ls_server = None
-
+        log.warning("validate_bsl_ls_not_provided", hint="Use build_graph(bsl_ls_server=...)")
     if kb_server is None:
-        try:
-            from mcp_servers.kb.server import KbServer
-
-            kb_server = KbServer()
-        except Exception:
-            kb_server = None
+        log.warning("validate_kb_not_provided", hint="Use build_graph(kb_server=...)")
 
     # Target context из subtask.constraints (default='server')
     target_context = "server"
