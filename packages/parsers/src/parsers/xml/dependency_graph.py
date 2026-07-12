@@ -302,7 +302,7 @@ def get_dependents(
     dep_graph: dict[str, Any],
     object_ref: str,
 ) -> list[dict[str, Any]]:
-    """Что зависит от объекта? (входящие зависимости).
+    """Что зависит от объекта? (входящие зависимости, 1-hop).
 
     Args:
         dep_graph: граф из load_dependency_graph.
@@ -316,3 +316,114 @@ def get_dependents(
         if isinstance(e.get("target"), dict)
         and f"{e['target'].get('type')}.{e['target'].get('name')}" == object_ref
     ]
+
+
+def get_transitive_dependents(
+    dep_graph: dict[str, Any],
+    object_ref: str,
+    max_depth: int = 10,
+) -> list[str]:
+    """Все транзитивные зависимые (кто зависит от object_ref прямо или косвенно).
+
+    Sprint 4.2 (TD-S4.2-06): для Planner — blast radius analysis.
+    A→B→C: если object_ref=C, вернёт [A, B] (все, кто зависит транзитивно).
+
+    Args:
+        dep_graph: граф из load_dependency_graph.
+        object_ref: строка вида 'Catalog.Контрагенты'.
+        max_depth: максимальная глубина обхода (защита от циклов).
+
+    Returns:
+        Список ObjectRef строк ('Document.Продажа', 'Catalog.Заказ', ...).
+    """
+    edges = dep_graph.get("edges", [])
+    # Строим adjacency list: target → [sources]
+    dependents_map: dict[str, list[str]] = {}
+    for e in edges:
+        if not isinstance(e.get("source"), dict) or not isinstance(e.get("target"), dict):
+            continue
+        target = f"{e['target'].get('type')}.{e['target'].get('name')}"
+        source = f"{e['source'].get('type')}.{e['source'].get('name')}"
+        dependents_map.setdefault(target, []).append(source)
+
+    # BFS обход
+    visited: set[str] = set()
+    queue: list[tuple[str, int]] = [(object_ref, 0)]
+    result: list[str] = []
+
+    while queue:
+        current, depth = queue.pop(0)
+        if depth >= max_depth:
+            continue
+        for dep in dependents_map.get(current, []):
+            if dep not in visited:
+                visited.add(dep)
+                result.append(dep)
+                queue.append((dep, depth + 1))
+
+    return result
+
+
+def get_transitive_dependencies(
+    dep_graph: dict[str, Any],
+    object_ref: str,
+    max_depth: int = 10,
+) -> list[str]:
+    """Все транзитивные зависимости (на что ссылается object_ref прямо или косвенно).
+
+    Sprint 4.2 (TD-S4.2-06): для Planner — understanding full impact.
+    A→B→C: если object_ref=A, вернёт [B, C] (все, на кого ссылается транзитивно).
+
+    Args:
+        dep_graph: граф из load_dependency_graph.
+        object_ref: строка вида 'Document.Продажа'.
+        max_depth: максимальная глубина обхода.
+
+    Returns:
+        Список ObjectRef строк.
+    """
+    edges = dep_graph.get("edges", [])
+    # Строим adjacency list: source → [targets]
+    dependencies_map: dict[str, list[str]] = {}
+    for e in edges:
+        if not isinstance(e.get("source"), dict) or not isinstance(e.get("target"), dict):
+            continue
+        source = f"{e['source'].get('type')}.{e['source'].get('name')}"
+        target = f"{e['target'].get('type')}.{e['target'].get('name')}"
+        dependencies_map.setdefault(source, []).append(target)
+
+    # BFS обход
+    visited: set[str] = set()
+    queue: list[tuple[str, int]] = [(object_ref, 0)]
+    result: list[str] = []
+
+    while queue:
+        current, depth = queue.pop(0)
+        if depth >= max_depth:
+            continue
+        for dep in dependencies_map.get(current, []):
+            if dep not in visited:
+                visited.add(dep)
+                result.append(dep)
+                queue.append((dep, depth + 1))
+
+    return result
+
+
+def get_impact_count(
+    dep_graph: dict[str, Any],
+    object_ref: str,
+) -> int:
+    """Количество транзитивных зависимых (blast radius).
+
+    Sprint 4.2 (TD-S4.2-06): для Reviewer — quick impact assessment.
+    Возвращает число, не список — Reviewer'у нужен только размер.
+
+    Args:
+        dep_graph: граф из load_dependency_graph.
+        object_ref: строка вида 'CommonModule.ОбщегоНазначения'.
+
+    Returns:
+        Число объектов, которые зависят от object_ref (транзитивно).
+    """
+    return len(get_transitive_dependents(dep_graph, object_ref))

@@ -36,6 +36,9 @@ from .dependency_graph import (
     build_dependency_graph,
     get_dependencies,
     get_dependents,
+    get_impact_count,
+    get_transitive_dependencies,
+    get_transitive_dependents,
     load_dependency_graph,
     save_dependency_graph,
 )
@@ -59,6 +62,9 @@ __all__ = [
     "load_dependency_graph",
     "get_dependencies",
     "get_dependents",
+    "get_transitive_dependencies",
+    "get_transitive_dependents",
+    "get_impact_count",
     # Утилиты
     "parse_xml",
     "parse_xml_string",
