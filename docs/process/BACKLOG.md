@@ -59,12 +59,12 @@
 - **Описание:** get_transitive_dependents для dependency graph (blast radius
   для Planner). Transitive call count для Reviewer (impact). Coder — 1-hop только.
 
-### TD-S4.2-07: api-reference в pipeline (Gatherer)
-- **Этап:** 2 (Sprint 4.2)
-- **Приоритет:** HIGH
-- **Описание:** Подключить build_api_reference к `1c-ai config build`.
-  Gatherer загружает api-reference и передаёт в context_summary.
-  Export-методы используются как chunk boundaries (ADR-0020).
+### TD-S4.2-07: api-reference в pipeline (Gatherer) — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit (pending)
+- **Решение:** `1c-ai config build` теперь строит api-reference.json, call-graph.json,
+  dependency-graph.json. Gatherer загружает api-reference и передаёт Coder'у
+  список существующих export-методов для целевого объекта.
 
 ---
 

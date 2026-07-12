@@ -229,6 +229,41 @@ def cmd_config_build(
                 click.echo(f"     ... и ещё {len(stats['parse_errors']) - 5} ошибок")
         click.echo(f"  📁 Индекс: {output_path}")
 
+        # ─── Sprint 4.2 (TD-S4.2-07): api-reference ────────────────────────
+        try:
+            from parsers.indexers import save_api_reference
+            from parsers.indexers.api_reference_indexer import build_api_reference as _build_api_ref
+
+            api_ref = _build_api_ref(config_dir, entry.name, entry.version)
+            api_ref_path = output_path.parent / "api-reference.json"
+            save_api_reference(api_ref, api_ref_path)
+            click.echo(f"  ✅ Export-методов: {api_ref['stats']['total_export_methods']}")
+            click.echo(f"     Модулей с методами: {api_ref['stats']['total_modules']}")
+        except Exception as exc:
+            click.echo(f"  ⚠️  api-reference не построен: {exc}")
+
+        # ─── Sprint 4.1 (TD-S4.1-02): call graph ───────────────────────────
+        try:
+            from parsers.bsl import build_call_graph, save_call_graph
+
+            cg = build_call_graph(config_dir, entry.name, entry.version)
+            cg_path = output_path.parent / "call-graph.json"
+            save_call_graph(cg, cg_path)
+            click.echo(f"  ✅ Рёбер вызовов: {cg['stats']['total_edges']}")
+        except Exception as exc:
+            click.echo(f"  ⚠️  call-graph не построен: {exc}")
+
+        # ─── Sprint 4.1 (TD-S4.1-04): dependency graph ─────────────────────
+        try:
+            from parsers.xml import build_dependency_graph, save_dependency_graph
+
+            dg = build_dependency_graph(config_dir, entry.name, entry.version)
+            dg_path = output_path.parent / "dependency-graph.json"
+            save_dependency_graph(dg, dg_path)
+            click.echo(f"  ✅ Зависимостей: {dg['stats']['total_edges']}")
+        except Exception as exc:
+            click.echo(f"  ⚠️  dependency-graph не построен: {exc}")
+
     return 0
 
 

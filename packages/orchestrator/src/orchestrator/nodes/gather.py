@@ -77,6 +77,34 @@ async def gather_node(
     summary_lines.append(f"## Целевой объект: {subtask.target_module}")
     summary_lines.append(f"## Задача: {subtask.description}")
 
+    # ─── Sprint 4.2 (TD-S4.2-07): api-reference ────────────────────────────
+    # Загружаем export-методы конфигурации, чтобы Coder видел существующий API
+    available_methods: list[dict[str, Any]] = []
+    try:
+        from data_layer import PathManager
+        from parsers.indexers import load_api_reference
+
+        pm = PathManager()
+        api_ref_path = pm.unified_metadata_index(state.config_name, state.config_version).parent / "api-reference.json"
+        api_ref = load_api_reference(api_ref_path)
+        if api_ref is not None:
+            # Ищем методы для целевого объекта
+            from parsers.indexers import get_methods_for_object
+            target_ref = str(subtask.target_module)
+            available_methods = get_methods_for_object(api_ref, target_ref)
+            mcp_calls_made.append("api_reference.get_methods")
+
+            if available_methods:
+                summary_lines.append(f"\n## Существующие методы ({target_ref}):")
+                for m in available_methods[:10]:
+                    params = ", ".join(m.get("parameters", []))
+                    kind = "Функция" if m.get("is_function") else "Процедура"
+                    summary_lines.append(f"- {kind} {m['name']}({params})")
+                if len(available_methods) > 10:
+                    summary_lines.append(f"... и ещё {len(available_methods) - 10} методов")
+    except Exception as exc:
+        log.warning("gather_api_reference_error: %s", exc)
+
     if patterns:
         summary_lines.append("\n## Релевантные паттерны:")
         for p in patterns:
