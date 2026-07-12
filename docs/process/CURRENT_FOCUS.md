@@ -8,10 +8,10 @@
 ## 🎯 ФОКУС СЕССИИ
 
 > **Задача:** Этап 2 (Поиск и качество) — в работе
-> **Статус:** TD-S4.2-07 ✅, TD-S4.2-06 ✅, TD-S4.2-05 ✅ (library add)
+> **Статус:** TD-S4.2-07 ✅, TD-S4.2-06 ✅, TD-S4.2-05 ✅, TD-S4.2-02 (часть 1: embeddings indexer + vector_store) ✅
 > **Блокеры:** нет
-> **Что сделано:** ✅ Этап 1 (5/5), ✅ ADR-0020, ✅ TD-S4.2-07, ✅ TD-S4.2-06, ✅ TD-S4.2-05
-> **Следующий шаг:** TD-S4.2-02 codebase MCP (embeddings) → TD-S4.2-03 standards → TD-S4.2-04 BSL LS
+> **Что сделано:** ✅ Этап 1, ✅ ADR-0020, ✅ api-reference в pipeline, ✅ transitive closure, ✅ library add, ✅ embeddings indexer + VectorStoreProtocol + PgVectorStore + InMemoryVectorStore
+> **Следующий шаг:** TD-S4.2-02 часть 2: codebase MCP server (4 tools) → TD-S4.2-03 standards → TD-S4.2-04 BSL LS
 >
 > **Принцип «Глубина сначала»** (D-2026-07-12-08): качество важнее скорости.
 >
