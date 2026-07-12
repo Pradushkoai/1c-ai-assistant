@@ -23,18 +23,24 @@ class PathManagerProtocol(Protocol):
     """
 
     def data_config_dir(self, name: str, version: str) -> Path: ...
+    def data_library_dir(self, name: str, version: str) -> Path: ...
     def data_archive_path(self, archive_name: str) -> Path: ...
     def data_hbk_dir(self, platform_version: str) -> Path: ...
     def derived_config_dir(self, name: str, version: str) -> Path: ...
+    def derived_library_dir(self, name: str, version: str) -> Path: ...
     def derived_platform_dir(self, platform_version: str) -> Path: ...
     def unified_metadata_index(self, name: str, version: str) -> Path: ...
     def api_reference_index(self, name: str, version: str) -> Path: ...
     def call_graph_index(self, name: str, version: str) -> Path: ...
     def dependency_graph_index(self, name: str, version: str) -> Path: ...
     def codebase_embeddings_dir(self, name: str, version: str) -> Path: ...
+    def library_metadata_index(self, name: str, version: str) -> Path: ...
+    def library_api_reference_index(self, name: str, version: str) -> Path: ...
+    def library_call_graph_index(self, name: str, version: str) -> Path: ...
     def platform_methods_db(self, platform_version: str) -> Path: ...
     def runtime_dir(self) -> Path: ...
     def config_registry_path(self) -> Path: ...
+    def library_registry_path(self) -> Path: ...
     def session_state_path(self) -> Path: ...
     def soul_path(self) -> Path: ...
     def user_profile_path(self) -> Path: ...
@@ -141,6 +147,10 @@ class PathManager:
         """data/configs/{name}/{version}/ — распакованная конфигурация 1С."""
         return self._resolve("${DATA_DIR}/configs/{name}/{version}", name=name, version=version)
 
+    def data_library_dir(self, name: str, version: str) -> Path:
+        """data/libraries/{name}/{version}/ — распакованная библиотека (БСП, БПО)."""
+        return self._resolve("${DATA_DIR}/libraries/{name}/{version}", name=name, version=version)
+
     def data_archive_path(self, archive_name: str) -> Path:
         """data/archives/{archive_name} — ZIP архивы."""
         return self._resolve("${DATA_DIR}/archives/{archive}", archive=archive_name)
@@ -157,6 +167,10 @@ class PathManager:
     def derived_config_dir(self, name: str, version: str) -> Path:  # noqa: D102
         """derived/configs/{name}/{version}/ — индексы конфигурации."""
         return self._resolve("${DERIVED_DIR}/configs/{name}/{version}", name=name, version=version)
+
+    def derived_library_dir(self, name: str, version: str) -> Path:
+        """derived/libraries/{name}/{version}/ — индексы библиотеки (БСП, БПО)."""
+        return self._resolve("${DERIVED_DIR}/libraries/{name}/{version}", name=name, version=version)
 
     def derived_platform_dir(self, platform_version: str) -> Path:
         """derived/platform/{platform_version}/ — индексы платформы (SQLite)."""
@@ -181,6 +195,20 @@ class PathManager:
         """derived/configs/{name}/{version}/dependency-graph.json."""
         return self.derived_config_dir(name, version) / "dependency-graph.json"
 
+    # ─── Library indexes (БСП, БПО) ────────────────────────────────────────
+
+    def library_metadata_index(self, name: str, version: str) -> Path:
+        """derived/libraries/{name}/{version}/unified-metadata-index.json."""
+        return self.derived_library_dir(name, version) / "unified-metadata-index.json"
+
+    def library_api_reference_index(self, name: str, version: str) -> Path:
+        """derived/libraries/{name}/{version}/api-reference.json."""
+        return self.derived_library_dir(name, version) / "api-reference.json"
+
+    def library_call_graph_index(self, name: str, version: str) -> Path:
+        """derived/libraries/{name}/{version}/call-graph.json."""
+        return self.derived_library_dir(name, version) / "call-graph.json"
+
     def codebase_embeddings_dir(self, name: str, version: str) -> Path:
         """derived/configs/{name}/{version}/embeddings/ — Qdrant snapshots."""
         return self.derived_config_dir(name, version) / "embeddings"
@@ -198,6 +226,10 @@ class PathManager:
     def config_registry_path(self) -> Path:
         """runtime/config-registry.json — ConfigRegistry."""
         return self.runtime_dir() / "config-registry.json"
+
+    def library_registry_path(self) -> Path:
+        """runtime/library-registry.json — LibraryRegistry (БСП, БПО)."""
+        return self.runtime_dir() / "library-registry.json"
 
     def session_state_path(self) -> Path:
         """runtime/session-state.json — SessionManager."""

@@ -261,5 +261,69 @@ def generate(
     )
 
 
+@main.group()
+def library() -> None:
+    """Управление библиотеками (БСП, БПО).
+
+    Библиотеки индексируются как отдельный слой (source_layer=library),
+    шарится между конфигурациями.
+
+    Пример:
+
+        1c-ai library add --name БСП --version 3.1 --zip bsp.zip
+
+        1c-ai library build --name БСП
+
+        1c-ai library list
+    """
+
+
+@library.command(name="add")
+@click.option("--name", required=True, help="Имя библиотеки (например, 'БСП')")
+@click.option("--version", required=True, help="Версия (например, '3.1')")
+@click.option(
+    "--zip",
+    "zip_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="Путь к ZIP архиву библиотеки",
+)
+@click.option("--title", help="Человекочитаемое название")
+def library_add(name: str, version: str, zip_path: Path, title: str | None) -> None:
+    """Распаковать ZIP и зарегистрировать библиотеку."""
+    from .cli_commands.library import cmd_library_add
+
+    sys.exit(cmd_library_add(name=name, version=version, zip_path=zip_path, title=title))
+
+
+@library.command(name="build")
+@click.option("--name", required=True, help="Имя библиотеки")
+@click.option("--version", default=None, help="Версия (если не указана — все версии)")
+@click.option("--force", is_flag=True, help="Принудительная пересборка")
+def library_build(name: str, version: str | None, force: bool) -> None:
+    """Построить индексы для библиотеки (metadata + api-reference + call graph)."""
+    from .cli_commands.library import cmd_library_build
+
+    sys.exit(cmd_library_build(name=name, version=version, force=force))
+
+
+@library.command(name="list")
+def library_list() -> None:
+    """Показать список зарегистрированных библиотек."""
+    from .cli_commands.library import cmd_library_list
+
+    sys.exit(cmd_library_list())
+
+
+@library.command(name="remove")
+@click.option("--name", required=True, help="Имя библиотеки")
+@click.option("--version", required=True, help="Версия")
+def library_remove(name: str, version: str) -> None:
+    """Удалить библиотеку."""
+    from .cli_commands.library import cmd_library_remove
+
+    sys.exit(cmd_library_remove(name=name, version=version))
+
+
 if __name__ == "__main__":
     main()
