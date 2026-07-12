@@ -794,3 +794,91 @@ Stage Summary:
 - Окружение сброшено, восстановление начато
 - Принцип «глубина сначала» принят как постоянное правило
 - План: восстановить критичный минимум, потом Этап 1
+
+---
+Task ID: sprint-4.1-context-for-coder
+Agent: GLM (architect mode)
+Task: Этап 1 (контекст для Coder) — 4 из 5 задач завершены.
+
+Work Log:
+- Пользователь подтвердил принцип «Глубина сначала» как постоянное правило
+- Пользователь дал вводные: старый репо 1c-ai-dev-env (MIT) можно использовать для переноса алгоритмов
+- Окружение сбросилось — восстановлены Sprint 3.2/3.2.1/3.3 + файлы состояния перенесены в git (docs/process/)
+- Записаны D-2026-07-12-08 (Этап 1 сначала) и D-2026-07-12-09 (файлы в git)
+
+### Реализовано (6 коммитов):
+
+#### fe19738 — asyncio.TaskGroup (контракт CONCEPTUAL.md §2.1)
+- validate.py переписан: 3 валидатора параллельно через asyncio.TaskGroup
+- _run_bsl_ls_validator, _run_kb_antipatterns_validator, _run_method_availability_validator
+- _check_methods_availability → _check_methods_availability_sync + asyncio.to_thread
+
+#### 169cbf4 — Form parser (TD-S4.1-01, часть 1)
+- parsers/xml/form.py (НОВЫЙ, ~300 строк)
+- parse_form(wrapper_xml_path) → FormMetadata
+- Парсит wrapper + Ext/Form.xml: Title, Events (handlers), Attributes, ChildItems (рекурсивно)
+- 14 тестов
+- Проверен на УТ11: Form name, Title, Object ref, Handlers (OnCreateAtServer), Elements
+
+#### 9ef4856 — Subsystem + Role parser (TD-S4.1-01, часть 2)
+- parsers/xml/subsystem_role.py (НОВЫЙ)
+- parse_subsystem → SubsystemMetadata (content: list[ObjectRef])
+- parse_role → RoleMetadata
+- Модели SubsystemMetadata, RoleMetadata добавлены в metadata.py
+- 15 тестов
+- Проверен на УТ11: Subsystem (17 объектов content), Role (имя, синоним)
+
+#### 4c255d4 — api-reference indexer (TD-S4.1-03)
+- parsers/indexers/api_reference_indexer.py (НОВЫЙ, ~200 строк)
+- build_api_reference: сканирует .bsl файлы, извлекает export-методы
+- _guess_module_info: определяет тип модуля из пути
+- save/load/get_methods_for_object
+- 15 тестов
+- Проверен на УТ11: 4 модуля, 43 export-метода с параметрами
+
+#### ccf158a — Call graph builder (TD-S4.1-02)
+- parsers/bsl/call_graph.py (НОВЫЙ, ~320 строк)
+- build_call_graph: двухпроходный алгоритм
+  1. Собираем имена модулей и export-методов
+  2. Парсим каждый .bsl файл на вызовы (regex-based)
+- Кросс-модульные вызовы: Модуль.Метод(
+- Локальные вызовы: Метод( (если export)
+- _strip_comments, _find_current_procedure
+- save/load
+- 13 тестов
+- Проверен на УТ11: 4 модуля, 27 рёбер (2 кросс-модульных + 25 локальных)
+- Алгоритм перенесён из старого репо 1c-ai-dev-env (MIT)
+
+### Дополнительно:
+- 3e8ff7f — обновление ФОКУС-строки (Session Checkpoint)
+- Все парсеры проверены на реальных данных УТ11 (не только синтетика)
+- Принцип «Глубина сначала» соблюдён: каждая задача глубоко с тестами
+
+### Проверка:
+- 707 тестов проходят
+- ruff: All checks passed
+- check_package_boundaries: 0 violations
+- MVP работает: 1c-ai generate → BSL код через Z.ai GLM
+
+### Что Coder теперь получает (контекст):
+1. Структуру формы — элементы, события, реквизиты (parse_form)
+2. Объекты подсистемы — что с чем связано (parse_subsystem)
+3. Export-методы — список доступных функций (build_api_reference)
+4. Граф вызовов — кто кого вызывает (build_call_graph)
+
+### Session Checkpoint:
+- [x] ФОКУС-строка обновлена (4/5 задач, 707 тестов)
+- [x] worklog.md — эта запись
+- [x] DECISIONS.md — D-2026-07-12-08, D-2026-07-12-09 зафиксированы
+- [x] BACKLOG.md — 3 задачи закрыты, сводка обновлена (6 закрыто)
+- [x] Тесты проходят, ruff чистый
+- [x] Коммиты запушены от Pradushkoai
+- [x] Security audit чистый
+- [x] docs/process/ файлы в git репозитории
+
+Stage Summary:
+- Этап 1: 4/5 задач завершены (TD-S4.1-01 ✅, TD-S4.1-02 ✅, TD-S4.1-03 ✅, TD-S4.1-04 ⬜)
+- 707 тестов (было 644 в начале сессии — +63 новых)
+- 7 коммитов: 6bfde2d → ccf158a
+- Coder теперь имеет 4 источника контекста вместо 0
+- Следующий шаг: TD-S4.1-04 Dependency graph builder → Этап 2

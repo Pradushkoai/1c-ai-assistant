@@ -4,8 +4,8 @@
 > в новый чат — агент активируется с полным контекстом проекта 1c-ai-assistant.
 >
 > **Дата генерации:** 2026-07-12
-> **Последний коммит в репозитории:** (см. git log)
-> **Версия файла:** 2.0 (восстановленная после сброса окружения)
+> **Последний коммит в репозитории:** `ccf158a` (call graph builder)
+> **Версия файла:** 2.1
 
 ---
 
@@ -62,17 +62,27 @@
 | **Проект** | 1c-ai-assistant — AI-ассистент для 1С-разработчиков |
 | **Репозиторий** | https://github.com/Pradushkoai/1c-ai-assistant |
 | **Локальный путь** | `/home/z/my-project/1c-ai-assistant/` |
-| **Тесты** | 644+ проходят |
-| **Спринты завершены** | 0, 1, 1.5, 2, 3, 3.1 (восстанавливается дальше) |
-| **MVP статус** | Pipeline работает с реальной LLM (Z.ai GLM через z-ai CLI) |
+| **Последний коммит** | `ccf158a` — call graph builder |
+| **Тесты** | 707 проходят, ruff чистый, 0 boundary violations |
+| **Спринты завершены** | 0, 1, 1.5, 2, 3, 3.1, 3.2, 3.2.1, 3.3 |
+| **Этап 1 прогресс** | 4/5 задач (Form ✅, Subsystem ✅, Role ✅, api-reference ✅, call graph ✅) |
+| **MVP** | ✅ `1c-ai generate` работает с реальной LLM (ZaiLLM через z-ai CLI) |
 | **LLM** | ZaiLLM adapter (z-ai CLI subprocess, без внешнего API ключа) |
+| **HBK** | 10,150 методов платформы 8.3.25 (Container32 парсер) |
+| **Архитектура** | CONCEPTUAL.md §1.1 соблюдён (DI), §2.1 соблюдён (asyncio.TaskGroup) |
 | **Принцип** | Глубина сначала (D-2026-07-12-08) |
+
+### Что Coder получает (контекст для генерации)
+1. **Структуру формы** — элементы, события, реквизиты (`parse_form`)
+2. **Объекты подсистемы** — что с чем связано (`parse_subsystem`)
+3. **Export-методы** — список доступных функций (`build_api_reference`)
+4. **Граф вызовов** — кто кого вызывает (`build_call_graph`)
 
 ### Топ-3 активного техдолга (полностью — в BACKLOG.md)
 
-- **TD-S4.1-01 (CRITICAL):** Form/Subsystem/Role парсеры — для metadata MCP
-- **TD-S4.1-02 (HIGH):** Call graph builder — перенос из старого репо
-- **TD-S4.1-03 (HIGH):** api-reference indexer — список export-методов
+- **TD-S4.1-04 (MEDIUM):** Dependency graph builder — последняя задача Этапа 1
+- **TD-S4.2-01 (CRITICAL):** ADR-0020 Embeddings strategy — блокирует codebase MCP
+- **TD-011 (LOW):** ZaiLLM mypy cleanup — 9 ошибок LangChain strict typing
 
 ---
 

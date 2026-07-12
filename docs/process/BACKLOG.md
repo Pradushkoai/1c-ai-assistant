@@ -12,33 +12,7 @@
 
 ## 🔴 В работе (Этап 1 — Контекст для Coder)
 
-### TD-S4.1-01: Form/Subsystem/Role парсеры (metadata MCP)
-- **Источник:** INTERNAL_ROADMAP.md §4.2, 12-real-data-validation.md §5.1
-- **Этап:** 1 (Sprint 4.1)
-- **Приоритет:** CRITICAL (блокирует metadata MCP)
-- **Описание:** В УТ 11 — 4,124 Form/Module.bsl, 42 Subsystems, 641 Role.
-  Нужны парсеры `Form.xml` → `FormMetadata`, `Subsystem.xml`, `Rights.xml`.
-  Можно переносить алгоритмы из старого репо 1c-ai-dev-env (MIT, мой).
-- **Оценка:** 1-2 дня
-
-### TD-S4.1-02: Call graph builder
-- **Источник:** старый репо 1c-ai-dev-env (call_graph.py, call_graph_parser.py)
-- **Этап:** 1 (Sprint 4.1)
-- **Приоритет:** HIGH
-- **Описание:** Граф вызовов методов в BSL-модулях. Coder будет видеть
-  существующие методы, не дублировать. Перенос алгоритма под наши модели
-  (Pydantic v2 frozen, CallEdge модель).
-- **Оценка:** 1-2 дня
-
-### TD-S4.1-03: api-reference indexer
-- **Источник:** INTERNAL_ROADMAP.md §4.2
-- **Этап:** 1 (Sprint 4.1)
-- **Приоритет:** HIGH
-- **Описание:** Из BSL модулей извлекаем export-методы → api-reference.json.
-  Coder получает список доступных функций конфигурации.
-- **Оценка:** 1 день
-
-### TD-S4.1-04: dependency graph builder
+### TD-S4.1-04: dependency graph builder — ПОСЛЕДНЯЯ ЗАДАЧА ЭТАПА 1
 - **Источник:** старый репо 1c-ai-dev-env (dependency_graph.py)
 - **Этап:** 1 (Sprint 4.1)
 - **Приоритет:** MEDIUM
@@ -121,6 +95,24 @@
 
 ## ✅ Закрыто
 
+### TD-S4.1-03: api-reference indexer — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-12
+- **Закрыто в:** commit `4c255d4`
+- **Решение:** parsers/indexers/api_reference_indexer.py — извлечение export-методов.
+  15 тестов. Проверен на УТ11: 43 метода из 5 модулей.
+
+### TD-S4.1-02: Call graph builder — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-12
+- **Закрыто в:** commit `ccf158a`
+- **Решение:** parsers/bsl/call_graph.py — двухпроходный regex-парсер.
+  13 тестов. Проверен на УТ11: 27 рёбер из 4 модулей.
+
+### TD-S4.1-01: Form/Subsystem/Role парсеры — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-12
+- **Закрыто в:** commits `169cbf4`, `9ef4856`
+- **Решение:** parsers/xml/form.py (14 тестов) + parsers/xml/subsystem_role.py (15 тестов).
+  Проверены на УТ11: Form (элементы, события), Subsystem (17 объектов), Role (имя, синоним).
+
 ### TD-002: 3 boundary violations (orchestrator → mcp_servers) — ЗАКРЫТО ✅
 - **Дата закрытия:** 2026-07-12 (восстановлено)
 - **Решение:** Dependency injection через `functools.partial` в `build_graph()`.
@@ -139,11 +131,11 @@
 
 | Статус | Количество |
 |---|---|
-| В работе (Этап 1) | 4 (TD-S4.1-01..04) |
+| В работе (Этап 1) | 1 (TD-S4.1-04) |
 | Этап 2 | 4 (TD-S4.2-01..04) |
 | Этап 3 | 4 (TD-S5-01..04) |
 | Когда-нибудь | 4 (TD-005..011) |
-| Закрыто | 3 (TD-000, TD-002, TD-004) |
+| Закрыто | 6 (TD-000, TD-002, TD-004, TD-S4.1-01, TD-S4.1-02, TD-S4.1-03) |
 | **Всего** | **19** |
 
 ---
