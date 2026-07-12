@@ -21,6 +21,12 @@
 
 from __future__ import annotations
 
+from .api_reference_indexer import (
+    build_api_reference,
+    get_methods_for_object,
+    load_api_reference,
+    save_api_reference,
+)
 from .metadata_indexer import (
     build_metadata_index,
     get_object_from_index,
@@ -33,4 +39,8 @@ __all__ = [
     "save_metadata_index",
     "load_metadata_index",
     "get_object_from_index",
+    "build_api_reference",
+    "save_api_reference",
+    "load_api_reference",
+    "get_methods_for_object",
 ]
