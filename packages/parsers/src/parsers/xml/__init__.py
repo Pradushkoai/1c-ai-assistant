@@ -34,6 +34,7 @@ from .common_module import parse_common_module
 from .configuration import get_configuration_child_objects, parse_configuration
 from .document import parse_document
 from .form import parse_form
+from .subsystem_role import parse_role, parse_subsystem
 
 __all__ = [
     # Парсеры
@@ -42,6 +43,8 @@ __all__ = [
     "parse_document",
     "parse_common_module",
     "parse_form",
+    "parse_subsystem",
+    "parse_role",
     "get_configuration_child_objects",
     # Утилиты
     "parse_xml",

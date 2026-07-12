@@ -289,5 +289,37 @@ class FormMetadata(ModelConfig):
     )
 
 
+class SubsystemMetadata(ObjectMetadata):
+    """Метаданные подсистемы.
+
+    Соответствует Subsystem.xml. Подсистема — группировка объектов
+    конфигурации для пользовательского интерфейса (разделы).
+
+    Ключевое поле — content: список ObjectRef объектов, входящих в подсистему
+    (Catalog.Товары, Document.Продажа, Report.АнализПродаж, ...).
+    Planner использует для понимания какие объекты связаны.
+    """
+
+    metadata_type: MetadataType = MetadataType.SUBSYSTEM
+    content: list[ObjectRef] = Field(
+        default_factory=list,
+        description="Объекты, входящие в подсистему (Catalog.Товары, Document.Продажа, ...)",
+    )
+    child_subsystems: list[str] = Field(
+        default_factory=list,
+        description="Имена дочерних подсистем",
+    )
+
+
+class RoleMetadata(ObjectMetadata):
+    """Метаданные роли.
+
+    Соответствует Role.xml. Роль — права доступа в конфигурации.
+    Простая модель: имя, синоним, комментарий.
+    """
+
+    metadata_type: MetadataType = MetadataType.ROLE
+
+
 # Forward reference для FormElement.children (рекурсивный тип)
 FormElement.model_rebuild()

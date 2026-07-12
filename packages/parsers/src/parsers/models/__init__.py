@@ -47,6 +47,8 @@ from .metadata import (
     FormMetadata,
     MetadataType,
     ObjectMetadata,
+    RoleMetadata,
+    SubsystemMetadata,
 )
 from .method import (
     PlatformMethod,
@@ -81,6 +83,8 @@ __all__ = [
     "CommonModuleMetadata",
     "FormElement",
     "FormMetadata",
+    "RoleMetadata",
+    "SubsystemMetadata",
     # method
     "PlatformMethod",
     "PlatformProperty",
