@@ -7,6 +7,7 @@
     parse_catalog(path) → CatalogMetadata
     parse_document(path) → DocumentMetadata
     parse_common_module(path) → CommonModuleMetadata
+    parse_form(path) → FormMetadata
 
 См. ADR-0007 (Pydantic v2 frozen models) и ADR-0006 (Data Layer).
 """
@@ -32,6 +33,7 @@ from .catalog import parse_catalog
 from .common_module import parse_common_module
 from .configuration import get_configuration_child_objects, parse_configuration
 from .document import parse_document
+from .form import parse_form
 
 __all__ = [
     # Парсеры
@@ -39,8 +41,9 @@ __all__ = [
     "parse_catalog",
     "parse_document",
     "parse_common_module",
+    "parse_form",
     "get_configuration_child_objects",
-    # Утилиты (для других парсеров, например Form/Role в Спринте 4)
+    # Утилиты
     "parse_xml",
     "parse_xml_string",
     "find_text",
