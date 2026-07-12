@@ -8,10 +8,10 @@
 ## 🎯 ФОКУС СЕССИИ
 
 > **Задача:** Этап 1 (контекст для Coder) — в работе
-> **Статус:** 3 из 4 задач завершены, 1 осталась
+> **Статус:** 4 из 5 задач завершены, 1 осталась
 > **Блокеры:** нет
-> **Что сделано:** ✅ Form/Subsystem/Role парсеры (TD-S4.1-01), ✅ api-reference indexer (TD-S4.1-03), ✅ asyncio.TaskGroup
-> **Следующий шаг:** TD-S4.1-02 Call graph builder (перенос из старого репо 1c-ai-dev-env)
+> **Что сделано:** ✅ Form/Subsystem/Role (TD-S4.1-01), ✅ api-reference (TD-S4.1-03), ✅ asyncio.TaskGroup, ✅ Call graph (TD-S4.1-02)
+> **Следующий шаг:** TD-S4.1-04 Dependency graph builder → Этап 2 (ADR-0020 + codebase MCP)
 > **После:** TD-S4.1-04 Dependency graph builder → Этап 2 (ADR-0020 + codebase MCP)
 >
 > **Принцип «Глубина сначала»** (D-2026-07-12-08): качество важнее скорости.
