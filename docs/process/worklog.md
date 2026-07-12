@@ -882,3 +882,78 @@ Stage Summary:
 - 7 коммитов: 6bfde2d → ccf158a
 - Coder теперь имеет 4 источника контекста вместо 0
 - Следующий шаг: TD-S4.1-04 Dependency graph builder → Этап 2
+
+---
+Task ID: sprint-4.2-search-and-quality
+Agent: GLM (architect mode)
+Task: Этап 2 (Поиск и качество) — 5 задач завершены из 7.
+
+Work Log:
+- Пользователь подтвердил все 3 вводных (transitive closure, export-методы, multi-config)
+- ADR-0020 принят: гибридный BM25+pgvector+RRF, 4-layer, multilingual-e5-large 1024 dim
+- Пользователь установил правило «Всегда готов к завершению» — после каждой задачи commit+push+обновление файлов
+- Пользователь запретил временные решения — только production-ready
+
+### Реализовано (5 коммитов):
+
+#### e1c6330 — ADR-0020 Embeddings strategy
+- adr/0020-embeddings-strategy.md (230 строк)
+- Гибридный BM25+pgvector+RRF
+- multilingual-e5-large (1024 dim, мультилингвальный)
+- Chunking по export-методам (27,581 чанков)
+- 4-layer индексация (platform/library/config/KB)
+- Transitive closure: Planner (да), Reviewer (count), Coder (1-hop)
+- 3 новых TD: S4.2-05 (library), S4.2-06 (transitive), S4.2-07 (api-ref в pipeline)
+
+#### f53c21f — TD-S4.2-07: api-reference в pipeline
+- config build теперь строит 4 индекса: metadata + api-reference + call-graph + dependency-graph
+- Gatherer загружает api-reference, передаёт Coder'у список существующих методов
+
+#### 163cfc6 — TD-S4.2-06: Transitive closure
+- get_transitive_dependents (BFS, для Planner — blast radius)
+- get_transitive_dependencies (BFS, для Planner — full impact)
+- get_impact_count (для Reviewer — quick number)
+
+#### c756c74 — TD-S4.2-05: 1c-ai library add/build/list/remove
+- PathManager: data_library_dir, derived_library_dir, library_*_index, library_registry_path
+- CLI: 4 подкоманды (add, build, list, remove)
+- cli_commands/library.py (235 строк)
+- Библиотеки (БСП/БПО) — отдельный слой source_layer=library
+
+#### 0eaf241 — TD-S4.2-02 часть 1: Embeddings indexer + VectorStoreProtocol
+- parsers/indexers/embeddings_indexer.py (200 строк)
+  - build_embeddings_index: чанкует по export-методам, генерирует векторы
+  - Модель: intfloat/multilingual-e5-large (1024 dim, BGE-M3 недоступен в fastembed)
+  - Multi-layer metadata (ADR-0020)
+- mcp_servers/codebase/vector_store.py (500 строк)
+  - VectorStoreProtocol (ADR-0017): upsert, search, search_bm25, search_hybrid, delete, health
+  - PgVectorStore (production): postgres + pgvector + pg_trgm, IVFFlat, GIN, RRF
+  - InMemoryVectorStore (тесты): cosine, substring BM25, RRF
+  - make_vector_store factory (env VECTOR_STORE)
+- Зависимости: fastembed>=0.7, psycopg2-binary>=2.9
+
+### Дополнительно:
+- 72c0d80 — правило «Всегда готов к завершению» прописано в CURRENT_FOCUS.md
+- ADR-0020 обновлён: BGE-M3 → multilingual-e5-large (недоступен в fastembed)
+
+### Проверка:
+- 722 теста проходят (без регрессий на всех этапах)
+- ruff: All checks passed
+- check_package_boundaries: 0 violations
+- fastembed + multilingual-e5-large: работает, 1024 dim
+
+### Session Checkpoint:
+- [x] ФОКУС-строка обновлена
+- [x] worklog.md — эта запись
+- [x] DECISIONS.md — D-2026-07-13-01 зафиксировано
+- [x] BACKLOG.md — TD-S4.2-01/05/06/07 закрыты
+- [x] Тесты проходят, ruff чистый
+- [x] Все коммиты запушены от Pradushkoai
+- [x] docs/process/ файлы в git
+
+Stage Summary:
+- Этап 2: 5/7 задач завершены (ADR-0020, TD-S4.2-07, TD-S4.2-06, TD-S4.2-05, TD-S4.2-02 ч.1)
+- 722 теста (было 707 — +15 новых от Этапа 1, остальные без регрессий)
+- 6 коммитов: e1c6330 → 0eaf241
+- codebase MCP server (TD-S4.2-02 ч.2) — следующий шаг
+- Оставшиеся: TD-S4.2-02 ч.2 (codebase MCP 4 tools), TD-S4.2-03 (standards), TD-S4.2-04 (BSL LS Docker)
