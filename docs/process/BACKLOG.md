@@ -188,7 +188,7 @@
 
 ### TD-S5-04: Docker production — ЗАКРЫТО ✅
 - **Дата закрытия:** 2026-07-13
-- **Закрыто в:** commit (pending)
+- **Закрыто в:** commit `c83ca2d`
 - **Решение:**
   - `docker/Dockerfile.app` — переписан на **multi-stage** (builder + runtime):
     - **builder**: `python:3.12-slim` + gcc/g++/libpq-dev (build deps для C-extensions),
