@@ -1,7 +1,7 @@
 # CURRENT FOCUS — точка входа для каждой сессии
 
 > **Этот файл живёт в git репозитории (docs/process/), чтобы переживать сбросы окружения.**
-> Последнее обновление: 2026-07-13 (Stage 5 — **1/4 задача завершена**, TD-S7-01 закрыт)
+> Последнее обновление: 2026-07-13 (Stage 5 — **2/4 задачи завершены**, TD-S7-01/02 закрыты)
 
 ---
 
@@ -14,7 +14,7 @@
 - **Этап 2:** ✅ **ЗАВЕРШЁН** (7/7 задач) — TD-S4.2-01..07 все закрыты
 - **Stage 3 (Production-readiness):** ✅ **ЗАВЕРШЁН** (4/4) — TD-S5-01/02/03/04 все закрыты
 - **Stage 4 (Contract Compliance):** ✅ **ЗАВЕРШЁН** (4/4) — TD-S6-01/02/03/04 все закрыты
-- **Stage 5 (Production Hardening):** 🔄 В РАБОТЕ (1/4) — TD-S7-01 ✅ закрыт
+- **Stage 5 (Production Hardening):** 🔄 В РАБОТЕ (2/4) — TD-S7-01/02 ✅ закрыты
 
 ### Что прочитать в порядке приоритета (первые 5 минут сессии)
 1. **Этот файл** (CURRENT_FOCUS.md) — целиком, до конца
@@ -24,19 +24,20 @@
 5. **`docs/architecture/CONCEPTUAL.md`** §2.1 (asyncio.TaskGroup) — если работаешь с validate_node
 
 ### Следующая задача Stage 5
-**TD-S7-02: REST API (HTTP server :8000)** (HIGH приоритет)
-- stdio не работает для удалённых/k8s клиентов. Нужен HTTP Facade + /health probe.
-- `packages/agent/src/agent/cli_commands/serve.py` — `1c-ai serve` (HTTP server).
-- FastAPI/Starlette: POST /facade/{tool}, GET /health, GET /servers.
-- FacadeHandlers через HTTP (stateless — state через FacadeStateStore).
+**TD-S7-03: ZaiLLM mypy cleanup (TD-011)** (MEDIUM приоритет)
+- 14 mypy ошибок в zai_llm.py (LangChain strict typing) — базовая линия, висит с Sprint 3.
+- type: ignore или RunnableLambda вместо BaseChatModel inheritance.
+- Очистка для mypy strict mode (сейчас 14 ошибок, цель — 0).
 
 ### Закрытые задачи Stage 5
 - ✅ **TD-S7-01: Production survival-restart для Facade** (2026-07-13) — `FacadeStateStore`
   через LangGraph checkpointer (aput/aget_tuple). State по plan_id переживает рестарт
-  контейнера (PostgresSaver). In-memory fallback (backward compat). `_subtask_to_plan`
-  cache для handle_validate/review. `facade_entry.py` создаёт PersistenceManager +
-  FacadeStateStore(state_class=TaskState). 19 тестов (in-memory, mock checkpointer,
-  survive-restart, TaskState round-trip). Архитектурный пробел #4 закрыт. См. D-2026-07-13-13.
+  контейнера (PostgresSaver). In-memory fallback (backward compat). 19 тестов.
+  Архитектурный пробел #4 закрыт. См. D-2026-07-13-13.
+- ✅ **TD-S7-02: REST API HTTP server** (2026-07-13) — `1c-ai serve` (FastAPI :8000).
+  GET /health (Docker/k8s probe), GET /servers, GET /tools/{server}, POST /facade/{tool},
+  POST /domain/{server}/{tool}. Stateless (state через FacadeStateStore). Dockerfile
+  healthcheck обновлён (curl /health). 19 тестов. См. D-2026-07-13-14.
 - ✅ **TD-S6-01: metadata MCP server + orchestrator wiring** (2026-07-13) —
   `MetadataServer` с 4 tools. `gather_node` убран прямой FS-доступ, ходит через
   metadata_server (DI). `plan_node` — metadata_server DI (ADR-0005). 24 теста.
@@ -118,11 +119,11 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 
 ## 🎯 ФОКУС СЕССИИ (для продолжающей сессии)
 
-> **Задача:** Stage 5 (Production Hardening) — **TD-S7-01 ЗАВЕРШЁН** ✅ (1/4)
-> **Статус:** survival-restart для Facade закрыт (FacadeStateStore через checkpointer)
+> **Задача:** Stage 5 (Production Hardening) — **TD-S7-01/02 ЗАВЕРШЕНЫ** ✅ (2/4)
+> **Статус:** survival-restart + REST API закрыты
 > **Блокеры:** нет
-> **Что сделано:** ✅ Все 4 этапа (TD-S5/6) + ✅ TD-S7-01 (survival-restart)
-> **Следующий шаг:** TD-S7-02 (REST API HTTP server) → TD-S7-03 (ZaiLLM mypy) → TD-S7-04 (CI integration)
+> **Что сделано:** ✅ Все 4 этапа (TD-S5/6) + ✅ TD-S7-01 (survival-restart) + ✅ TD-S7-02 (REST API)
+> **Следующий шаг:** TD-S7-03 (ZaiLLM mypy cleanup) → TD-S7-04 (CI integration)
 >
 > **Принцип «Глубина сначала»** (D-2026-07-12-08): качество важнее скорости.
 >
@@ -139,8 +140,8 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 - **Этап 2 прогресс:** **7/7 задач ЗАВЕРШЕНО** ✅ (TD-S4.2-01/02/03/04/05/06/07 ✅)
 - **Stage 3 прогресс:** ✅ 4/4 задач ЗАВЕРШЕНО (TD-S5-01/02/03/04 ✅)
 - **Stage 4 прогресс:** ✅ 4/4 задач ЗАВЕРШЕНО (TD-S6-01/02/03/04 ✅)
-- **Stage 5 прогресс:** 1/4 задач ЗАВЕРШЕНО ✅ (TD-S7-01 ✅; TD-S7-02/03/04 открыты)
-- **Тесты:** 1009 проходят + 12 skipped (3 BSL LS + 3 Postgres + 1 git + 5 integration smoke)
+- **Stage 5 прогресс:** 2/4 задач ЗАВЕРШЕНО ✅ (TD-S7-01/02 ✅; TD-S7-03/04 открыты)
+- **Тесты:** 1028 проходят + 12 skipped (3 BSL LS + 3 Postgres + 1 git + 5 integration smoke)
 - **Persistence:** ✅ PostgresSaver (AsyncPostgresSaver + setup() + connection lifecycle);
   MemorySaver fallback (dev/tests); migrations/ (Alembic scaffolding + state-миграции)
 - **Facade:** ✅ 8 lifecycle tools (ADR-0013): plan/gather/generate/validate/review/explain/run_cli/data_status;
@@ -157,6 +158,8 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
   режим C (power-user → доменный MCP напрямую) работает
 - **Facade survival-restart:** ✅ FacadeStateStore через LangGraph checkpointer (aput/aget_tuple);
   state по plan_id переживает рестарт контейнера (PostgresSaver); in-memory fallback
+- **REST API:** ✅ `1c-ai serve` (FastAPI :8000) — GET /health (Docker/k8s probe), GET /servers,
+  GET /tools/{server}, POST /facade/{tool}, POST /domain/{server}/{tool}; stateless через store
 - **Docker:** ✅ multi-stage Dockerfile.app (builder + runtime, non-root user, OCI labels);
   `1c-ai health` CLI (persistence + BSL LS ping, JSON output); healthcheck в compose;
   .env.example; docker-compose.override.yml (dev hot reload)
@@ -168,7 +171,7 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 - **BSL LS Docker:** мульти-stage Dockerfile v0.25.5, HTTP API, healthcheck, .dockerignore
 - **Boundary violations:** 0 (DI через functools.partial)
 - **Данные:** УТ11 (5,575 объектов, 7,141 BSL модулей) + HBK 8.3.25 (80 файлов)
-- **Последний коммит:** TD-S7-01 FacadeStateStore survival-restart — Stage 5 1/4
+- **Последний коммит:** TD-S7-02 REST API HTTP server — Stage 5 2/4
 
 ---
 

@@ -74,10 +74,10 @@ LABEL org.opencontainers.image.title="1c-ai-app" \
 # Переключаемся на non-root user.
 USER app
 
-# Healthcheck: 1c-ai health (persistence + BSL LS ping).
+# Healthcheck: HTTP /health endpoint (Stage 5 TD-S7-02). Fallback: 1c-ai health CLI.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/health || 1c-ai health || exit 1
 
-# Точка входа — CLI.
+# Точка входа — CLI. Для production: docker run ... 1c-ai serve (HTTP server).
 ENTRYPOINT ["1c-ai"]
 CMD ["--help"]

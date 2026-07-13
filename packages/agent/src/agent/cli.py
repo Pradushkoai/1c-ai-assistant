@@ -9,6 +9,7 @@
     1c-ai validate                 — preflight check
     1c-ai health                   — health check (persistence + BSL LS) для Docker
     1c-ai mcp serve --server NAME  — запустить MCP stdio-сервер (facade/metadata/codebase/kb/bsl_ls/git)
+    1c-ai serve                    — запустить HTTP REST API server (FastAPI :8000)
     1c-ai hbk load                 — загрузить .hbk файлы (минимальная версия)
 
 Использует click для CLI, data_layer.PathManager для путей,
@@ -196,6 +197,43 @@ def health() -> None:
     from .cli_commands.health import cmd_health
 
     sys.exit(cmd_health())
+
+
+@main.command()
+@click.option(
+    "--host",
+    "-h",
+    default="0.0.0.0",
+    help="Bind host (default 0.0.0.0 — для Docker).",
+)
+@click.option(
+    "--port",
+    "-p",
+    type=int,
+    default=8000,
+    help="Bind port (default 8000).",
+)
+def serve(host: str, port: int) -> None:
+    """Запустить HTTP REST API server (Stage 5 TD-S7-02).
+
+    FastAPI/uvicorn на :8000 (default). Endpoints:
+    - GET  /health — health check
+    - GET  /servers — список MCP серверов
+    - GET  /tools/{server} — список tools
+    - POST /facade/{tool} — Facade lifecycle tools
+    - POST /domain/{server}/{tool} — доменные tools
+
+    Примеры:
+
+        1c-ai serve                          # default 0.0.0.0:8000
+
+        1c-ai serve --host 127.0.0.1 --port 9000
+
+    Docs: http://localhost:8000/docs (Swagger UI).
+    """
+    from .cli_commands.serve import cmd_serve
+
+    sys.exit(cmd_serve(host=host, port=port))
 
 
 @main.group()

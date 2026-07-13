@@ -1992,3 +1992,71 @@ gather → generate → validate → review, с ожиданием между в
 - Архитектурный пробел #4 закрыт: Facade state переживает рестарт контейнера (PostgresSaver).
 - Foundation для TD-S7-02 (REST API — stateless HTTP handlers через store) готов.
 - **Следующий шаг:** TD-S7-02 (REST API HTTP server :8000 + /health probe).
+
+---
+
+## 2026-07-13: TD-S7-02 — REST API HTTP server (Stage 5, 2/4)
+
+**Task ID:** TD-S7-02
+**Agent:** main (GLM, продолжающая сессия)
+**Этап:** Stage 5 (Production Hardening), вторая задача
+
+### Контекст
+
+Facade был доступен только через MCP stdio (`1c-ai mcp serve`). stdio не работает
+для удалённых клиентов, k8s probes, browser-based IDE. CONCEPTUAL §1.2 режим A
+упоминал "CLI `1c-ai generate`, REST API" — REST API не был реализован. Docker-compose
+port 8000 зарезервирован "для REST API (спринт 5+)" — сейчас пришёл.
+
+### Что сделано
+
+1. **DECISIONS.md** — D-2026-07-13-14: подход (FastAPI + endpoints + stateless через store).
+
+2. **`packages/mcp_servers/src/mcp_servers/http_server.py`** — FastAPI app:
+   - `create_http_app(handlers)` → FastAPI с endpoints:
+     - `GET /health` — persistence (state_store check) + BSL LS ping. JSON `{status, checks}`.
+       Для Docker/k8s probe.
+     - `GET /servers` — список 6 MCP серверов + tools count.
+     - `GET /tools/{server_name}` — список tools для сервера.
+     - `POST /facade/{tool}` — вызов Facade lifecycle tool (plan/gather/.../data_status).
+       Body = `{"args": {...}}`. Response = `{"tool": ..., "result": ...}`.
+     - `POST /domain/{server_name}/{tool}` — вызов доменного tool.
+     - `GET /` — root info (endpoints list).
+   - ErrorHandler: FacadeNotConfiguredError → 400, KeyError/ValueError → 400,
+     неизвестный tool/server → 404, прочее → 500.
+   - `run_http_server(host, port, handlers)` — uvicorn server.
+
+3. **`packages/agent/src/agent/cli_commands/serve.py`** — `cmd_serve(host, port)`:
+   создаёт handlers (через `create_facade_handlers`), запускает `run_http_server`.
+
+4. **`packages/agent/src/agent/cli.py`** — `@main.command() def serve()` с `--host`
+   (default 0.0.0.0) и `--port` (default 8000).
+
+5. **`docker/Dockerfile.app`** — healthcheck обновлён: `curl -f http://localhost:8000/health`
+   (HTTP probe, primary) + `1c-ai health` (fallback). CMD comment: `docker run ... 1c-ai serve`.
+
+6. **`tests/agent/test_cli_serve.py`** — 19 тестов:
+   - `TestHealth` (3): 200 + JSON structure, in-memory persistence, BSL LS skipped.
+   - `TestServers` (2): 6 серверов, tools_count > 0, facade=8.
+   - `TestTools` (3): facade (8), metadata (4), unknown → 404.
+   - `TestFacadeTools` (3): data_status, unknown → 404, FacadeNotConfiguredError → 400.
+   - `TestDomainTools` (2): /domain/facade → 400, unknown server → 404.
+   - `TestRoot` (1): root info.
+   - `TestServeCliRegistration` (3): command exists, --help, serve --help (--host/--port/8000).
+   - `TestCmdServe` (2): starts server (mock), handlers failure → exit 1.
+
+### Проверки
+
+- [x] Тесты: **1028 проходят + 12 skipped** (было 1009+12, +19 от serve).
+- [x] ruff: чистый.
+- [x] mypy: 14 ошибок (базовая TD-011, **новых нет**).
+- [x] boundaries: 0 violations.
+- [x] `1c-ai serve --help` manually verified.
+
+### Stage Summary
+
+- **Stage 5: 2/4 задач ЗАВЕРШЕНО** ✅ (TD-S7-01, TD-S7-02)
+- REST API доступен через HTTP (удалённые клиенты, k8s probes, browser IDE).
+- /health endpoint для Docker/k8s (стандартный HTTP probe).
+- Stateless — state через FacadeStateStore (survival-restart, TD-S7-01).
+- **Следующий шаг:** TD-S7-03 (ZaiLLM mypy cleanup, TD-011).

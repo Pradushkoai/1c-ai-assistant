@@ -12,6 +12,63 @@
 
 ## Записи (новые сверху)
 
+### D-2026-07-13-14: TD-S7-02 — REST API HTTP server (`1c-ai serve`, FastAPI)
+
+**Дата:** 2026-07-13
+**Тип:** architecture + implementation (TD-S7-02, Stage 5 задача 2/4)
+**Контекст:** Stage 4 закрыл 3 пробела, Stage 5 TD-S7-01 закрыл survival-restart.
+Остальной пробел: Facade доступен только через MCP stdio (`1c-ai mcp serve`).
+stdio не работает для удалённых клиентов, k8s probes, browser-based IDE. CONCEPTUAL
+§1.2 режим A упоминал "CLI `1c-ai generate`, REST API" — REST API не был реализован.
+Docker-compose port 8000 зарезервирован "для REST API (спринт 5+)" — сейчас пришёл.
+
+**Решение:**
+1. **`packages/agent/src/agent/cli_commands/serve.py`** — `cmd_serve(host, port)`:
+   запускает FastAPI/uvicorn HTTP server. Делегирует в `mcp_servers.http_server`.
+2. **`packages/mcp_servers/src/mcp_servers/http_server.py`** — `create_http_app(handlers)`:
+   FastAPI app с endpoints:
+   - `GET /health` — health check (PersistenceManager.health_check + BSL LS ping).
+     Возвращает JSON `{"status": "ok"|"failed", "checks": {...}}`. Для Docker/k8s probe.
+   - `GET /servers` — список доступных MCP серверов (через `server_factory.AVAILABLE_SERVERS`).
+   - `GET /tools/{server_name}` — список tools для сервера.
+   - `POST /facade/{tool}` — вызов Facade lifecycle tool (plan/gather/generate/validate/
+     review/explain/run_cli/data_status). Body = tool args. Response = JSON.
+   - `POST /domain/{server_name}/{tool}` — вызов доменного tool (metadata/codebase/kb/
+     bsl_ls/git). Body = tool args.
+   - ErrorHandler: ToolError → 400, неизвестный tool → 404, внутренняя ошибка → 500.
+3. **`packages/agent/src/agent/cli.py`** — `@main.command() def serve()` с `--host`
+   (default 0.0.0.0) и `--port` (default 8000).
+4. **`docker-compose.yml`** — обновить healthcheck для `1c-ai-app`: `curl -f http://localhost:8000/health`
+   вместо `1c-ai health` (HTTP probe более стандартен для Docker/k8s).
+5. **Тесты** `tests/agent/test_cli_serve.py`:
+   - `GET /health` → 200 + JSON structure (status, checks).
+   - `GET /servers` → 200 + 6 серверов.
+   - `GET /tools/facade` → 200 + 8 tools.
+   - `POST /facade/data_status` → 200 + JSON result.
+   - `POST /facade/plan` с mock handlers → 200 + plan_id.
+   - `POST /facade/unknown` → 404.
+   - `POST /domain/unknown_server/foo` → 404.
+   - CLI registration: `1c-ai serve --help`.
+
+**ADR compliance:**
+- ADR-0003 (MCP-архитектура: Facade + 5 доменных серверов) — HTTP access к любому.
+- ADR-0013 (Agent-Facade) — Facade через HTTP (режим A: REST API).
+- ADR-0015 (3-container deployment) — port 8000 finally используется.
+
+**Реализация:** commit (pending).
+
+**Последствия:**
+- Положительные: Facade доступен через HTTP (удалённые клиенты, k8s probes, browser
+  IDE); /health endpoint для Docker/k8s; единый entry point для всех tools; foundation
+  для web UI (future).
+- Отрицательные: HTTP server — stateless (state через FacadeStateStore, уже готово
+  TD-S7-01); без auth (future TD — добавить API key/OAuth для production).
+
+**Связанные:** ADR-0003, ADR-0013, ADR-0015, BACKLOG TD-S7-02, D-2026-07-13-13
+(survival-restart — stateless HTTP работает через store).
+
+---
+
 ### D-2026-07-13-13: TD-S7-01 — Production survival-restart для Facade (FacadeStateStore)
 
 **Дата:** 2026-07-13
