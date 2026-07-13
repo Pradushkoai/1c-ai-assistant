@@ -92,7 +92,7 @@
 
 ## 🟢 Этап 3 (Production-readiness)
 
-> **Статус:** В РАБОТЕ (TD-S5-01/02/03 ЗАКРЫТЫ 2026-07-13, 3/4 задач).
+> **Статус:** ✅ ЗАВЕРШЁН (TD-S5-01/02/03/04 все закрыты 2026-07-13, 4/4 задач).
 > **Цель этапа:** production-ready система для Cursor IDE — persistence, lifecycle,
 > git-интеграция, production Docker.
 
@@ -186,16 +186,32 @@
   - Тесты: 905 проходят + 7 skipped (+59 от git). ruff чист. 0 boundaries. mypy 14.
   - См. D-2026-07-13-08.
 
-### TD-S5-04: Docker production
-- **Этап:** 3 (Sprint 5)
-- **Приоритет:** MEDIUM
-- **Описание:** Multi-stage Dockerfile.app, healthchecks, .env.example.
-- **Архитектура:**
-  - `docker/Dockerfile.app` — переписать на multi-stage (builder + runtime).
-  - `.env.example` — все переменные окружения с комментариями.
-  - `docker-compose.override.yml` — для dev (с hot reload).
-  - Healthcheck для `1c-ai-app` (HTTP /health endpoint).
-- **Оценка:** 1 день
+### TD-S5-04: Docker production — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit (pending)
+- **Решение:**
+  - `docker/Dockerfile.app` — переписан на **multi-stage** (builder + runtime):
+    - **builder**: `python:3.12-slim` + gcc/g++/libpq-dev (build deps для C-extensions),
+      `uv sync --all-extras` собирает `.venv`.
+    - **runtime**: `python:3.12-slim` + только git/curl/ca-certificates, копирует
+      `.venv` из builder. Non-root user (`app`). OCI labels. `HEALTHCHECK`.
+  - `packages/agent/src/agent/cli_commands/health.py` — `1c-ai health` CLI команда:
+    `PersistenceManager.health_check()` + BSL LS HTTP ping. JSON output, exit 0/1.
+    Зарегистрирована в `cli.py`.
+  - `docker-compose.yml` — healthcheck для `1c-ai-app`:
+    `CMD-SHELL, 1c-ai health || exit 1`, interval 30s, timeout 10s, start_period 30s.
+  - `.env.example` — все env vars с комментариями: `DATABASE_URL`, `BSL_LS_HTTP_URL`,
+    `BSL_LS_TIMEOUT`, `VECTOR_STORE`, `LOG_FORMAT`, `GH_TOKEN`, `ZAI_API_KEY`,
+    `ONEC_AI_PROJECT`, `TEST_POSTGRES_DSN`, `TEST_GIT_REPO`.
+  - `docker-compose.override.yml` — dev: volume mount `./packages` (hot reload),
+    `LOG_FORMAT=text`, `VECTOR_STORE=memory`, `restart: "no"`, `command: 1c-ai-mcp`,
+    healthcheck disabled (быстрый старт).
+  - `tests/agent/test_cli_health.py` — 16 тестов: MemorySaver ok, PostgresSaver
+    ok/failed/error, BSL LS ok/500/connection-error/skipped, JSON output format,
+    CLI registration, `_mask_dsn`.
+  - Тесты: 921 проходят + 7 skipped (+16 от health). ruff чист. 0 boundaries.
+    mypy 14 (базовая TD-011, новых нет).
+  - См. D-2026-07-13-09.
 
 ---
 
@@ -261,10 +277,10 @@
 | В работе (Этап 1) | 0 (Этап 1 завершён) |
 | Этап 2 — открыто | 0 (**Этап 2 ЗАВЕРШЁН**) |
 | Этап 2 — закрыто | 7 (TD-S4.2-01/02/03/04/05/06/07) |
-| Этап 3 — открыто | 1 (TD-S5-04) |
-| Этап 3 — закрыто | 3 (TD-S5-01, TD-S5-02, TD-S5-03) |
+| Этап 3 — открыто | 0 (**Этап 3 ЗАВЕРШЁН**) |
+| Этап 3 — закрыто | 4 (TD-S5-01, TD-S5-02, TD-S5-03, TD-S5-04) |
 | Когда-нибудь | 4 (TD-005..011) |
-| Закрыто | 16 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01..07, TD-S5-01, TD-S5-02, TD-S5-03) |
+| Закрыто | 17 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01..07, TD-S5-01, TD-S5-02, TD-S5-03, TD-S5-04) |
 | **Всего** | **21** |
 
 ---

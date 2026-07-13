@@ -28,6 +28,12 @@ services:
     stdin_open: true  # для MCP stdio
     ports:
       - "8000:8000"  # зарезервировано для REST API (спринт 5+)
+    healthcheck:
+      test: ["CMD-SHELL", "1c-ai health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
     restart: unless-stopped
 
   # ─── BSL Language Server: JVM + HTTP API ────────────────────────────────

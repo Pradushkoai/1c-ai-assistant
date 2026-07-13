@@ -1,0 +1,45 @@
+# docker-compose.override.yml — dev overrides (TD-S5-04).
+# Автоматически применяется docker-compose рядом с docker-compose.yml.
+# См. ADR-0015, D-2026-07-13-09.
+#
+# Использование:
+#   docker-compose up              # production-like (docker-compose.yml)
+#   docker-compose -f docker-compose.yml -f docker-compose.override.yml up  # dev
+#
+# Dev отличия:
+# - Volume mount `.` → `/app` (hot reload исходников без rebuild).
+# - LOG_FORMAT=text (читаемость в dev).
+# - restart: "no" (dev — не перезапускать автоматически).
+# - command: 1c-ai-mcp (запуск Facade MCP server для разработки).
+
+services:
+  1c-ai-app:
+    volumes:
+      # Hot reload: монтируем исходники пакетов поверх образа.
+      - ./packages:/app/packages
+      - ./knowledge-base:/app/knowledge-base:ro
+      - ./data:/app/data
+      - ./derived:/app/derived
+      - ./runtime:/app/runtime
+    environment:
+      - LOG_FORMAT=text
+      - VECTOR_STORE=memory  # dev: без postgres (если не запущен)
+    # Dev: запуск Facade MCP server (stdio) вместо CLI.
+    command: ["1c-ai-mcp"]
+    restart: "no"
+    # Dev: без healthcheck wait (быстрый старт).
+    healthcheck:
+      disable: true
+
+  postgres:
+    # Dev: postgres без persistent volume (данные теряются при down).
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    # Без named volume — данные ephemeral.
+    ports:
+      - "5432:5432"
+
+  1c-ai-bsl-ls:
+    ports:
+      - "8080:8080"
+    restart: "no"

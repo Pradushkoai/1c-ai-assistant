@@ -1,43 +1,83 @@
 # docker/Dockerfile.app
-# 1C AI Assistant — основной Python-контейнер.
+# 1C AI Assistant — основной Python-контейнер (multi-stage, TD-S5-04).
 # Содержит: orchestrator + 4 MCP in-process + Facade.
 # Не содержит Java (BSL LS в отдельном контейнере).
+#
+# Multi-stage: builder (с build deps) + runtime (только runtime deps).
+# См. ADR-0015 (3-container deployment), D-2026-07-13-09.
 
-FROM python:3.12-slim AS base
+# ─── Stage 1: builder ───────────────────────────────────────────────────────
+FROM python:3.12-slim AS builder
 
-# Системные зависимости
+# Build deps для C-extensions (psycopg, fastembed, tree-sitter).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    curl \
-    unzip \
+    gcc \
+    g++ \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Установка uv для dependency management
 RUN pip install --no-cache-dir uv
 
 WORKDIR /app
 
-# Копируем workspace
+# Копируем только dependency-файлы (better layer caching).
 COPY pyproject.toml uv.lock* ./
 COPY packages/ ./packages/
 COPY paths.env ./
 
-# Синхронизация зависимостей
+# Синхронизация всех extras (postgres, langsmith, qdrant, api) в /app/.venv.
 RUN uv sync --all-extras
 
-# Копируем остальное
-COPY knowledge-base/ ./knowledge-base/
-COPY adr/ ./adr/
-COPY docs/ ./docs/
+# ─── Stage 2: runtime ───────────────────────────────────────────────────────
+FROM python:3.12-slim AS runtime
 
-# Volume для данных
+# Runtime deps: git (для git MCP), curl (для healthcheck), ca-certificates.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Non-root user для security.
+RUN groupadd -r app && useradd -r -g app -d /app -s /bin/bash app
+
+WORKDIR /app
+
+# Копируем .venv из builder.
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/pyproject.toml /app/uv.lock* /app/
+COPY --from=builder /app/paths.env /app/
+
+# Копируем исходники пакетов (для editable install).
+COPY packages/ /app/packages/
+
+# Копируем knowledge-base, adr, docs (read-only ресурсы).
+COPY knowledge-base/ /app/knowledge-base/
+COPY adr/ /app/adr/
+COPY docs/ /app/docs/
+
+# Volume для данных (gitignored в репо, монтируется из host).
 VOLUME ["/app/data", "/app/derived", "/app/runtime"]
 
-# Переменные окружения
+# Переменные окружения (defaults; переопределяются в docker-compose / .env).
 ENV PYTHONUNBUFFERED=1 \
     LOG_FORMAT=json \
-    VECTOR_STORE=pgvector
+    VECTOR_STORE=pgvector \
+    PATH="/app/.venv/bin:${PATH}"
 
-# Точка входа — CLI
-ENTRYPOINT ["uv", "run", "1c-ai"]
+# OCI labels (org.opencontainers.image.*).
+LABEL org.opencontainers.image.title="1c-ai-app" \
+      org.opencontainers.image.description="1C AI Assistant — orchestrator + MCP servers + Facade" \
+      org.opencontainers.image.source="https://github.com/Pradushkoai/1c-ai-assistant" \
+      org.opencontainers.image.licenses="MIT"
+
+# Переключаемся на non-root user.
+USER app
+
+# Healthcheck: 1c-ai health (persistence + BSL LS ping).
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000/health || 1c-ai health || exit 1
+
+# Точка входа — CLI.
+ENTRYPOINT ["1c-ai"]
 CMD ["--help"]

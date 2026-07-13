@@ -7,6 +7,7 @@
     1c-ai config list              — список конфигураций
     1c-ai config remove            — удалить конфигурацию
     1c-ai validate                 — preflight check
+    1c-ai health                   — health check (persistence + BSL LS) для Docker
     1c-ai hbk load                 — загрузить .hbk файлы (минимальная версия)
 
 Использует click для CLI, data_layer.PathManager для путей,
@@ -179,6 +180,21 @@ def validate() -> None:
     from .cli_commands.validate import cmd_validate
 
     sys.exit(cmd_validate())
+
+
+@main.command()
+def health() -> None:
+    """Health check — проверить состояние persistence + BSL LS (для Docker).
+
+    Проверяет:
+    - PersistenceManager.health_check() (PostgresSaver или MemorySaver)
+    - BSL LS HTTP /health (если BSL_LS_HTTP_URL задан)
+
+    Выход: 0 если OK, 1 если есть проблемы. Вывод: JSON в stdout.
+    """
+    from .cli_commands.health import cmd_health
+
+    sys.exit(cmd_health())
 
 
 @main.group()

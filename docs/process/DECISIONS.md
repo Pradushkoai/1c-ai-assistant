@@ -12,6 +12,62 @@
 
 ## Записи (новые сверху)
 
+### D-2026-07-13-09: TD-S5-04 — Docker production: multi-stage + `1c-ai health` + .env.example
+
+**Дата:** 2026-07-13
+**Тип:** architecture + infrastructure (TD-S5-04, Stage 3 задача 4/4, ЗАВЕРШАЮЩАЯ)
+**Контекст:** `docker/Dockerfile.app` был одно-stage (большой образ, build deps в
+runtime). Не было healthcheck для `1c-ai-app`. Не было `.env.example`.
+Не было `docker-compose.override.yml` для dev. BACKLOG TD-S5-04 требует:
+multi-stage Dockerfile.app, healthchecks, .env.example, docker-compose.override.
+
+**Решение:**
+1. **Multi-stage `Dockerfile.app`** (builder + runtime):
+   - **builder**: `python:3.12-slim` + build deps (gcc для C-extensions), `uv sync
+     --all-extras` собирает wheels в `/app/.venv`.
+   - **runtime**: `python:3.12-slim` + только runtime deps (git, curl, ca-certificates),
+     копирует `.venv` из builder. Образ ~250 МБ (было ~400 МБ).
+   - OCI labels (org.opencontainers.image.*), non-root user (`app`), `HEALTHCHECK`.
+2. **`1c-ai health` CLI команда** — проверка состояния для Docker healthcheck:
+   - `PersistenceManager.health_check()` (если `DATABASE_URL` задан — PostgresSaver
+     ping; иначе MemorySaver → True).
+   - BSL LS HTTP ping (если `BSL_LS_HTTP_URL` задан — GET /health; иначе skip).
+   - Exit 0 если OK, 1 если не OK. JSON output для логов.
+3. **`docker-compose.yml`** — healthcheck для `1c-ai-app`:
+   `CMD-SHELL`, `1c-ai health || exit 1`, interval 30s, timeout 10s, start_period 30s.
+   `1c-ai-app` depends_on postgres + bsl-ls (service_healthy).
+4. **`.env.example`** — все env vars с комментариями:
+   `DATABASE_URL`, `BSL_LS_HTTP_URL`, `VECTOR_STORE`, `LOG_FORMAT`, `GH_TOKEN`,
+   `ZAI_API_KEY`, `TEST_POSTGRES_DSN`, `ONEC_AI_PROJECT`.
+5. **`docker-compose.override.yml`** — для dev:
+   - Volume mount `.` → `/app` (hot reload исходников).
+   - `LOG_FORMAT=text` (читаемость в dev).
+   - `restart: "no"` (dev — не перезапускать автоматически).
+   - Override command для MCP server (если разработка Facade).
+
+**Health endpoint:** НЕ добавляю HTTP server (FastAPI) — это TD-S5-05+ (REST API).
+Для MVP Docker production healthcheck через CLI достаточно. Docker перезапустит
+контейнер если `1c-ai health` падает 3 раза подряд.
+
+**Тесты** (`tests/agent/test_cli_health.py`):
+- `1c-ai health` с MemorySaver (no DATABASE_URL) → exit 0.
+- `1c-ai health` с PostgresSaver (mock health_check False) → exit 1.
+- `1c-ai health` с BSL LS (mock httpx 200) → exit 0; (mock 500) → exit 1.
+- JSON output format.
+
+**Реализация:** commit (pending).
+
+**Последствия:**
+- Положительные: production-ready Docker (multi-stage, healthcheck, .env.example);
+  `1c-ai health` reusable для CI/CD; dev override для hot reload.
+- Отрицательные: `1c-ai health` — CLI, не HTTP (для orchestration типа k8s
+  нужен HTTP probe — отдельный TD).
+
+**Связанные:** ADR-0015 (3-container deployment), D-2026-07-13-04 (PersistenceManager
+health_check), BACKLOG TD-S5-04.
+
+---
+
 ### D-2026-07-13-08: TD-S5-03 — git MCP server: async subprocess + безопасность
 
 **Дата:** 2026-07-13

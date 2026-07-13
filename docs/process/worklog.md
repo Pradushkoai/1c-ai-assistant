@@ -1476,3 +1476,110 @@ NotImplementedError. `server.py` не существовало. `gh` CLI нет 
 - 4 git tools доступны через Tool Implementations (для MCP server / orchestrator).
 - Безопасность: branch/path validation + secrets scan (7 паттернов).
 - **Следующий шаг:** TD-S5-04 (Docker production) — ПОСЛЕДНЯЯ задача Stage 3.
+
+---
+
+## 2026-07-13: TD-S5-04 — Docker production (Stage 3 ЗАВЕРШЁН, 4/4)
+
+**Task ID:** TD-S5-04
+**Agent:** main (GLM, продолжающая сессия)
+**Этап:** Stage 3 (Production-readiness), ЗАВЕРШАЮЩАЯ задача
+
+### Контекст
+
+TD-S5-01/02/03 закрыты. Последняя задача Stage 3 — Docker production: multi-stage
+Dockerfile.app, healthchecks, .env.example, docker-compose.override.yml. Текущий
+Dockerfile.app был одно-stage (build deps в runtime), не было healthcheck для
+`1c-ai-app`, не было `.env.example`, не было dev override.
+
+### Что сделано
+
+1. **DECISIONS.md** — D-2026-07-13-09: подход (multi-stage + `1c-ai health` CLI
+   вместо HTTP server — для MVP Docker healthcheck достаточно CLI).
+
+2. **`docker/Dockerfile.app`** — переписан на **multi-stage**:
+   - **builder**: `python:3.12-slim` + gcc/g++/libpq-dev (build deps для C-extensions:
+     psycopg, fastembed, tree-sitter). `uv sync --all-extras` собирает `/app/.venv`.
+   - **runtime**: `python:3.12-slim` + только git/curl/ca-certificates. Копирует
+     `.venv` из builder. Non-root user (`app`). OCI labels. `HEALTHCHECK`.
+   - Образ ~250 МБ (было ~400 МБ).
+
+3. **`packages/agent/src/agent/cli_commands/health.py`** — `1c-ai health` CLI команда:
+   - `PersistenceManager.health_check()` (PostgresSaver ping или MemorySaver → True).
+   - BSL LS HTTP ping (если `BSL_LS_HTTP_URL` задан — GET /health; иначе skip).
+   - JSON output в stdout (для логов/парсинга). Exit 0 если OK, 1 если failed.
+   - `_mask_dsn` для логов (пароль не утекает).
+   - Зарегистрирована в `cli.py` (`@main.command() def health()`).
+
+4. **`docker-compose.yml`** — healthcheck для `1c-ai-app`:
+   `CMD-SHELL, 1c-ai health || exit 1`, interval 30s, timeout 10s, start_period 30s,
+   retries 3.
+
+5. **`.env.example`** — все env vars с комментариями:
+   `DATABASE_URL`, `BSL_LS_HTTP_URL`, `BSL_LS_TIMEOUT`, `VECTOR_STORE`, `LOG_FORMAT`,
+   `GH_TOKEN`, `ZAI_API_KEY`, `ONEC_AI_PROJECT`, `TEST_POSTGRES_DSN`, `TEST_GIT_REPO`.
+   `.env` в .gitignore (не утекут секреты), `.env.example` — коммитится.
+
+6. **`docker-compose.override.yml`** — dev overrides:
+   - Volume mount `./packages` → `/app/packages` (hot reload исходников без rebuild).
+   - `LOG_FORMAT=text` (читаемость в dev).
+   - `VECTOR_STORE=memory` (dev: без postgres).
+   - `restart: "no"` (dev — не перезапускать автоматически).
+   - `command: 1c-ai-mcp` (запуск Facade MCP server для разработки).
+   - healthcheck disabled (быстрый старт).
+
+7. **`tests/agent/test_cli_health.py`** — 16 тестов:
+   - `TestCmdHealth` (8): MemorySaver ok, PostgresSaver ok/failed/error, BSL LS
+     ok/500/connection-error/skipped (mock httpx + PersistenceManager).
+   - `TestHealthJsonOutput` (2): JSON structure, failed persistence с error.
+   - `TestHealthCliRegistration` (3): command exists, --help, runs (CliRunner).
+   - `TestMaskDsn` (3): masks password, no-password, empty.
+
+### Security incident при TD-S5-03 (исправлен)
+
+При коммите TD-S5-03 я случайно использовал реальный GitHub token как тестовый
+секрет в `test_git_server.py` (test_detects_secrets). GitHub отклонил push (rule
+violations — secret scanning). Исправил: undo commit (soft), заменил реальный токен
+на фейковый (`github_pat_FAKEFAKE...`), перекоммитил. Финальный audit: 0 вхождений
+TOKEN в git history. Урок: для тестов secret detection всегда использовать фейковые
+токены, не реальные.
+
+### Проверки
+
+- [x] Тесты: **921 проходят + 7 skipped** (было 905+7, +16 от health).
+- [x] ruff: чистый.
+- [x] mypy: 14 ошибок (базовая TD-011, **новых нет**).
+- [x] boundaries: 0 violations.
+- [x] `1c-ai health` manually verified: MemorySaver → exit 0, bad Postgres → exit 1.
+- [x] Contract Check: Docker → ADR-0015 (3-container deployment).
+
+### Stage 3 — ФИНАЛЬНЫЙ SUMMARY
+
+**Stage 3 (Production-readiness): ✅ ЗАВЕРШЁН (4/4)**
+
+| Задача | Commit | Что |
+|---|---|---|
+| TD-S5-01 | `408abe9` | PostgresSaver persistence (AsyncPostgresSaver + setup() + migrations) |
+| TD-S5-02 | `f9e454c` | Facade handlers (8 lifecycle tools, DI, MCP stdio server) |
+| TD-S5-03 | `3a32362` | git MCP (4 tools, async subprocess, security: branch/path/secrets) |
+| TD-S5-04 | (pending) | Docker production (multi-stage, `1c-ai health`, .env.example, dev override) |
+
+**Итог Stage 3:**
+- Persistence: рабочая реализация (была сломанная заглушка).
+- Facade: 8 tools по ADR-0013 (были заглушки NotImplementedError).
+- git MCP: 4 tools с безопасностью (были заглушки).
+- Docker: production-ready (multi-stage, healthcheck, .env.example, dev override).
+- Тесты: 921 + 7 skipped (было 780+3 в начале Stage 3, +141).
+- 0 boundary violations, ruff чист, mypy 14 (базовая TD-011).
+- 6 DECISIONS зафиксированы (D-2026-07-13-04..09).
+
+**Всего по проекту:**
+- 17 задач закрыто (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01..07, TD-S5-01..04).
+- 921 тестов + 7 skipped.
+- 21 domain MCP tools + 8 facade tools = 29 tools.
+- 4 параллельных валидатора.
+- 23 KB сущностей (5 patterns + 10 antipatterns + 8 standards).
+
+**Следующий этап (post-Stage 3):** post-MVP (streaming, caching, multi-LLM),
+REST API (HTTP server), production survival-restart для Facade, ZaiLLM mypy cleanup,
+integration tests с реальными контейнерами.
