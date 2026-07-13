@@ -19,7 +19,6 @@ import pytest
 from mcp_servers.facade.handlers import (
     FacadeHandlers,
     FacadeNotConfiguredError,
-    _find_plan_id_by_subtask,
     _find_subtask_idx,
     _parse_artifact_id,
     _validate_plan_id,
@@ -107,6 +106,77 @@ class _FakeState:
                 setattr(new, k, v)
         return new
 
+    def model_dump_json(self) -> str:
+        """Сериализация в JSON (имитация Pydantic model_dump_json, для FacadeStateStore)."""
+        import json
+
+        return json.dumps(
+            {
+                "task_id": self.task_id,
+                "description": self.description,
+                "config_name": self.config_name,
+                "config_version": self.config_version,
+                "platform_version": self.platform_version,
+                "fsm_state": self.fsm_state,
+                "subtasks": [
+                    {"id": s.id, "constraints": None} for s in self.subtasks
+                ],
+                "current_subtask_idx": self.current_subtask_idx,
+                "current_iteration": self.current_iteration,
+                "iterations": [
+                    {
+                        "number": i.number,
+                        "code": i.code,
+                        "llm_response": i.llm_response,
+                    }
+                    for i in self.iterations
+                ],
+                "validation_passed": self.validation_passed,
+                "review_passed": self.review_passed,
+                "critical_findings": self.critical_findings,
+                "plan_result": self.plan_result,
+                "gather_result": self.gather_result,
+                "validate_result": self.validate_result,
+                "review_result": self.review_result,
+                "commit_result": self.commit_result,
+            },
+            ensure_ascii=False,
+            default=str,
+        )
+
+    @classmethod
+    def model_validate_json(cls, json_str: str) -> _FakeState:
+        """Десериализация из JSON (имитация Pydantic model_validate_json)."""
+        import json
+
+        data = json.loads(json_str)
+        state = cls(
+            task_id=data["task_id"],
+            description=data["description"],
+            config_name=data["config_name"],
+            config_version=data["config_version"],
+            platform_version=data["platform_version"],
+            fsm_state=data.get("fsm_state", "planning"),
+        )
+        state.subtasks = [_FakeSubtask(s["id"]) for s in data.get("subtasks", [])]
+        state.current_subtask_idx = data.get("current_subtask_idx", 0)
+        state.current_iteration = data.get("current_iteration", 0)
+        state.iterations = [
+            _FakeIteration(i["number"], i["code"]) for i in data.get("iterations", [])
+        ]
+        # Восстанавливаем llm_response в Iteration.
+        for it, it_data in zip(state.iterations, data.get("iterations", []), strict=False):
+            it.llm_response = it_data.get("llm_response", {})
+        state.validation_passed = data.get("validation_passed", False)
+        state.review_passed = data.get("review_passed", False)
+        state.critical_findings = data.get("critical_findings", 0)
+        state.plan_result = data.get("plan_result")
+        state.gather_result = data.get("gather_result")
+        state.validate_result = data.get("validate_result")
+        state.review_result = data.get("review_result")
+        state.commit_result = data.get("commit_result")
+        return state
+
 
 def _state_factory(**kwargs: Any) -> _FakeState:
     """Factory для создания _FakeState (имитация TaskState)."""
@@ -183,6 +253,11 @@ def _make_handlers(
             "fsm_state": "committing",
         }
 
+    # FacadeStateStore с state_class=_FakeState для round-trip в tests.
+    from mcp_servers.facade import FacadeStateStore
+
+    state_store = FacadeStateStore(state_class=_FakeState)
+
     return FacadeHandlers(
         state_factory=_state_factory,
         node_plan=_plan_node,
@@ -191,6 +266,7 @@ def _make_handlers(
         node_validate=_validate_node,
         node_review=_review_node,
         node_commit=_commit_node,
+        state_store=state_store,
         kb_server=kb_server,
         bsl_ls_server=bsl_ls_server,
         llm=llm,
@@ -249,13 +325,6 @@ class TestHelpers:
         state = _FakeState("t1", "d", "c", "v", "p")
         state.subtasks = [_FakeSubtask("st-001")]
         assert _find_subtask_idx(state, "st-999") is None
-
-    def test_find_plan_id_by_subtask(self) -> None:
-        state = _FakeState("t1", "d", "c", "v", "p")
-        state.subtasks = [_FakeSubtask("st-001")]
-        states = {"plan-a": state}
-        assert _find_plan_id_by_subtask(states, "st-001") == "plan-a"
-        assert _find_plan_id_by_subtask(states, "st-999") is None
 
 
 # ─── handle_plan ─────────────────────────────────────────────────────────────
@@ -317,9 +386,10 @@ class TestHandlePlan:
             }
         )
         plan_id = result["plan_id"]
-        # State сохранён в in-memory dict.
-        assert plan_id in h._states
-        assert h._states[plan_id].subtasks[0].id == "st-001"
+        # State сохранён в state_store (in-memory fallback).
+        saved_state = await h._state_store.load_state(plan_id)
+        assert saved_state is not None
+        assert saved_state.subtasks[0].id == "st-001"
 
 
 # ─── handle_gather ───────────────────────────────────────────────────────────
@@ -383,7 +453,8 @@ class TestHandleGather:
         # Gather для второй подзадачи.
         await h.handle_gather({"plan_id": plan_id, "subtask_id": "st-002"})
         # State должен переключить current_subtask_idx на 1.
-        assert h._states[plan_id].current_subtask_idx == 1
+        saved_state = await h._state_store.load_state(plan_id)
+        assert saved_state.current_subtask_idx == 1
 
 
 # ─── handle_generate ─────────────────────────────────────────────────────────
@@ -492,7 +563,7 @@ class TestHandleValidate:
     @pytest.mark.asyncio
     async def test_validate_unknown_subtask(self) -> None:
         h = _make_handlers()
-        with pytest.raises(KeyError, match="not found"):
+        with pytest.raises(KeyError, match="not in cache"):
             await h.handle_validate({"artifact_id": "st-unknown#1"})
 
 

@@ -357,15 +357,22 @@ class TestFacadeReviewCommitGitFlow:
                 "fsm_state": "done",
             }
 
+        # FacadeStateStore с state_class=TaskState (real TaskState round-trip).
+        from mcp_servers.facade import FacadeStateStore
+        from orchestrator.state import TaskState as _TaskState
+
+        state_store = FacadeStateStore(state_class=_TaskState)
+
         h = FacadeHandlers(
             state_factory=_state_factory,
             node_review=_node_review,
             node_commit=_node_commit,
+            state_store=state_store,
             git_server=git_server,
             repo_path=str(tmp_path),
         )
-        # Подготовим state в in-memory dict через handle_plan-like flow.
-        h._save_state("plan-x", state)
+        # Подготовим state в state_store + subtask→plan cache.
+        await h._save_state("plan-x", state)
 
         result = await h.handle_review({"artifact_id": "st-1#1"})
         assert result["decision"] == "proceed"

@@ -80,6 +80,11 @@ def create_facade_handlers() -> FacadeHandlers:
     path_manager = _try_create_path_manager()
     config_registry = _try_create_config_registry(path_manager)
 
+    # ─── state_store (Stage 5 TD-S7-01, survival-restart) ───────────────────
+    # PersistenceManager + FacadeStateStore. Если DATABASE_URL задан — PostgresSaver
+    # (state переживает restart). Иначе — in-memory fallback.
+    state_store = _try_create_state_store()
+
     return FacadeHandlers(
         state_factory=state_factory,
         node_plan=plan_node,
@@ -88,6 +93,7 @@ def create_facade_handlers() -> FacadeHandlers:
         node_validate=validate_node,
         node_review=review_node,
         node_commit=commit_node,
+        state_store=state_store,
         kb_server=kb_server,
         bsl_ls_server=bsl_ls_server,
         llm=llm,
@@ -151,6 +157,79 @@ def _get_repo_path() -> str | None:
     import os
 
     return os.environ.get("1C_AI_REPO_PATH")
+
+
+def _try_create_state_store() -> Any:
+    """Создать FacadeStateStore с PersistenceManager (Stage 5 TD-S7-01).
+
+    PersistenceManager — async context manager. Для MCP stdio server (долгоживущий
+    процесс) открываем connection один раз через asyncio.run() и держим открытым.
+    Если DATABASE_URL не задан — FacadeStateStore с in-memory fallback.
+
+    Returns:
+        FacadeStateStore (persistent если DATABASE_URL задан, иначе in-memory).
+    """
+    import os
+
+    # Если DATABASE_URL не задан — in-memory fallback (state не переживает restart).
+    if not os.environ.get("DATABASE_URL"):
+        log.info("facade_entry: no DATABASE_URL, using in-memory FacadeStateStore")
+        from mcp_servers.facade import FacadeStateStore
+
+        try:
+            from orchestrator.state import TaskState
+
+            return FacadeStateStore(state_class=TaskState)
+        except ImportError:
+            return FacadeStateStore()
+
+    try:
+        from mcp_servers.facade import FacadeStateStore
+        from orchestrator.state import TaskState
+
+        # Открываем PersistenceManager (async) через asyncio.run.
+        # Connection держится открытым на lifecycle процесса.
+        pm = _open_persistence_manager_sync()
+        checkpointer = pm.get_checkpointer()
+        log.info("facade_entry: FacadeStateStore with PostgresSaver (persistent)")
+        return FacadeStateStore(
+            checkpointer=checkpointer,
+            is_postgres=True,
+            state_class=TaskState,
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("facade_entry: state_store init failed, using in-memory: %s", exc)
+        from mcp_servers.facade import FacadeStateStore
+
+        # In-memory fallback — тоже с state_class=TaskState (если доступен).
+        try:
+            from orchestrator.state import TaskState
+
+            return FacadeStateStore(state_class=TaskState)
+        except ImportError:
+            return FacadeStateStore()
+
+
+def _open_persistence_manager_sync() -> Any:
+    """Открыть PersistenceManager синхронно (через asyncio.run) и удерживать.
+
+    Для MCP stdio server — один долгоживущий процесс, connection открывается
+    один раз. Для CLI команд (generate) — PersistenceManager открывается в
+    asyncio.run(_run_pipeline) отдельно (там свой lifecycle).
+
+    Returns:
+        PersistenceManager (войденный, с активным connection).
+    """
+    import asyncio
+
+    from orchestrator.persistence import PersistenceManager
+
+    async def _open() -> Any:
+        pm = PersistenceManager.from_env()
+        await pm.__aenter__()
+        return pm
+
+    return asyncio.run(_open())
 
 
 def _try_create_llm() -> Any:

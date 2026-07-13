@@ -35,6 +35,7 @@ from .next_action import (
     after_validate,
 )
 from .server import create_facade_server, run_facade_server, run_sync
+from .state_store import FacadeStateStore
 from .tool_definitions import FACADE_TOOL_NAMES, FACADE_TOOLS
 
 __all__ = [
@@ -57,6 +58,8 @@ __all__ = [
     "DataStatusOutput",
     # handlers
     "FacadeHandlers",
+    # state store (TD-S7-01)
+    "FacadeStateStore",
     # server
     "create_facade_server",
     "run_facade_server",

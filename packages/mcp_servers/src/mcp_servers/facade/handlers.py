@@ -98,8 +98,8 @@ class FacadeHandlers:
         node_validate: async callable ``validate_node(state, bsl_ls_server=..., kb_server=...)``.
         node_review: async callable ``review_node(state, llm=..., kb_server=...)``.
         node_commit: async callable ``commit_node(state)``.
-        persistence_manager: опц. PersistenceManager (для будущего production
-            survival-restart). Сейчас не используется для state.
+        state_store: ``FacadeStateStore`` для persistence (survival-restart, TD-S7-01).
+            Если None — in-memory fallback (state не переживает restart процесса).
         kb_server: KbServer инстанс (для gather, validate, review, explain, run_cli).
         bsl_ls_server: BslLsServer инстанс (для validate, run_cli).
         llm: LLM инстанс (для plan, generate, review).
@@ -116,7 +116,7 @@ class FacadeHandlers:
         node_validate: NodeCallable | None = None,
         node_review: NodeCallable | None = None,
         node_commit: NodeCallable | None = None,
-        persistence_manager: Any = None,
+        state_store: Any = None,
         kb_server: Any = None,
         bsl_ls_server: Any = None,
         metadata_server: Any = None,
@@ -133,7 +133,10 @@ class FacadeHandlers:
         self.node_validate = node_validate
         self.node_review = node_review
         self.node_commit = node_commit
-        self.persistence_manager = persistence_manager
+        # State store (TD-S7-01): FacadeStateStore или None (in-memory fallback).
+        from .state_store import FacadeStateStore
+
+        self._state_store = state_store or FacadeStateStore()
         self.kb_server = kb_server
         self.bsl_ls_server = bsl_ls_server
         self.metadata_server = metadata_server
@@ -142,22 +145,29 @@ class FacadeHandlers:
         self.llm = llm
         self.path_manager = path_manager
         self.config_registry = config_registry
-        # In-memory state: plan_id → state (TaskState в production).
-        self._states: dict[str, Any] = {}
+        # In-memory cache: subtask_id → plan_id (для handle_validate/review).
+        # После restart cache пустой — клиент должен начать с plan (MVP-ограничение).
+        self._subtask_to_plan: dict[str, str] = {}
 
     # ─── state helpers ──────────────────────────────────────────────────────
 
-    def _get_state(self, plan_id: str) -> Any:
+    async def _get_state(self, plan_id: str) -> Any:
         """Загрузить state по plan_id. Raises KeyError если нет."""
         _validate_plan_id(plan_id)
-        if plan_id not in self._states:
+        state = await self._state_store.load_state(plan_id)
+        if state is None:
             raise KeyError(f"plan_id={plan_id!r} not found. Call 'plan' first.")
-        return self._states[plan_id]
+        return state
 
-    def _save_state(self, plan_id: str, state: Any) -> None:
+    async def _save_state(self, plan_id: str, state: Any) -> None:
         """Сохранить state по plan_id."""
         _validate_plan_id(plan_id)
-        self._states[plan_id] = state
+        await self._state_store.save_state(plan_id, state)
+        # Обновляем subtask→plan cache для handle_validate/review.
+        for subtask in getattr(state, "subtasks", []) or []:
+            subtask_id = getattr(subtask, "id", None)
+            if subtask_id:
+                self._subtask_to_plan[subtask_id] = plan_id
 
     def _require(self, attr: str, name: str) -> Any:
         """Проверить, что DI dependency задана. Raises FacadeNotConfiguredError."""
@@ -196,7 +206,7 @@ class FacadeHandlers:
 
         update = await node_plan(state, llm=self.llm, metadata_server=self.metadata_server)
         state = state.model_copy(update=update)
-        self._save_state(plan_id, state)
+        await self._save_state(plan_id, state)
 
         subtasks = state.subtasks
         first_subtask_id = subtasks[0].id if subtasks else None
@@ -219,7 +229,7 @@ class FacadeHandlers:
         log.info("facade_gather_start: plan_id=%s subtask_id=%s", parsed.plan_id, parsed.subtask_id)
 
         node_gather = self._require("node_gather", "node_gather")
-        state = self._get_state(parsed.plan_id)
+        state = await self._get_state(parsed.plan_id)
         idx = _find_subtask_idx(state, parsed.subtask_id)
         if idx is None:
             raise KeyError(f"subtask_id={parsed.subtask_id!r} not found in plan {parsed.plan_id!r}")
@@ -228,7 +238,7 @@ class FacadeHandlers:
 
         update = await node_gather(state, kb_server=self.kb_server, metadata_server=self.metadata_server)
         state = state.model_copy(update=update)
-        self._save_state(parsed.plan_id, state)
+        await self._save_state(parsed.plan_id, state)
 
         gather_result = state.gather_result or {}
         next_action = after_gather(parsed.plan_id, parsed.subtask_id)
@@ -255,7 +265,7 @@ class FacadeHandlers:
         )
 
         node_code = self._require("node_code", "node_code")
-        state = self._get_state(parsed.plan_id)
+        state = await self._get_state(parsed.plan_id)
         idx = _find_subtask_idx(state, parsed.subtask_id)
         if idx is None:
             raise KeyError(f"subtask_id={parsed.subtask_id!r} not found in plan {parsed.plan_id!r}")
@@ -264,7 +274,7 @@ class FacadeHandlers:
 
         update = await node_code(state, llm=self.llm)
         state = state.model_copy(update=update)
-        self._save_state(parsed.plan_id, state)
+        await self._save_state(parsed.plan_id, state)
 
         current_iteration = state.iterations[-1] if state.iterations else None
         if current_iteration is None:
@@ -292,14 +302,14 @@ class FacadeHandlers:
 
         node_validate = self._require("node_validate", "node_validate")
         subtask_id, iteration_num = _parse_artifact_id(parsed.artifact_id)
-        plan_id = _find_plan_id_by_subtask(self._states, subtask_id)
+        plan_id = self._subtask_to_plan.get(subtask_id)
         if plan_id is None:
             raise KeyError(
-                f"artifact_id={parsed.artifact_id!r} not found. "
-                "Ensure 'plan' and 'generate' were called first."
+                f"subtask_id={subtask_id!r} not in cache. "
+                "After restart, call 'plan' first to populate cache, or pass plan_id explicitly."
             )
 
-        state = self._get_state(plan_id)
+        state = await self._get_state(plan_id)
 
         update = await node_validate(
             state,
@@ -307,7 +317,7 @@ class FacadeHandlers:
             kb_server=self.kb_server,
         )
         state = state.model_copy(update=update)
-        self._save_state(plan_id, state)
+        await self._save_state(plan_id, state)
 
         validate_result = state.validate_result or {}
         passed = bool(state.validation_passed)
@@ -335,14 +345,14 @@ class FacadeHandlers:
 
         node_review = self._require("node_review", "node_review")
         subtask_id, iteration_num = _parse_artifact_id(parsed.artifact_id)
-        plan_id = _find_plan_id_by_subtask(self._states, subtask_id)
+        plan_id = self._subtask_to_plan.get(subtask_id)
         if plan_id is None:
             raise KeyError(
-                f"artifact_id={parsed.artifact_id!r} not found. "
-                "Ensure 'plan', 'generate', 'validate' were called first."
+                f"subtask_id={subtask_id!r} not in cache. "
+                "After restart, call 'plan' first to populate cache, or pass plan_id explicitly."
             )
 
-        state = self._get_state(plan_id)
+        state = await self._get_state(plan_id)
 
         update = await node_review(state, llm=self.llm, kb_server=self.kb_server)
         state = state.model_copy(update=update)
@@ -360,7 +370,7 @@ class FacadeHandlers:
             if state.commit_result and state.commit_result.get("files_changed"):
                 pr_url = state.commit_result.get("pr_url")
 
-        self._save_state(plan_id, state)
+        await self._save_state(plan_id, state)
 
         # Следующая подзадача (если есть).
         next_subtask_id: str | None = None
@@ -625,11 +635,3 @@ def _parse_artifact_id(artifact_id: str) -> tuple[str, int]:
     if iteration < 1:
         raise ValueError(f"Iteration must be >= 1, got: {iteration}")
     return subtask_id, iteration
-
-
-def _find_plan_id_by_subtask(states: dict[str, Any], subtask_id: str) -> str | None:
-    """Найти plan_id, в котором есть подзадача с данным subtask_id."""
-    for plan_id, state in states.items():
-        if _find_subtask_idx(state, subtask_id) is not None:
-            return plan_id
-    return None

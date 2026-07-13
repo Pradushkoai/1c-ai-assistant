@@ -12,6 +12,71 @@
 
 ## Записи (новые сверху)
 
+### D-2026-07-13-13: TD-S7-01 — Production survival-restart для Facade (FacadeStateStore)
+
+**Дата:** 2026-07-13
+**Тип:** architecture + implementation (TD-S7-01, Stage 5 задача 1/4)
+**Контекст:** Stage 4 закрыл 3 архитектурных пробела, но остался 4-й: FacadeHandlers
+использовал in-memory dict `_states: dict[plan_id, TaskState]` (D-2026-07-13-07).
+Это значит: рестарт контейнера → потеря всех активных Cursor-сессий. Даже с
+PostgresSaver (TD-S5-01) persistence работал только для `1c-ai generate` (LangGraph
+checkpoint), но не для Facade (in-memory state). Для production deployment это
+критичный пробел: долгие задачи (plan → gather → generate → validate → review, с
+ожиданием между вызовами) теряются при любом restart.
+
+**Решение:**
+1. **`packages/mcp_servers/src/mcp_servers/facade/state_store.py`** — `FacadeStateStore`:
+   - `load_state(plan_id) -> TaskState | None` — через `checkpointer.aget_tuple(config)`
+     где `thread_id = plan_id`. Десериализация `TaskState.model_validate_json(...)` из
+     `checkpoint["channel_values"]["task_state"]`.
+   - `save_state(plan_id, state)` — через `checkpointer.aput(config, checkpoint, metadata, new_versions)`.
+     Checkpoint structure: `{v:3, id:uuid, ts:ISO, channel_values:{"task_state": json_str},
+     channel_versions:{}, versions_seen:{}, pending_sends:[]}`. Используем
+     `model_dump_json()` / `model_validate_json()` для round-trip (обходит strict datetime).
+   - DI: `checkpointer: Any = None`. Если None → in-memory fallback (dict[plan_id, json_str]).
+     Backward compat для tests/dev без persistence.
+   - `is_persistent` property (True если checkpointer задан и is_postgres).
+2. **`FacadeHandlers`** — `_get_state`/`_save_state` теперь async, ходят через
+   `self._state_store`. `_states` dict убран (заменён на store). `_subtask_to_plan`
+   in-memory cache (заполняется при handle_plan/gather/generate; после restart клиент
+   должен начать с plan — reasonable для MVP). Все handlers обновлены: `await self._get_state(...)`
+   вместо sync.
+3. **`facade_entry.py`** — создаёт `PersistenceManager.from_env()` → `FacadeStateStore(checkpointer=pm.get_checkpointer())`
+   → `FacadeHandlers(state_store=...)`. PersistenceManager lifecycle: для MCP stdio
+   server (долгоживущий процесс) — открывается один раз при старте, закрывается при
+   shutdown. Для `1c-ai mcp serve` — в `cmd_mcp_serve`.
+4. **Тесты** `tests/mcp_servers/test_facade_state_store.py`:
+   - Unit: in-memory fallback (no checkpointer), load/save round-trip, load None if
+     not saved, save overwrites.
+   - Mock checkpointer: aput/aget_tuple mock, load после save, survive-restart (2
+     store instances с тем же mock checkpointer — второй находит state от первого).
+   - TaskState round-trip (model_dump_json → model_validate_json) с datetime, subtasks,
+     iterations.
+   - FacadeHandlers с state_store: handle_plan сохраняет в store, handle_gather
+     загружает из store.
+
+**ADR compliance:**
+- ADR-0014 (PersistenceError + PostgresSaver) — Facade использует PersistenceManager.
+- ADR-0018 (TaskState migration) — schema_version в state, migration-ready.
+- ADR-0013 (Agent-Facade) — state по plan_id, thread_id = plan_id (как в generate.py).
+- CONCEPTUAL §1.1 — mcp_servers.facade НЕ импортирует orchestrator (DI через
+  state_store, checkpointer как Any).
+
+**Реализация:** commit (pending).
+
+**Последствия:**
+- Положительные: архитектурный пробел #4 закрыт; Facade state переживает рестарт
+  контейнера (PostgresSaver); backward compat (in-memory fallback для tests); foundation
+  для TD-S7-02 (REST API — stateless HTTP handlers могут использовать store).
+- Отрицательные: `_subtask_to_plan` in-memory cache — после restart handle_validate/review
+  без явного plan_id не найдут state (клиент должен начать с plan). Задокументировано
+  как MVP-ограничение; future TD — расширить artifact_id или добавить plan_id param.
+
+**Связанные:** ADR-0013, ADR-0014, ADR-0018, BACKLOG TD-S7-01, D-2026-07-13-04
+(PersistenceManager), D-2026-07-13-07 (FacadeHandlers in-memory state).
+
+---
+
 ### D-2026-07-13-12: TD-S6-03 — `1c-ai mcp serve` CLI + режим C (закрыть архитектурный пробел #3)
 
 **Дата:** 2026-07-13
