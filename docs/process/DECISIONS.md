@@ -12,6 +12,62 @@
 
 ## Записи (новые сверху)
 
+### D-2026-07-13-08: TD-S5-03 — git MCP server: async subprocess + безопасность
+
+**Дата:** 2026-07-13
+**Тип:** architecture + implementation (TD-S5-03, Stage 3 задача 3/4)
+**Контекст:** BACKLOG TD-S5-03 требует 4 git tools (create_branch, commit, open_pr,
+diff) через subprocess git CLI. Контракты (`git/contracts.py`) уже есть (Sprint 1.5),
+`__call__` поднимает `NotImplementedError`. `gh` CLI нет в окружении — `open_pr`
+будет падать с понятной ошибкой; тесты mock'ают subprocess.
+
+**Решение:**
+1. **`GitServer`** класс с 4 async methods. Каждый: валидация input →
+   `asyncio.create_subprocess_exec` (shell=False, явные args, timeout) → парсинг
+   вывода → Pydantic Output. Без shell-инъекций (args list, не строка).
+2. **Безопасность:**
+   - `_validate_branch_name`: regex `^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,199}$` + запрет
+     `..`, control chars, leading `-`. Соответствует git ref naming rules.
+   - `_validate_repo_path`: `Path(repo_path).resolve()` существует и является dir.
+   - `_validate_relative_paths` (для commit files): пути относительно repo_path,
+     нет абсолютных, нет `..` traversal.
+   - `_check_secrets_in_diff`: regex-скан diff на github_pat_*, AKIA*, bearer tokens,
+     private key markers. При находке — `SecretDetectedError` (ABORT).
+3. **4 Tool Implementations** (`CreateBranchImplementation`, etc.) — обёртки над
+   `GitServer` methods для MCP server (по паттерну `bsl_ls/server.py`).
+4. **`git/__init__.py`** — экспорт `GitServer`, `GIT_TOOLS`, 4 Implementation classes.
+5. **Subprocess execution** — `asyncio.create_subprocess_exec(*args, cwd=repo_path,
+   capture_output=True, timeout=...)`. `shell=False` (явные args list — нет
+   shell-инъекций). Для `commit` message — через `-m` arg (не stdin, для простоты).
+6. **`open_pr`** — `gh pr create --base ... --head ... --title ... --body ... --label ...`.
+   Если `gh` не установлен → `FileNotFoundError` с понятным сообщением. Auth через
+   `GH_TOKEN` env (gh CLI стандарт).
+7. **`diff`** — `git diff <a>..<b> -- <paths>`, вывод сканируется на secrets перед
+   возвратом.
+
+**Тесты** (`tests/mcp_servers/test_git_server.py`):
+- Unit (mock `asyncio.create_subprocess_exec`): 4 tools happy path, branch name
+  validation (reject `..`, leading `-`, control chars, too long), repo_path
+  validation (non-existent), relative paths validation (absolute, `..` traversal),
+  secrets in diff (github_pat_*, AKIA*, private key), gh not installed →
+  FileNotFoundError, subprocess timeout.
+- Integration (skip-if `TEST_GIT_REPO` not set): real git repo, create_branch +
+  diff roundtrip.
+
+**Реализация:** commit (pending).
+
+**Последствия:**
+- Положительные: 4 git tools работают; безопасность (branch/path validation,
+  secrets scan); async subprocess (не блокирует event loop); паттерн совпадает с
+  bsl_ls (consistency).
+- Отрицательные: `open_pr` требует `gh` CLI в production (задокументировано в
+  error message); secrets scan — regex-based (не идеально, но базовая защита).
+
+**Связанные:** ADR-0010, ADR-0003, BACKLOG TD-S5-03, D-2026-07-13-07 (Facade
+run_cli proxy расширится на git.* в следующем спринте).
+
+---
+
 ### D-2026-07-13-07: TD-S5-02 — Facade handlers: in-memory state + 8 tools по ADR-0013 (расхождение с BACKLOG)
 
 **Дата:** 2026-07-13

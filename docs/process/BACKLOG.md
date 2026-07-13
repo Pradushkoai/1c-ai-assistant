@@ -92,7 +92,7 @@
 
 ## 🟢 Этап 3 (Production-readiness)
 
-> **Статус:** В РАБОТЕ (TD-S5-01/02 ЗАКРЫТЫ 2026-07-13, 2/4 задач).
+> **Статус:** В РАБОТЕ (TD-S5-01/02/03 ЗАКРЫТЫ 2026-07-13, 3/4 задач).
 > **Цель этапа:** production-ready система для Cursor IDE — persistence, lifecycle,
 > git-интеграция, production Docker.
 
@@ -153,16 +153,38 @@
   - Тесты: 846 проходят + 6 skipped (+45 от facade). ruff чист. mypy 14 (базовая).
   - См. D-2026-07-13-07.
 
-### TD-S5-03: git MCP (4 tools)
-- **Этап:** 3 (Sprint 5)
-- **Приоритет:** MEDIUM
-- **Описание:** subprocess git CLI. 4 tools: create_branch, commit, open_pr, diff.
-- **Архитектура:**
-  - `packages/mcp_servers/src/mcp_servers/git/contracts.py` — уже есть контракты.
-  - Создать `packages/mcp_servers/src/mcp_servers/git/server.py` (аналогично bsl_ls/server.py).
-  - Auth: GitHub token из env (без хардкода).
-  - Безопасность: валидация branch names, проверка на secrets в diff.
-- **Оценка:** 1-2 дня
+### TD-S5-03: git MCP (4 tools) — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit (pending)
+- **Решение:**
+  - `packages/mcp_servers/src/mcp_servers/git/server.py` — `GitServer` класс с 4 async
+    methods (create_branch, commit, open_pr, diff) через `asyncio.create_subprocess_exec`
+    (shell=False, явные args list — нет shell-инъекций).
+  - 4 Tool Implementations (`CreateBranchImplementation`, `CommitImplementation`,
+    `OpenPrImplementation`, `DiffImplementation`) — обёртки для MCP server (по
+    паттерну `bsl_ls/server.py`).
+  - **Безопасность:**
+    - `_validate_branch_name`: regex `^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,199}$` + запрет
+      `..` (git ref naming rules).
+    - `_validate_repo_path`: `Path(repo_path).resolve()` существует и is_dir.
+    - `_validate_relative_paths` (commit files): нет абсолютных, нет `..` traversal.
+    - `_scan_diff_for_secrets`: regex-скан diff на github_pat_*, ghp_*, AKIA*,
+      private keys, Bearer tokens, Slack tokens. При находке — `SecretDetectedError`
+      (ABORT, snippet маскирован в error message).
+  - `open_pr` — `gh pr create --base --head --title --body --label`. `gh` CLI
+    проверяется через `shutil.which`; если нет — `FileNotFoundError` с инструкцией.
+    Auth через `GH_TOKEN` env (gh CLI стандарт).
+  - Errors: `GitValidationError`, `GitCommandError` (non-zero exit + stderr),
+    `GitTimeoutError` (subprocess timeout + kill), `SecretDetectedError`.
+  - `git/__init__.py` — экспорт `GitServer`, `GIT_TOOLS`, 4 Implementation, 4 errors.
+  - `git/contracts.py` — `__call__` обновлён: указывает на `*Implementation` (было
+    "реализация в Sprint 4").
+  - `tests/mcp_servers/test_git_server.py` — 59 тестов: validations (branch names,
+    repo_path, relative paths), secret scan (7 паттернов), `_parse_diff_stat`,
+    4 tools happy path (mock subprocess), error cases, timeout, Tool Implementations,
+    integration (skip-if `TEST_GIT_REPO` not set).
+  - Тесты: 905 проходят + 7 skipped (+59 от git). ruff чист. 0 boundaries. mypy 14.
+  - См. D-2026-07-13-08.
 
 ### TD-S5-04: Docker production
 - **Этап:** 3 (Sprint 5)
@@ -239,10 +261,10 @@
 | В работе (Этап 1) | 0 (Этап 1 завершён) |
 | Этап 2 — открыто | 0 (**Этап 2 ЗАВЕРШЁН**) |
 | Этап 2 — закрыто | 7 (TD-S4.2-01/02/03/04/05/06/07) |
-| Этап 3 — открыто | 2 (TD-S5-03/04) |
-| Этап 3 — закрыто | 2 (TD-S5-01, TD-S5-02) |
+| Этап 3 — открыто | 1 (TD-S5-04) |
+| Этап 3 — закрыто | 3 (TD-S5-01, TD-S5-02, TD-S5-03) |
 | Когда-нибудь | 4 (TD-005..011) |
-| Закрыто | 15 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01..07, TD-S5-01, TD-S5-02) |
+| Закрыто | 16 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01..07, TD-S5-01, TD-S5-02, TD-S5-03) |
 | **Всего** | **21** |
 
 ---

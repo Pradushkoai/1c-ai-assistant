@@ -1401,3 +1401,78 @@ review/explain/run_cli/data_status).
 - 8 tools экспонируются через MCP stdio (`1c-ai-mcp` script).
 - Foundation для TD-S5-03 (git MCP, run_cli proxy расширится) готов.
 - **Следующий шаг:** TD-S5-03 (git MCP, 4 tools: create_branch, commit, open_pr, diff).
+
+---
+
+## 2026-07-13: TD-S5-03 — git MCP server (4 tools, Stage 3 задача 3/4)
+
+**Task ID:** TD-S5-03
+**Agent:** main (GLM, продолжающая сессия)
+**Этап:** Stage 3 (Production-readiness), третья задача
+
+### Контекст
+
+TD-S5-01 (persistence) и TD-S5-02 (Facade handlers) закрыты. Следующая задача —
+git MCP: 4 tools (create_branch, commit, open_pr, diff) через subprocess git CLI.
+Контракты (`git/contracts.py`) были из Sprint 1.5, `__call__` поднимал
+NotImplementedError. `server.py` не существовало. `gh` CLI нет в окружении —
+`open_pr` падает с понятной ошибкой; тесты mock'ают subprocess.
+
+### Что сделано
+
+1. **DECISIONS.md** — D-2026-07-13-08: подход (async subprocess + безопасность).
+
+2. **`packages/mcp_servers/src/mcp_servers/git/server.py`** — `GitServer` класс:
+   - 4 async methods: `create_branch` (git rev-parse + git checkout -b),
+     `commit` (git add + git commit + git rev-parse HEAD), `open_pr` (gh pr create),
+     `diff` (git diff + git diff --stat).
+   - `_run_subprocess` — `asyncio.create_subprocess_exec` (shell=False, явные args,
+     timeout, kill при timeout).
+   - **Безопасность:**
+     - `_validate_branch_name`: regex `^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,199}$` + запрет
+       `..` (git ref naming rules).
+     - `_validate_repo_path`: `Path.resolve()` существует и is_dir.
+     - `_validate_relative_paths`: нет абсолютных, нет `..` traversal.
+     - `_scan_diff_for_secrets`: regex на github_pat_*, ghp_*, AKIA*, private keys
+       (RSA/EC/OPENSSH/DSA), Bearer tokens, Slack tokens. SecretDetectedError
+       (ABORT, snippet маскирован).
+   - Errors: `GitValidationError`, `GitCommandError` (non-zero exit + stderr),
+     `GitTimeoutError`, `SecretDetectedError`.
+   - `_parse_diff_stat` — парсер `git diff --stat` вывода.
+
+3. **4 Tool Implementations** (`CreateBranchImplementation`, `CommitImplementation`,
+   `OpenPrImplementation`, `DiffImplementation`) — обёртки для MCP server (по
+   паттерну `bsl_ls/server.py`).
+
+4. **`packages/mcp_servers/src/mcp_servers/git/__init__.py`** — экспорт `GitServer`,
+   `GIT_TOOLS`, 4 Implementation, 4 errors.
+
+5. **`packages/mcp_servers/src/mcp_servers/git/contracts.py`** — `__call__` обновлён:
+   указывает на `*Implementation` (было "реализация в Sprint 4").
+
+6. **`tests/mcp_servers/test_git_server.py`** — 59 тестов:
+   - `TestValidations`: branch names (9 good + 9 bad parametrized), repo_path
+     (ok/nonexistent/not-dir), relative paths (ok + 5 bad parametrized).
+   - `TestSecretScan`: 7 секретных паттернов (github_pat, ghp, AKIA, RSA/EC/OPENSSH
+     private keys, Bearer, Slack), clean diff passes, snippet masking.
+   - `TestParseDiffStat`: full/multi/empty/insertions-only.
+   - 4 tools: happy path (mock subprocess), error cases (GitValidationError,
+     GitCommandError, FileNotFoundError for gh, timeout).
+   - Tool Implementations: обёртки + input validation + secret detection.
+   - Integration (skip-if `TEST_GIT_REPO` not set): real git repo roundtrip.
+
+### Проверки
+
+- [x] Тесты: **905 проходят + 7 skipped** (было 846+6, +59 от git).
+- [x] ruff: чистый.
+- [x] mypy: 14 ошибок (базовая TD-011, **новых нет**).
+- [x] boundaries: 0 violations.
+- [x] Contract Check: git → ADR-0010 (MCP tool contracts) + ADR-0003 (MCP-архитектура).
+
+### Stage Summary
+
+- **Stage 3: 3/4 задач ЗАВЕРШЕНО** ✅ (TD-S5-01, TD-S5-02, TD-S5-03)
+- GitServer — рабочая реализация (были заглушки NotImplementedError в contracts).
+- 4 git tools доступны через Tool Implementations (для MCP server / orchestrator).
+- Безопасность: branch/path validation + secrets scan (7 паттернов).
+- **Следующий шаг:** TD-S5-04 (Docker production) — ПОСЛЕДНЯЯ задача Stage 3.

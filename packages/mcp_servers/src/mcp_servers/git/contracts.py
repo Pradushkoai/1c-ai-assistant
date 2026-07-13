@@ -99,7 +99,7 @@ class CreateBranch:
     required_role: str = "COMMITTER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError("git.create_branch — реализация в Sprint 4")
+        raise NotImplementedError("git.create_branch — вызовите через CreateBranchImplementation")
 
 
 class Commit:
@@ -115,7 +115,7 @@ class Commit:
     required_role: str = "COMMITTER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError("git.commit — реализация в Sprint 4")
+        raise NotImplementedError("git.commit — вызовите через CommitImplementation")
 
 
 class OpenPr:
@@ -131,7 +131,7 @@ class OpenPr:
     required_role: str = "COMMITTER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError("git.open_pr — реализация в Sprint 4")
+        raise NotImplementedError("git.open_pr — вызовите через OpenPrImplementation")
 
 
 class Diff:
@@ -147,7 +147,7 @@ class Diff:
     required_role: str = "COMMITTER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError("git.diff — реализация в Sprint 4")
+        raise NotImplementedError("git.diff — вызовите через DiffImplementation")
 
 
 GIT_TOOLS: list[type[Any]] = [CreateBranch, Commit, OpenPr, Diff]
