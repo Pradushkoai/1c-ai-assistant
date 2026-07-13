@@ -177,7 +177,7 @@ def _make_handlers(
             "fsm_state": "reviewing",
         }
 
-    async def _commit_node(state: Any) -> dict[str, Any]:
+    async def _commit_node(state: Any, git_server: Any = None, repo_path: Any = None) -> dict[str, Any]:
         return {
             "commit_result": {"files_changed": ["/tmp/x.bsl"], "pr_url": "https://example.com/pr/1"},
             "fsm_state": "committing",

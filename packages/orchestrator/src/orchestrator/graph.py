@@ -81,6 +81,8 @@ def build_graph(
     bsl_ls_server: Any = None,
     kb_server: Any = None,
     metadata_server: Any = None,
+    git_server: Any = None,
+    repo_path: Any = None,
     llm: Any = None,
 ) -> Any:
     """Собрать главный pipeline с dependency injection.
@@ -90,6 +92,7 @@ def build_graph(
     Соответствует CONCEPTUAL.md §1.1: «зависимости только вниз».
 
     Stage 4 (TD-S6-01): + metadata_server DI для plan/gather (ADR-0003/0005/0010).
+    Stage 4 (TD-S6-02): + git_server + repo_path DI для commit (ADR-0004/0005/0010).
     """
     from functools import partial
 
@@ -111,7 +114,13 @@ def build_graph(
     graph.add_node("validate", partial(validate_node, bsl_ls_server=bsl_ls_server, kb_server=kb_server))
     graph.add_node("review", partial(review_node, llm=llm, kb_server=kb_server) if llm else partial(review_node, kb_server=kb_server))
     graph.add_node("retry", retry_node)
-    graph.add_node("commit", commit_node)
+    # Stage 4 (TD-S6-02): commit_node получает git_server + repo_path (ADR-0005 COMMITTER).
+    graph.add_node(
+        "commit",
+        partial(commit_node, git_server=git_server, repo_path=repo_path)
+        if git_server or repo_path
+        else commit_node,
+    )
     graph.add_node("escalate", escalate_node)
     graph.add_node("next_subtask", next_subtask_node)
 

@@ -69,6 +69,10 @@ def create_facade_handlers() -> FacadeHandlers:
     # ─── metadata_server (опц., Stage 4 TD-S6-01) ───────────────────────────
     metadata_server = _try_create_metadata_server()
 
+    # ─── git_server + repo_path (опц., Stage 4 TD-S6-02) ────────────────────
+    git_server = _try_create_git_server()
+    repo_path = _get_repo_path()
+
     # ─── llm (опц.) ─────────────────────────────────────────────────────────
     llm = _try_create_llm()
 
@@ -90,6 +94,8 @@ def create_facade_handlers() -> FacadeHandlers:
         path_manager=path_manager,
         config_registry=config_registry,
         metadata_server=metadata_server,
+        git_server=git_server,
+        repo_path=repo_path,
     )
 
 
@@ -127,6 +133,24 @@ def _try_create_metadata_server() -> Any:
     except Exception as exc:  # noqa: BLE001
         log.warning("facade_entry: metadata_server init failed: %s", exc)
         return None
+
+
+def _try_create_git_server() -> Any:
+    """Создать GitServer, если доступно (Stage 4 TD-S6-02)."""
+    try:
+        from mcp_servers.git.server import GitServer
+
+        return GitServer()
+    except Exception as exc:  # noqa: BLE001
+        log.warning("facade_entry: git_server init failed: %s", exc)
+        return None
+
+
+def _get_repo_path() -> str | None:
+    """Путь к git-репозиторию для коммитов (env 1C_AI_REPO_PATH)."""
+    import os
+
+    return os.environ.get("1C_AI_REPO_PATH")
 
 
 def _try_create_llm() -> Any:

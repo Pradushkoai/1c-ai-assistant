@@ -120,6 +120,8 @@ class FacadeHandlers:
         kb_server: Any = None,
         bsl_ls_server: Any = None,
         metadata_server: Any = None,
+        git_server: Any = None,
+        repo_path: Any = None,
         llm: Any = None,
         path_manager: Any = None,
         config_registry: Any = None,
@@ -135,6 +137,8 @@ class FacadeHandlers:
         self.kb_server = kb_server
         self.bsl_ls_server = bsl_ls_server
         self.metadata_server = metadata_server
+        self.git_server = git_server
+        self.repo_path = repo_path
         self.llm = llm
         self.path_manager = path_manager
         self.config_registry = config_registry
@@ -351,7 +355,7 @@ class FacadeHandlers:
         # При proceed — вызываем node_commit (review → commit в одном tool).
         if decision == "proceed":
             node_commit = self._require("node_commit", "node_commit")
-            commit_update = await node_commit(state)
+            commit_update = await node_commit(state, git_server=self.git_server, repo_path=self.repo_path)
             state = state.model_copy(update=commit_update)
             if state.commit_result and state.commit_result.get("files_changed"):
                 pr_url = state.commit_result.get("pr_url")

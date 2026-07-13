@@ -144,6 +144,20 @@ async def _run_pipeline(
         import logging
         logging.getLogger(__name__).warning("metadata_server_init_failed: %s", exc)
 
+    # Stage 4 (TD-S6-02): git server для commit (real git flow).
+    git_server = None
+    try:
+        from mcp_servers.git.server import GitServer
+
+        git_server = GitServer()
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("git_server_init_failed: %s", exc)
+
+    # repo_path: env 1C_AI_REPO_PATH (путь к git-репозиторию для коммитов).
+    import os
+    repo_path = os.environ.get("1C_AI_REPO_PATH")
+
     # Stage 3 (TD-S5-01): persistence. PostgresSaver (production) или MemorySaver.
     async with PersistenceManager.from_env() as pm:
         # Собираем граф с DI + checkpointer из PersistenceManager.
@@ -152,6 +166,8 @@ async def _run_pipeline(
             bsl_ls_server=bsl_ls_server,
             kb_server=kb_server,
             metadata_server=metadata_server,
+            git_server=git_server,
+            repo_path=repo_path,
         )
 
         config: dict[str, Any] = {"configurable": {"thread_id": initial_state.task_id}}

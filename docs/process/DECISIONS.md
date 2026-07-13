@@ -12,6 +12,65 @@
 
 ## Записи (новые сверху)
 
+### D-2026-07-13-11: TD-S6-02 — commit_node → git MCP интеграция (закрыть архитектурный пробел #2)
+
+**Дата:** 2026-07-13
+**Тип:** architecture + implementation (TD-S6-02, Stage 4 задача 2/4)
+**Контекст:** Архитектурный пробел #2: `commit_node` писал файлы в
+`runtime/generated/` (Sprint 2 логика: `commit_sha="n/a (Sprint 2: file save)"`).
+`GitServer` (TD-S5-03) уже существует с 4 tools, но `commit_node` его не использует.
+Нарушение ADR-0004 (hierarchical orchestration) + ADR-0010 (tool contracts) +
+ADR-0005 (TOOL_GROUPS[COMMITTER] = git.*). Facade `handle_review → proceed →
+node_commit` писал файл, не создавал branch/commit/PR.
+
+**Решение:**
+1. **`orchestrator/nodes/commit.py`** — переписан:
+   - DI через конструктор: `git_server: Any = None`, `repo_path: str | None = None`.
+   - Если `git_server` задан AND `repo_path` задан → real git flow:
+     - `git_server.create_branch(repo_path, branch_name)` — branch `feature/{task_id[:8]}-{subtask_id[:8]}`.
+     - Write code to `{repo_path}/{file_path}` (relative path, derived from subtask.target_module).
+     - `git_server.commit(repo_path, message, files=[file_path], branch=branch_name)`.
+     - Если `open_pr=True` (env `1C_AI_OPEN_PR=1`) → `git_server.open_pr(...)`.
+     - `CommitResult` с реальным `commit_sha`, `branch_name`, `pr_url` (если PR).
+   - Если `git_server=None` OR `repo_path=None` → **fallback** на Sprint 2 логику
+     (file save в `runtime/generated/`). Backward compat для dev/tests.
+   - `file_path` derivation: `CommonModule.Имя` → `CommonModules/Имя/Ext/Module.bsl`
+     (по convention 1С); иначе — `Generated/{subtask_id}_{iter}.bsl`.
+2. **`orchestrator/graph.py`** — `build_graph(git_server=..., repo_path=...)`.
+   `commit_node` получает `partial(commit_node, git_server=git_server, repo_path=repo_path)`.
+3. **`agent/cli_commands/generate.py`** + **`facade_entry.py`** — создать `GitServer`,
+   читать `1C_AI_REPO_PATH` env (путь к git-репозиторию для коммитов). Передать в
+   `build_graph` + `FacadeHandlers`.
+4. **`mcp_servers/facade/handlers.py`** — `FacadeHandlers.__init__` + `git_server` +
+   `repo_path`. `handle_review → proceed → node_commit` пробрасывает `git_server`
+   и `repo_path` в вызов `node_commit`.
+5. **Тесты** `tests/orchestrator/test_commit_node.py` (новый):
+   - Real git flow (mock GitServer): create_branch + commit + CommitResult с sha.
+   - open_pr flow (mock GitServer.open_pr).
+   - Fallback file save (git_server=None): Sprint 2 логика, warning в log.
+   - file_path derivation для CommonModule vs other.
+   - Обновить `test_facade_handlers.py`: mock node_commit принимает git_server/repo_path.
+
+**ADR compliance (закрываются):**
+- ADR-0004 (Hierarchical orchestration) — commit_node реально коммитит.
+- ADR-0010 (MCP tool contracts) — git_server как MCP tool.
+- ADR-0005 (TOOL_GROUPS[COMMITTER] = git.*) — Committer использует git tools.
+
+**Реализация:** commit (pending).
+
+**Последствия:**
+- Положительные: архитектурный пробел #2 закрыт; pipeline end-to-end контракт-совместим
+  (plan → gather → code → validate → review → **real git commit**); foundation для
+  TD-S6-03 (mcp serve — git server как отдельный MCP).
+- Отрицательные: real git flow требует `1C_AI_REPO_PATH` env (без него — fallback file
+  save, задокументировано); `open_pr` требует `gh` CLI + `GH_TOKEN` (без них — commit
+  без PR, warning).
+
+**Связанные:** ADR-0004, ADR-0005, ADR-0010, BACKLOG TD-S6-02, D-2026-07-13-08
+(GitServer), D-2026-07-13-10 (предыдущая задача).
+
+---
+
 ### D-2026-07-13-10: TD-S6-01 — metadata MCP server + orchestrator wiring (закрыть архитектурный пробел #1)
 
 **Дата:** 2026-07-13
