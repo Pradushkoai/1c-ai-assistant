@@ -256,19 +256,31 @@ class TestCheckMethodAvailabilityWithSQLite:
                         "ЗаписьЖурналаРегистрации",
                         "ЗаписьЖурналаРегистрации(ИмяСобытия, Уровень, ...)",
                         "Записывает событие в журнал регистрации (только сервер)",
-                        1, 0, 0, 0, 1,
+                        1,
+                        0,
+                        0,
+                        0,
+                        1,
                     ),
                     (
                         "ПоказатьЗначение",
                         "ПоказатьЗначение(Значение)",
                         "Показывает значение в отдельном окне (только клиент)",
-                        0, 1, 1, 1, 0,
+                        0,
+                        1,
+                        1,
+                        1,
+                        0,
                     ),
                     (
                         "Сообщить",
                         "Сообщить(Текст)",
                         "Выводит текст в окно сообщений (везде)",
-                        1, 1, 1, 1, 1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
                     ),
                     # Метод из хардкод-списка, но с другими availability в БД
                     # (БД приоритетнее хардкода)
@@ -276,7 +288,11 @@ class TestCheckMethodAvailabilityWithSQLite:
                         "ОткрытьФорму",
                         "ОткрытьФорму(ИмяФормы, ...)",
                         "Открывает форму (в тесте БД: доступно и на сервере тоже)",
-                        1, 1, 1, 0, 1,
+                        1,
+                        1,
+                        1,
+                        0,
+                        1,
                     ),
                 ],
             )
@@ -305,9 +321,7 @@ class TestCheckMethodAvailabilityWithSQLite:
 
     def test_db_overrides_hardcoded_server_only(self, kb_collection_with_db: KBCollection):
         """Метод из БД (server-only) недоступен на клиенте."""
-        result = kb_collection_with_db.check_method_availability(
-            "ЗаписьЖурналаРегистрации", "thin_client", "8.3.20"
-        )
+        result = kb_collection_with_db.check_method_availability("ЗаписьЖурналаРегистрации", "thin_client", "8.3.20")
         assert result["available"] is False
         assert "недоступен" in result["reason"].lower()
         # Возвращается platform_method с деталями из БД
@@ -318,9 +332,7 @@ class TestCheckMethodAvailabilityWithSQLite:
 
     def test_db_overrides_hardcoded_client_only(self, kb_collection_with_db: KBCollection):
         """Клиентский метод из БД недоступен на сервере."""
-        result = kb_collection_with_db.check_method_availability(
-            "ПоказатьЗначение", "server", "8.3.20"
-        )
+        result = kb_collection_with_db.check_method_availability("ПоказатьЗначение", "server", "8.3.20")
         assert result["available"] is False
         assert result["platform_method"] is not None
 
@@ -336,9 +348,7 @@ class TestCheckMethodAvailabilityWithSQLite:
         ОткрытьФорму в хардкоде = client_only (server=False),
         но в тестовой БД server=1 → должно быть available=True на сервере.
         """
-        result = kb_collection_with_db.check_method_availability(
-            "ОткрытьФорму", "server", "8.3.20"
-        )
+        result = kb_collection_with_db.check_method_availability("ОткрытьФорму", "server", "8.3.20")
         assert result["available"] is True
         assert result["platform_method"] is not None
         # БД переопределила хардкод
@@ -346,9 +356,7 @@ class TestCheckMethodAvailabilityWithSQLite:
 
     def test_unknown_method_still_available(self, kb_collection_with_db: KBCollection):
         """Метод, не найденный в БД, проверяется по хардкоду (или доступен)."""
-        result = kb_collection_with_db.check_method_availability(
-            "НекийНезнакомыйМетод", "server", "8.3.20"
-        )
+        result = kb_collection_with_db.check_method_availability("НекийНезнакомыйМетод", "server", "8.3.20")
         assert result["available"] is True
         assert result["platform_method"] is None  # нет в БД
 
@@ -357,9 +365,7 @@ class TestCheckMethodAvailabilityWithSQLite:
         nonexistent_db = tmp_path / "nonexistent.db"
         kb = KBCollection(kb_dir, platform_methods_db=nonexistent_db)
         # Хардкод-поведение: ЗаписьЖурналаРегистрации на клиенте недоступен
-        result = kb.check_method_availability(
-            "ЗаписьЖурналаРегистрации", "thin_client", "8.3.20"
-        )
+        result = kb.check_method_availability("ЗаписьЖурналаРегистрации", "thin_client", "8.3.20")
         assert result["available"] is False
         # platform_method = None (т.к. использовался хардкод)
         assert result["platform_method"] is None
@@ -367,9 +373,7 @@ class TestCheckMethodAvailabilityWithSQLite:
     def test_db_none_uses_hardcoded(self, kb_dir: Path):
         """Если platform_methods_db=None — только хардкод."""
         kb = KBCollection(kb_dir, platform_methods_db=None)
-        result = kb.check_method_availability(
-            "ЗаписьЖурналаРегистрации", "thin_client", "8.3.20"
-        )
+        result = kb.check_method_availability("ЗаписьЖурналаРегистрации", "thin_client", "8.3.20")
         assert result["available"] is False
         assert result["platform_method"] is None
 
@@ -383,16 +387,12 @@ class TestCheckMethodAvailabilityWithSQLite:
         assert methods2 is methods1  # тот же объект
 
     @pytest.mark.asyncio
-    async def test_kb_server_uses_db(
-        self, kb_dir: Path, platform_db: Path
-    ):
+    async def test_kb_server_uses_db(self, kb_dir: Path, platform_db: Path):
         """KbServer прокидывает platform_methods_db в KBCollection."""
         from mcp_servers.kb import KbServer
 
         server = KbServer(kb_dir=kb_dir, platform_methods_db=platform_db)
-        result = await server.check_method_availability(
-            "ЗаписьЖурналаРегистрации", "thin_client", "8.3.20"
-        )
+        result = await server.check_method_availability("ЗаписьЖурналаРегистрации", "thin_client", "8.3.20")
         assert result.available is False
         assert result.platform_method is not None
         assert result.platform_method.name == "ЗаписьЖурналаРегистрации"

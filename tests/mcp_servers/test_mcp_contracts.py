@@ -212,9 +212,7 @@ class TestFacadeHandlers:
             await handlers.handle_gather({"plan_id": "plan-x", "subtask_id": "st-x"})
 
         with pytest.raises(FacadeNotConfiguredError, match="node_code"):
-            await handlers.handle_generate(
-                {"plan_id": "plan-x", "subtask_id": "st-x", "iteration": 1}
-            )
+            await handlers.handle_generate({"plan_id": "plan-x", "subtask_id": "st-x", "iteration": 1})
 
         with pytest.raises(FacadeNotConfiguredError, match="node_validate"):
             await handlers.handle_validate({"artifact_id": "st-x#1"})
@@ -234,9 +232,7 @@ class TestFacadeHandlers:
         assert "KB сервер не настроен" in result["explanation"]
 
         # run_cli без kb_server/bsl_ls_server → warning.
-        result = await handlers.handle_run_cli(
-            {"tool_name": "kb.search_kb", "args": {"query": "test"}}
-        )
+        result = await handlers.handle_run_cli({"tool_name": "kb.search_kb", "args": {"query": "test"}})
         assert result["warning"] is not None
         assert "not available" in result["warning"]
 

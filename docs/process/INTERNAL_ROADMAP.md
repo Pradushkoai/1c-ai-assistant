@@ -61,11 +61,17 @@
 
 ## 0. Текущий статус
 
-> **Обновлено 2026-07-13:** Все 4 этапа завершены (Этап 1, Этап 2, Stage 3, Stage 4).
-> 991 тестов + 12 skipped. 21 ADR. 29 MCP tools. 0 boundary violations.
+> **Обновлено 2026-07-13:** Все 5 этапов завершены (Этап 1, Этап 2, Stage 3, Stage 4, Stage 5).
+> 1032 тестов + 14 skipped. 21 ADR. 29 MCP tools. 0 boundary violations. mypy 0 ошибок.
 > См. `docs/process/CURRENT_FOCUS.md` для актуального snapshot.
 
 ### Что готово:
+
+**Stage 5 — Production Hardening (завершён 2026-07-13, 4 задачи)**
+- [x] TD-S7-01: FacadeStateStore survival-restart (checkpointer aput/aget_tuple)
+- [x] TD-S7-02: REST API HTTP server (1c-ai serve, FastAPI :8000)
+- [x] TD-S7-03: ZaiLLM mypy cleanup (TD-011 закрыт, 0 ошибок)
+- [x] TD-S7-04: CI integration + ruff format
 
 **Stage 4 — Contract Compliance (завершён 2026-07-13, 4 задачи)**
 - [x] TD-S6-01: metadata MCP server + gather/plan wiring (ADR-0003/0005/0010)

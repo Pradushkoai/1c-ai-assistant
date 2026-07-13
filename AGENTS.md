@@ -7,10 +7,10 @@
 
 ## Текущий статус
 
-**Stage 4 (Contract Compliance) завершён.** Все 4 этапа закрыты.
-**991 тест** проходят + 12 skipped (integration без контейнеров). CI зелёная.
+**Stage 5 (Production Hardening) завершён.** Все 5 этапов закрыты.
+**1032 теста** проходят + 14 skipped. CI зелёная. **mypy 0 ошибок**. ruff check+format чистый.
 
-**Что готово (Этапы 1-4):**
+**Что готово (Этапы 1-5):**
 - **Этап 1** (5/5): parsers (xml/bsl/hbk/models/indexers), data_layer, agent CLI
 - **Этап 2** (7/7): ADR-0020 embeddings, codebase MCP, standards (4 СТО + 4 БСП),
   BSL LS Docker, library add, transitive closure, api-reference в pipeline
@@ -19,6 +19,9 @@
 - **Stage 4** (4/4): metadata MCP server + gather/plan wiring (ADR-0003/0005/0010),
   commit_node → git MCP (real git flow), `1c-ai mcp serve` CLI + режим C (6 серверов),
   integration tests + docs sync
+- **Stage 5** (4/4): FacadeStateStore survival-restart, REST API HTTP server
+  (`1c-ai serve` FastAPI :8000), ZaiLLM mypy cleanup (TD-011 закрыт, 0 ошибок),
+  CI integration tests + ruff format
 
 **Метрики:**
 - **21 ADR** (Architecture Decision Records) в `adr/`
@@ -26,12 +29,14 @@
 - **4 параллельных валидатора** в validate_node (asyncio.TaskGroup)
 - **23 KB сущности** (5 patterns + 10 antipatterns + 8 standards)
 - **0 boundary violations** (DI через functools.partial)
+- **mypy: 0 ошибок** (TD-011 закрыт)
 - **HBK**: 10,150 методов платформы 8.3.25
 
 **CLI команды:**
 - `1c-ai init` / `config add|build|list|remove` / `validate` / `health`
 - `1c-ai generate` — pipeline end-to-end (real git commit если `1C_AI_REPO_PATH` задан)
-- `1c-ai mcp serve --server {facade|metadata|codebase|kb|bsl_ls|git}` — MCP stdio
+- `1c-ai mcp serve --server {facade|metadata|codebase|kb|bsl_ls|git}` — MCP stdio (режим B/C)
+- `1c-ai serve` — HTTP REST API server (FastAPI :8000, режим A)
 - `1c-ai hbk load` / `library add|build|list|remove`
 
 ---

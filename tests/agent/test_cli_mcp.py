@@ -29,9 +29,7 @@ class TestServerFactory:
     def test_server_names_contains_6(self) -> None:
         from mcp_servers import SERVER_NAMES
 
-        assert frozenset(
-            {"facade", "metadata", "codebase", "kb", "bsl_ls", "git"}
-        ) == SERVER_NAMES
+        assert frozenset({"facade", "metadata", "codebase", "kb", "bsl_ls", "git"}) == SERVER_NAMES
 
     def test_available_servers_counts(self) -> None:
         from mcp_servers import AVAILABLE_SERVERS

@@ -302,6 +302,7 @@ class TestGoldenKbAntipatterns:
 
         # Sprint 3.2.1: KbServer создаётся в тесте (DI)
         from mcp_servers.kb.server import KbServer
+
         kb_server = KbServer()
 
         from orchestrator.graph import build_graph
@@ -438,9 +439,7 @@ class TestGoldenMethodAvailabilityViolation:
         # На сервере ОткрытьФорму недоступен → critical finding.
 
         code_with_violation = (
-            "Процедура ОткрытьФормуТовара() Экспорт\n"
-            "\tОткрытьФорму(\"Справочник.Товары.ФормаСписка\");\n"
-            "КонецПроцедуры"
+            'Процедура ОткрытьФормуТовара() Экспорт\n\tОткрытьФорму("Справочник.Товары.ФормаСписка");\nКонецПроцедуры'
         )
 
         mock_llm = _make_mock_llm(code_with_violation, decision="retry")
@@ -450,6 +449,7 @@ class TestGoldenMethodAvailabilityViolation:
 
         # Sprint 3.2.1: KbServer создаётся в тесте (DI)
         from mcp_servers.kb.server import KbServer
+
         kb_server = KbServer()
 
         from orchestrator.graph import build_graph
@@ -483,18 +483,14 @@ class TestGoldenMethodAvailabilityViolation:
         findings = validate_result.get("findings", [])
 
         method_findings = [
-            f for f in findings
-            if isinstance(f.get("code", ""), str)
-            and f["code"].startswith("METHOD-CONTEXT-")
+            f for f in findings if isinstance(f.get("code", ""), str) and f["code"].startswith("METHOD-CONTEXT-")
         ]
 
         # Если KB загрузилась — finding должен быть
         if method_findings:
             # Все method findings должны быть critical
             for f in method_findings:
-                assert f["severity"] == "critical", (
-                    f"METHOD-CONTEXT finding должен быть critical, got {f['severity']}"
-                )
+                assert f["severity"] == "critical", f"METHOD-CONTEXT finding должен быть critical, got {f['severity']}"
             # Должен быть finding для ОткрытьФорму
             codes = [f["code"] for f in method_findings]
             assert any("ОткрытьФорму" in c for c in codes), (

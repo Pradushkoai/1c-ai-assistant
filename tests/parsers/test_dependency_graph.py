@@ -98,7 +98,7 @@ def config_dir(tmp_path: Path) -> Path:
     (tmp_path / "Configuration.xml").write_text(
         '<?xml version="1.0"?>\n<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses">'
         '<Configuration uuid="x"><Properties><Name>Test</Name><Version>1.0</Version></Properties>'
-        '</Configuration></MetaDataObject>',
+        "</Configuration></MetaDataObject>",
         encoding="utf-8",
     )
 

@@ -116,9 +116,7 @@ class TestReviewNodeFindingsPropagation:
     """
 
     @pytest.mark.asyncio
-    async def test_llm_findings_propagated_to_state(
-        self, make_review_state
-    ):
+    async def test_llm_findings_propagated_to_state(self, make_review_state):
         """LLM возвращает 2 findings — они должны оказаться в state.review_result."""
         findings = [
             ReviewFinding(
@@ -155,9 +153,7 @@ class TestReviewNodeFindingsPropagation:
         assert result["fsm_state"] == FSMState.COMMITTING
 
     @pytest.mark.asyncio
-    async def test_llm_findings_empty_when_no_findings(
-        self, make_review_state
-    ):
+    async def test_llm_findings_empty_when_no_findings(self, make_review_state):
         """LLM возвращает 0 findings — findings пустой, но не None."""
         mock_llm = _make_mock_llm_with_findings([], decision="proceed")
 
@@ -172,9 +168,7 @@ class TestReviewNodeFindingsPropagation:
         assert len(review_result["findings"]) == 0
 
     @pytest.mark.asyncio
-    async def test_llm_findings_with_critical_retry(
-        self, make_review_state
-    ):
+    async def test_llm_findings_with_critical_retry(self, make_review_state):
         """LLM с critical finding → decision=retry → review_passed=False."""
         findings = [
             ReviewFinding(
@@ -208,9 +202,7 @@ class TestReviewNodeFindingsPropagation:
         assert result["fsm_state"] == FSMState.CODING
 
     @pytest.mark.asyncio
-    async def test_llm_findings_with_multiple_categories(
-        self, make_review_state
-    ):
+    async def test_llm_findings_with_multiple_categories(self, make_review_state):
         """LLM возвращает findings разных категорий — все прокидываются."""
         findings = [
             ReviewFinding(
@@ -263,9 +255,7 @@ class TestReviewNodeFallback:
     """Проверка fallback-логики когда LLM падает."""
 
     @pytest.mark.asyncio
-    async def test_llm_unavailable_validation_passed_auto_proceed(
-        self, make_review_state
-    ):
+    async def test_llm_unavailable_validation_passed_auto_proceed(self, make_review_state):
         """LLM падает, но validation_passed=True → auto-proceed с пустыми findings."""
         # Mock LLM, который бросает исключение
         llm = MagicMock()
@@ -291,9 +281,7 @@ class TestReviewNodeFallback:
         assert review_result["findings"] == []
 
     @pytest.mark.asyncio
-    async def test_llm_unavailable_validation_failed_auto_retry(
-        self, make_review_state
-    ):
+    async def test_llm_unavailable_validation_failed_auto_retry(self, make_review_state):
         """LLM падает и validation_passed=False → auto-retry с пустыми findings."""
         llm = MagicMock()
         mock_with_output = MagicMock()
@@ -326,9 +314,7 @@ class TestReviewNodeRouterSignals:
     """Проверка, что review_node корректно выставляет рутер-сигналы."""
 
     @pytest.mark.asyncio
-    async def test_proceed_sets_committing_state(
-        self, make_review_state
-    ):
+    async def test_proceed_sets_committing_state(self, make_review_state):
         """decision=proceed → fsm_state=COMMITTING."""
         mock_llm = _make_mock_llm_with_findings([], decision="proceed", passed=True)
         state = make_review_state()
@@ -340,9 +326,7 @@ class TestReviewNodeRouterSignals:
         assert result["review_passed"] is True
 
     @pytest.mark.asyncio
-    async def test_retry_sets_coding_state(
-        self, make_review_state
-    ):
+    async def test_retry_sets_coding_state(self, make_review_state):
         """decision=retry → fsm_state=CODING."""
         mock_llm = _make_mock_llm_with_findings(
             [],

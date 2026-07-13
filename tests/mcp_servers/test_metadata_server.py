@@ -314,9 +314,7 @@ class TestGetDependencyGraph:
 
         server = MetadataServer(path_manager=mock_path_manager)
         with pytest.raises(MetadataNotFoundError, match="No dependencies found"):
-            await server.get_dependency_graph(
-                "ut11", "4.5.3", object_ref="Catalog.Несуществующий"
-            )
+            await server.get_dependency_graph("ut11", "4.5.3", object_ref="Catalog.Несуществующий")
 
     @pytest.mark.asyncio
     async def test_get_dependency_graph_invalid_direction(
@@ -374,19 +372,13 @@ class TestGetFormStructure:
     ) -> None:
         """Form.xml существует → parse_form возвращает FormMetadata."""
         # Создаём Form.xml по ожидаемому пути.
-        form_xml = (
-            mock_path_manager.data_config_dir.return_value
-            / "Catalogs"
-            / "Товары"
-            / "Forms"
-            / "ФормаСписка.xml"
-        )
+        form_xml = mock_path_manager.data_config_dir.return_value / "Catalogs" / "Товары" / "Forms" / "ФормаСписка.xml"
         form_xml.parent.mkdir(parents=True, exist_ok=True)
         form_xml.write_text(
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<MetaDataObject xmlns="http://v8.1c.ru/8.3/data/enterprise/current-config" xmlns:xs="http://www.w3.org/2001/XMLSchema">'
-            '<Form><Name>ФормаСписка</Name><Synonym><key>ru</key><value>Форма списка</value></Synonym>'
-            '<UseForFoldersAndItems>Items</UseForFoldersAndItems></Form></MetaDataObject>',
+            "<Form><Name>ФормаСписка</Name><Synonym><key>ru</key><value>Форма списка</value></Synonym>"
+            "<UseForFoldersAndItems>Items</UseForFoldersAndItems></Form></MetaDataObject>",
             encoding="utf-8",
         )
 
@@ -521,9 +513,7 @@ class TestFacadeRunCliMetadataProxy:
         from mcp_servers.facade.handlers import FacadeHandlers
 
         h = FacadeHandlers()  # нет metadata_server
-        result = await h.handle_run_cli(
-            {"tool_name": "metadata.get_metadata", "args": {}}
-        )
+        result = await h.handle_run_cli({"tool_name": "metadata.get_metadata", "args": {}})
         assert result["warning"] is not None
         assert "not available" in result["warning"]
 
@@ -536,8 +526,6 @@ class TestFacadeRunCliMetadataProxy:
 
         metadata_server = MetadataServer(path_manager=mock_path_manager)
         h = FacadeHandlers(metadata_server=metadata_server)
-        result = await h.handle_run_cli(
-            {"tool_name": "metadata.unknown_method", "args": {}}
-        )
+        result = await h.handle_run_cli({"tool_name": "metadata.unknown_method", "args": {}})
         assert result["warning"] is not None
         assert "failed" in result["warning"]

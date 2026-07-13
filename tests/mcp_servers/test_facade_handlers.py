@@ -118,9 +118,7 @@ class _FakeState:
                 "config_version": self.config_version,
                 "platform_version": self.platform_version,
                 "fsm_state": self.fsm_state,
-                "subtasks": [
-                    {"id": s.id, "constraints": None} for s in self.subtasks
-                ],
+                "subtasks": [{"id": s.id, "constraints": None} for s in self.subtasks],
                 "current_subtask_idx": self.current_subtask_idx,
                 "current_iteration": self.current_iteration,
                 "iterations": [
@@ -161,9 +159,7 @@ class _FakeState:
         state.subtasks = [_FakeSubtask(s["id"]) for s in data.get("subtasks", [])]
         state.current_subtask_idx = data.get("current_subtask_idx", 0)
         state.current_iteration = data.get("current_iteration", 0)
-        state.iterations = [
-            _FakeIteration(i["number"], i["code"]) for i in data.get("iterations", [])
-        ]
+        state.iterations = [_FakeIteration(i["number"], i["code"]) for i in data.get("iterations", [])]
         # Восстанавливаем llm_response в Iteration.
         for it, it_data in zip(state.iterations, data.get("iterations", []), strict=False):
             it.llm_response = it_data.get("llm_response", {})
@@ -223,9 +219,7 @@ def _make_handlers(
             "fsm_state": "coding",
         }
 
-    async def _validate_node(
-        state: Any, bsl_ls_server: Any = None, kb_server: Any = None
-    ) -> dict[str, Any]:
+    async def _validate_node(state: Any, bsl_ls_server: Any = None, kb_server: Any = None) -> dict[str, Any]:
         return {
             "validation_passed": validate_passed,
             "validate_result": {
@@ -434,9 +428,7 @@ class TestHandleGather:
             }
         )
         with pytest.raises(KeyError, match="not found in plan"):
-            await h.handle_gather(
-                {"plan_id": plan_result["plan_id"], "subtask_id": "st-999"}
-            )
+            await h.handle_gather({"plan_id": plan_result["plan_id"], "subtask_id": "st-999"})
 
     @pytest.mark.asyncio
     async def test_gather_switches_subtask_idx(self) -> None:
@@ -475,9 +467,7 @@ class TestHandleGenerate:
         plan_id = plan_result["plan_id"]
         await h.handle_gather({"plan_id": plan_id, "subtask_id": "st-001"})
 
-        result = await h.handle_generate(
-            {"plan_id": plan_id, "subtask_id": "st-001", "iteration": 1}
-        )
+        result = await h.handle_generate({"plan_id": plan_id, "subtask_id": "st-001", "iteration": 1})
         assert result["subtask_id"] == "st-001"
         assert result["iteration"] == 1
         assert "МояФункция" in result["code"]
@@ -499,14 +489,10 @@ class TestHandleGenerate:
         await h.handle_gather({"plan_id": plan_id, "subtask_id": "st-001"})
 
         # Первый generate.
-        r1 = await h.handle_generate(
-            {"plan_id": plan_id, "subtask_id": "st-001", "iteration": 1}
-        )
+        r1 = await h.handle_generate({"plan_id": plan_id, "subtask_id": "st-001", "iteration": 1})
         assert r1["iteration"] == 1
         # Второй generate (retry).
-        r2 = await h.handle_generate(
-            {"plan_id": plan_id, "subtask_id": "st-001", "iteration": 2}
-        )
+        r2 = await h.handle_generate({"plan_id": plan_id, "subtask_id": "st-001", "iteration": 2})
         assert r2["iteration"] == 2
 
 
@@ -718,9 +704,7 @@ class TestHandleRunCli:
         kb_server.search_kb.return_value.model_dump = MagicMock(return_value={"results": []})
 
         h = _make_handlers(kb_server=kb_server)
-        result = await h.handle_run_cli(
-            {"tool_name": "kb.search_kb", "args": {"query": "test", "top_k": 3}}
-        )
+        result = await h.handle_run_cli({"tool_name": "kb.search_kb", "args": {"query": "test", "top_k": 3}})
         assert result["tool_name"] == "kb.search_kb"
         assert result["warning"] is None
         assert result["result"] == {"results": []}
@@ -734,18 +718,14 @@ class TestHandleRunCli:
         bsl_ls_server.lint.return_value.model_dump = MagicMock(return_value={"total": 0})
 
         h = _make_handlers(bsl_ls_server=bsl_ls_server)
-        result = await h.handle_run_cli(
-            {"tool_name": "bsl_ls.lint", "args": {"code": "x = 1;"}}
-        )
+        result = await h.handle_run_cli({"tool_name": "bsl_ls.lint", "args": {"code": "x = 1;"}})
         assert result["warning"] is None
         assert result["result"] == {"total": 0}
 
     @pytest.mark.asyncio
     async def test_run_cli_unknown_tool_warning(self) -> None:
         h = _make_handlers()
-        result = await h.handle_run_cli(
-            {"tool_name": "metadata.get_metadata", "args": {"object_ref": "Catalog.X"}}
-        )
+        result = await h.handle_run_cli({"tool_name": "metadata.get_metadata", "args": {"object_ref": "Catalog.X"}})
         assert result["warning"] is not None
         assert "not available" in result["warning"]
         assert result["result"] == {}
@@ -754,9 +734,7 @@ class TestHandleRunCli:
     async def test_run_cli_unknown_kb_method_raises_warning(self) -> None:
         kb_server = MagicMock()
         h = _make_handlers(kb_server=kb_server)
-        result = await h.handle_run_cli(
-            {"tool_name": "kb.unknown_method", "args": {}}
-        )
+        result = await h.handle_run_cli({"tool_name": "kb.unknown_method", "args": {}})
         assert result["warning"] is not None
         assert "failed" in result["warning"]
 
@@ -784,12 +762,8 @@ class TestHandleDataStatus:
     @pytest.mark.asyncio
     async def test_data_status_with_path_manager(self) -> None:
         path_manager = MagicMock()
-        path_manager.validate = MagicMock(
-            return_value={"data_dir": True, "derived_dir": True, "missing_dir": False}
-        )
-        path_manager.freshness_check = MagicMock(
-            return_value={"unified_metadata": True, "api_reference": True}
-        )
+        path_manager.validate = MagicMock(return_value={"data_dir": True, "derived_dir": True, "missing_dir": False})
+        path_manager.freshness_check = MagicMock(return_value={"unified_metadata": True, "api_reference": True})
 
         config_registry = MagicMock()
         entry1 = MagicMock()
@@ -846,9 +820,7 @@ class TestFullWorkflow:
         assert gather_out["next_action"]["tool"] == "generate"
 
         # 3. generate
-        gen_out = await h.handle_generate(
-            {"plan_id": plan_id, "subtask_id": st1, "iteration": 1}
-        )
+        gen_out = await h.handle_generate({"plan_id": plan_id, "subtask_id": st1, "iteration": 1})
         artifact_id = gen_out["artifact_id"]
         assert gen_out["next_action"]["tool"] == "validate"
         assert gen_out["next_action"]["args"]["artifact_id"] == artifact_id

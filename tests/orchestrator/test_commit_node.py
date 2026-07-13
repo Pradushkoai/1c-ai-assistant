@@ -100,9 +100,7 @@ class TestCommitNodeGitFlow:
     """Real git flow (git_server + repo_path заданы)."""
 
     @pytest.mark.asyncio
-    async def test_git_flow_creates_branch_and_commit(
-        self, sample_state: TaskState, tmp_path: Path
-    ) -> None:
+    async def test_git_flow_creates_branch_and_commit(self, sample_state: TaskState, tmp_path: Path) -> None:
         git_server = _mock_git_server(commit_sha="deadbeef1234")
         repo_path = str(tmp_path)
 
@@ -169,9 +167,7 @@ class TestCommitNodeGitFlow:
         assert commit_result["pr_number"] is None
 
     @pytest.mark.asyncio
-    async def test_git_flow_writes_file_to_repo(
-        self, sample_state: TaskState, tmp_path: Path
-    ) -> None:
+    async def test_git_flow_writes_file_to_repo(self, sample_state: TaskState, tmp_path: Path) -> None:
         """Код записывается в файл внутри repo_path."""
         git_server = _mock_git_server()
         repo_path = str(tmp_path)
@@ -191,7 +187,9 @@ class TestCommitNodeFallback:
     """Fallback: git_server=None → file save в runtime/generated/."""
 
     @pytest.mark.asyncio
-    async def test_fallback_no_git_server(self, sample_state: TaskState, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_fallback_no_git_server(
+        self, sample_state: TaskState, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Без git_server — file fallback."""
         monkeypatch.chdir(tmp_path)
         result = await commit_node(sample_state, git_server=None, repo_path=None)

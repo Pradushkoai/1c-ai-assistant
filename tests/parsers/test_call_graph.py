@@ -38,9 +38,7 @@ def config_dir(tmp_path: Path) -> Path:
     mod2_dir = tmp_path / "CommonModules" / "Модуль2" / "Ext"
     mod2_dir.mkdir(parents=True)
     (mod2_dir / "Module.bsl").write_text(
-        "Процедура ТестоваяПроцедура() Экспорт\n"
-        "\\тРезультат = Модуль1.ВнешняяФункция();\n"
-        "КонецПроцедуры\n",
+        "Процедура ТестоваяПроцедура() Экспорт\n\\тРезультат = Модуль1.ВнешняяФункция();\nКонецПроцедуры\n",
         encoding="utf-8",
     )
 
@@ -89,9 +87,11 @@ class TestBuildCallGraph:
         # Проверяем что Модуль2 вызывает Модуль1
         found = False
         for e in cross_edges:
-            if (e["source_module"]["name"] == "Модуль2" and
-                e["target_module"]["name"] == "Модуль1" and
-                e["target_method"] == "ВнешняяФункция"):
+            if (
+                e["source_module"]["name"] == "Модуль2"
+                and e["target_module"]["name"] == "Модуль1"
+                and e["target_method"] == "ВнешняяФункция"
+            ):
                 found = True
                 break
         assert found, "Expected cross-module call Модуль2 → Модуль1.ВнешняяФункция"
@@ -102,8 +102,7 @@ class TestBuildCallGraph:
         local_edges = [e for e in result["edges"] if e.get("target_module") is None]
         assert len(local_edges) >= 1
         found = any(
-            e["source_method"] == "ВнешняяФункция" and e["target_method"] == "ВнутренняяФункция"
-            for e in local_edges
+            e["source_method"] == "ВнешняяФункция" and e["target_method"] == "ВнутренняяФункция" for e in local_edges
         )
         assert found, "Expected local call ВнешняяФункция → ВнутренняяФункция"
 

@@ -35,8 +35,17 @@ def _make_zip_entry(name: str, content: bytes) -> bytes:
     name_bytes = name.encode("utf-8")
     header = struct.pack(
         "<IHHHHHIIIHH",
-        0x04034B50, 20, 0, 8, 0, 0, 0,
-        len(compressed), len(content), len(name_bytes), 0,
+        0x04034B50,
+        20,
+        0,
+        8,
+        0,
+        0,
+        0,
+        len(compressed),
+        len(content),
+        len(name_bytes),
+        0,
     )
     return header + name_bytes + compressed
 
@@ -242,24 +251,28 @@ class TestAvailability:
 
 class TestLoadToSqlite:
     def test_creates_db(self, tmp_path: Path):
-        methods = [PlatformMethod(
-            name="Тест",
-            signature="Тест()",
-            description="Test method",
-            is_procedure=False,
-        )]
+        methods = [
+            PlatformMethod(
+                name="Тест",
+                signature="Тест()",
+                description="Test method",
+                is_procedure=False,
+            )
+        ]
         db_path = tmp_path / "platform-methods.db"
         count = load_methods_to_sqlite(methods, db_path, "8.3.25")
         assert count == 1
         assert db_path.exists()
 
     def test_db_has_method(self, tmp_path: Path):
-        methods = [PlatformMethod(
-            name="Сообщить",
-            signature="Процедура Сообщить(Текст)",
-            description="Выводит сообщение",
-            is_procedure=True,
-        )]
+        methods = [
+            PlatformMethod(
+                name="Сообщить",
+                signature="Процедура Сообщить(Текст)",
+                description="Выводит сообщение",
+                is_procedure=True,
+            )
+        ]
         db_path = tmp_path / "platform-methods.db"
         load_methods_to_sqlite(methods, db_path, "8.3.25")
 

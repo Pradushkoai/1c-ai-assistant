@@ -206,11 +206,13 @@ class TestGuessParentFromPath:
 class TestExtractV8Content:
     def test_simple_text(self, tmp_path: Path):
         from parsers.xml._xml_utils import parse_xml_string
+
         root = parse_xml_string("<Title>Hello</Title>")
         assert _extract_v8_content(root) == "Hello"
 
     def test_v8_item_content(self, tmp_path: Path):
         from parsers.xml._xml_utils import parse_xml_string
+
         root = parse_xml_string(
             "<Title><v8:item><v8:lang>ru</v8:lang><v8:content>Привет</v8:content></v8:item></Title>"
         )
@@ -218,5 +220,6 @@ class TestExtractV8Content:
 
     def test_empty(self, tmp_path: Path):
         from parsers.xml._xml_utils import parse_xml_string
+
         root = parse_xml_string("<Title></Title>")
         assert _extract_v8_content(root) is None

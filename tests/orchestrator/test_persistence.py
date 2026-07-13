@@ -125,9 +125,7 @@ class TestFromEnv:
         pm = PersistenceManager.from_env()
         assert pm.dsn is None
 
-    def test_from_env_empty_string_returns_none(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_from_env_empty_string_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("DATABASE_URL", "")
         pm = PersistenceManager.from_env()
         assert pm.dsn is None
@@ -140,9 +138,7 @@ class TestImportErrorFallback:
     """Если langgraph-checkpoint-postgres не установлен — graceful MemorySaver."""
 
     @pytest.mark.asyncio
-    async def test_import_error_falls_back_to_memory(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_import_error_falls_back_to_memory(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import langgraph.checkpoint.postgres.aio as pg_aio
 
         # Скрываем AsyncPostgresSaver — эмулируем отсутствие пакета.
@@ -227,9 +223,7 @@ class TestPostgresLifecycleMocked:
     """Проверка lifecycle PersistenceManager с фейковым PostgresSaver."""
 
     @pytest.mark.asyncio
-    async def test_postgres_init_calls_setup(
-        self, fake_postgres_saver: list[_FakeSaverCM]
-    ) -> None:
+    async def test_postgres_init_calls_setup(self, fake_postgres_saver: list[_FakeSaverCM]) -> None:
         async with PersistenceManager(dsn="postgresql://u:p@host:5432/db") as pm:
             assert pm.is_postgres is True
             assert len(fake_postgres_saver) == 1
@@ -238,9 +232,7 @@ class TestPostgresLifecycleMocked:
             assert pm.get_checkpointer() is fake_postgres_saver[0].saver
 
     @pytest.mark.asyncio
-    async def test_postgres_exit_closes_connection(
-        self, fake_postgres_saver: list[_FakeSaverCM]
-    ) -> None:
+    async def test_postgres_exit_closes_connection(self, fake_postgres_saver: list[_FakeSaverCM]) -> None:
         async with PersistenceManager(dsn="postgresql://u:p@host:5432/db") as pm:
             assert pm.is_postgres is True
         # После выхода — connection закрыт, state сброшен.
@@ -248,17 +240,13 @@ class TestPostgresLifecycleMocked:
         assert pm.is_postgres is False
 
     @pytest.mark.asyncio
-    async def test_postgres_health_check_calls_aget_tuple(
-        self, fake_postgres_saver: list[_FakeSaverCM]
-    ) -> None:
+    async def test_postgres_health_check_calls_aget_tuple(self, fake_postgres_saver: list[_FakeSaverCM]) -> None:
         async with PersistenceManager(dsn="postgresql://u:p@host:5432/db") as pm:
             assert await pm.health_check() is True
             assert fake_postgres_saver[0].saver.aget_tuple_called is True
 
     @pytest.mark.asyncio
-    async def test_postgres_connection_error_raises_persistence_error(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_postgres_connection_error_raises_persistence_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Ошибка подключения → PersistenceError, CM корректно закрыт."""
 
         class _FailingSaver:
@@ -277,9 +265,7 @@ class TestPostgresLifecycleMocked:
                 pass
 
     @pytest.mark.asyncio
-    async def test_postgres_setup_error_raises_persistence_error(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_postgres_setup_error_raises_persistence_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Ошибка в setup() → PersistenceError."""
 
         class _SaverSetupFails:
@@ -370,9 +356,7 @@ class TestPostgresIntegration:
         # «Первый запуск»: пишем checkpoint.
         async with PersistenceManager(dsn=dsn) as pm1:
             compiled1 = build_compiled(pm1.get_checkpointer())
-            result = await compiled1.ainvoke(
-                {"value": 10}, config={"configurable": {"thread_id": thread_id}}
-            )
+            result = await compiled1.ainvoke({"value": 10}, config={"configurable": {"thread_id": thread_id}})
             assert result["value"] == 11
 
         # «Рестарт контейнера»: новый PersistenceManager, тот же DSN.
@@ -380,12 +364,8 @@ class TestPostgresIntegration:
             assert pm2.is_postgres is True
             compiled2 = build_compiled(pm2.get_checkpointer())
             # Читаем state по thread_id — должен найтись checkpoint от pm1.
-            state = await compiled2.aget_state(
-                config={"configurable": {"thread_id": thread_id}}
-            )
-            assert state.values.get("value") == 11, (
-                "checkpoint не пережил рестарт PersistenceManager"
-            )
+            state = await compiled2.aget_state(config={"configurable": {"thread_id": thread_id}})
+            assert state.values.get("value") == 11, "checkpoint не пережил рестарт PersistenceManager"
 
     @pytest.mark.asyncio
     async def test_health_check_detects_dead_connection(self) -> None:

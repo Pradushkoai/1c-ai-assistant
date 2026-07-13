@@ -4,8 +4,8 @@
 > в новый чат — агент активируется с полным контекстом проекта 1c-ai-assistant.
 >
 > **Дата генерации:** 2026-07-13
-> **Последний коммит в репозитории:** TD-S5-04 Docker production (Stage 3 ЗАВЕРШЁН, 4/4)
-> **Версия файла:** 4.0
+> **Последний коммит в репозитории:** TD-S7-04 Stage 5 ЗАВЕРШЁН (все 5 этапов)
+> **Версия файла:** 5.0
 
 ---
 
@@ -62,12 +62,14 @@
 | **Проект** | 1c-ai-assistant — AI-ассистент для 1С-разработчиков |
 | **Репозиторий** | https://github.com/Pradushkoai/1c-ai-assistant |
 | **Локальный путь** | `/home/z/my-project/1c-ai-assistant/` |
-| **Последний коммит** | TD-S5-04 — Docker production (Stage 3 ЗАВЕРШЁН, 4/4) |
-| **Тесты** | 921 проходят + 7 skipped (3 BSL LS + 3 Postgres + 1 git integration), ruff чистый, 0 boundary violations |
+| **Последний коммит** | TD-S7-04 — Stage 5 ЗАВЕРШЁН (все 5 этапов) |
+| **Тесты** | 1032 проходят + 14 skipped, ruff check+format чистый, 0 boundary violations, mypy 0 ошибок |
 | **Спринты завершены** | 0, 1, 1.5, 2, 3, 3.1, 3.2, 3.2.1, 3.3 |
-| **Этап 1** | ✅ ЗАВЕРШЁН (5/5: Form/Subsystem/Role, api-reference, call graph, dependency graph, asyncio.TaskGroup) |
-| **Этап 2** | ✅ **ЗАВЕРШЁН** (7/7: ADR-0020, codebase MCP, standards, BSL LS Docker, library, transitive closure, api-ref) |
-| **Stage 3** | ✅ **ЗАВЕРШЁН** (4/4: PostgresSaver persistence, Facade handlers, git MCP, Docker production) |
+| **Этап 1** | ✅ ЗАВЕРШЁН (5/5) |
+| **Этап 2** | ✅ **ЗАВЕРШЁН** (7/7) |
+| **Stage 3** | ✅ **ЗАВЕРШЁН** (4/4: PostgresSaver, Facade, git MCP, Docker) |
+| **Stage 4** | ✅ **ЗАВЕРШЁН** (4/4: metadata MCP, commit→git, mcp serve, integration+docs) |
+| **Stage 5** | ✅ **ЗАВЕРШЁН** (4/4: survival-restart, REST API, mypy cleanup, CI integration) |
 | **MVP** | ✅ `1c-ai generate` работает с реальной LLM (ZaiLLM через z-ai CLI) |
 | **LLM** | ZaiLLM adapter (z-ai CLI subprocess, без внешнего API ключа) |
 | **HBK** | 10,150 методов платформы 8.3.25 (Container32 парсер) |
@@ -75,8 +77,8 @@
 | **MCP tools** | 21 (5 KB → 7 KB: добавлены get_standard + check_standards) |
 | **Валидаторы** | 4 параллельных в validate_node (BSL LS + antipatterns + method + standards) |
 | **BSL LS Docker** | мульти-stage Dockerfile v0.25.5, HTTP API, healthcheck, .dockerignore |
-| **Persistence** | ✅ PostgresSaver (AsyncPostgresSaver + setup() + connection lifecycle); MemorySaver fallback; migrations/ (Alembic + state-миграции) |
-| **Архитектура** | CONCEPTUAL.md §1.1 соблюдён (DI), §2.1 соблюдён (asyncio.TaskGroup) |
+| **Persistence** | ✅ PostgresSaver + FacadeStateStore (survival-restart для Facade через checkpointer); MemorySaver fallback; migrations/ (Alembic + state-миграции) |
+| **Архитектура** | CONCEPTUAL.md §1.1 соблюдён (DI), §2.1 соблюдён (asyncio.TaskGroup), §1.2 (режимы A/B/C) — все 3 реализованы |
 | **Принцип** | Глубина сначала (D-2026-07-12-08) |
 
 ### Что Coder получает (контекст для генерации)
@@ -96,28 +98,27 @@
 - ✅ TD-S4.2-03 (Стандарты 1С: 8 YAML — 4 СТО + 4 БСП, 4-й валидатор)
 - ✅ **TD-S4.2-04** (BSL LS Docker: мульти-stage Dockerfile, исправлен CLI-синтаксис, healthcheck)
 
-### Stage 3: ✅ ЗАВЕРШЁН (4/4)
+### Stage 5: ✅ ЗАВЕРШЁН (4/4)
 
-- ✅ **TD-S5-01 (HIGH):** PostgresSaver persistence — ЗАКРЫТО (2026-07-13).
-  Рабочая реализация PersistenceManager (AsyncPostgresSaver + setup()),
-  schema_version в TaskState, миграции (Alembic scaffolding + state-миграции).
-- ✅ **TD-S5-02 (HIGH):** Facade handlers — ЗАКРЫТО (2026-07-13). 8 lifecycle
-  tools по ADR-0013 (plan/gather/generate/validate/review/explain/run_cli/data_status).
-  FacadeHandlers с DI, MCP stdio server.
-- ✅ **TD-S5-03 (MEDIUM):** git MCP — ЗАКРЫТО (2026-07-13). GitServer с 4 tools
-  (create_branch, commit, open_pr, diff) через async subprocess. Безопасность:
-  branch/path validation, secrets scan в diff.
-- ✅ **TD-S5-04 (MEDIUM):** Docker production — ЗАКРЫТО (2026-07-13). Multi-stage
-  Dockerfile.app, `1c-ai health` CLI, healthcheck в compose, .env.example,
-  docker-compose.override.yml (dev).
+- ✅ **TD-S7-01 (HIGH):** Production survival-restart для Facade — FacadeStateStore
+  через LangGraph checkpointer (aput/aget_tuple). State по plan_id переживает рестарт
+  контейнера (PostgresSaver). In-memory fallback.
+- ✅ **TD-S7-02 (HIGH):** REST API HTTP server — `1c-ai serve` (FastAPI :8000).
+  GET /health (Docker/k8s probe), GET /servers, GET /tools/{server}, POST /facade/{tool},
+  POST /domain/{server}/{tool}. Stateless через store.
+- ✅ **TD-S7-03 (MEDIUM):** ZaiLLM mypy cleanup — TD-011 закрыт. mypy 0 ошибок
+  (было 14: zai_llm/vector_store/form/library/codebase).
+- ✅ **TD-S7-04 (MEDIUM):** CI integration + ruff format. `ruff format` применён ко
+  всем файлам (CI `--check` зелёный). integration.yml: `docker compose up --build`.
 
-### Следующий этап (post-Stage 3)
+### Следующий этап (post-Stage 5)
 
 - **Post-MVP** (TD-005..011): Streaming, prompt caching, multi-LLM routing.
-- **REST API**: HTTP server на :8000 (для k8s probes, Facade через HTTP).
-- **Production survival-restart** для Facade (checkpointer.aput/aget_tuple hooks).
-- **ZaiLLM mypy cleanup** (TD-011: 14 ошибок).
-- **Integration tests** с реальными контейнерами.
+- **SDBL парсер** (ANTLR4), **SKD парсер** (DataCompositionSchema).
+- **Qdrant store** (ADR-0017, pgvector покрывает).
+- **Auth для REST API** (API key/OAuth).
+- **Web UI** (browser IDE на базе REST API).
+- **LangSmith observability** (ADR-0019).
 
 ---
 

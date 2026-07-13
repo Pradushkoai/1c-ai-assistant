@@ -349,7 +349,7 @@ class TestErrorHandling:
     def test_invalid_xml_recorded_in_errors(self, tmp_path: Path):
         """Повреждённый XML — не падает, записывается в parse_errors."""
         config_dir = tmp_path / "config"
-        bad_dir = config_dir / "Catalogs" # та же что good_dir
+        bad_dir = config_dir / "Catalogs"  # та же что good_dir
         bad_dir.mkdir(parents=True)
         # Полностью сломанный XML
         (bad_dir / "Плохой.xml").write_text(

@@ -193,11 +193,7 @@ class TestParseDiffStat:
         assert result == {"files_changed": 1, "insertions": 5, "deletions": 5}
 
     def test_parse_multi_files(self) -> None:
-        stat = (
-            " src/x.bsl | 10 +++++-----\n"
-            " src/y.bsl |  3 ++\n"
-            " 2 files changed, 7 insertions(+), 5 deletions(-)"
-        )
+        stat = " src/x.bsl | 10 +++++-----\n src/y.bsl |  3 ++\n 2 files changed, 7 insertions(+), 5 deletions(-)"
         result = _parse_diff_stat(stat)
         assert result == {"files_changed": 2, "insertions": 7, "deletions": 5}
 
@@ -230,9 +226,7 @@ class TestCreateBranch:
 
         with patch("mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake_subprocess):
             server = GitServer()
-            result = await server.create_branch(
-                repo_path=str(tmp_path), branch_name="feature/test"
-            )
+            result = await server.create_branch(repo_path=str(tmp_path), branch_name="feature/test")
         assert result.branch_name == "feature/test"
         assert result.base == "main"
 
@@ -246,9 +240,7 @@ class TestCreateBranch:
     async def test_create_branch_nonexistent_repo(self) -> None:
         server = GitServer()
         with pytest.raises(GitValidationError, match="does not exist"):
-            await server.create_branch(
-                repo_path="/nonexistent/xyz", branch_name="feature/test"
-            )
+            await server.create_branch(repo_path="/nonexistent/xyz", branch_name="feature/test")
 
     @pytest.mark.asyncio
     async def test_create_branch_git_error(self, tmp_path: Path) -> None:
@@ -268,13 +260,9 @@ class TestCreateBranch:
                 call_count += 1
                 return proc1 if call_count == 1 else proc2
 
-            with patch(
-                "mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake
-            ):
+            with patch("mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake):
                 with pytest.raises(GitCommandError, match="git checkout -b"):
-                    await server.create_branch(
-                        repo_path=str(tmp_path), branch_name="feature/test"
-                    )
+                    await server.create_branch(repo_path=str(tmp_path), branch_name="feature/test")
 
 
 # ─── commit ──────────────────────────────────────────────────────────────────
@@ -297,9 +285,7 @@ class TestCommit:
             call_count += 1
             return proc
 
-        with patch(
-            "mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake
-        ):
+        with patch("mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake):
             server = GitServer()
             result = await server.commit(
                 repo_path=str(tmp_path),
@@ -357,9 +343,7 @@ class TestCommit:
             call_count += 1
             return proc
 
-        with patch(
-            "mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake
-        ):
+        with patch("mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake):
             server = GitServer()
             result = await server.commit(
                 repo_path=str(tmp_path),
@@ -422,9 +406,7 @@ class TestOpenPr:
             captured_args.append(list(args))
             return proc
 
-        with patch(
-            "mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake
-        ):
+        with patch("mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake):
             with patch("mcp_servers.git.server.shutil.which", return_value="/usr/bin/gh"):
                 server = GitServer()
                 await server.open_pr(
@@ -481,9 +463,7 @@ class TestDiff:
             call_count += 1
             return proc
 
-        with patch(
-            "mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake
-        ):
+        with patch("mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake):
             server = GitServer()
             result = await server.diff(
                 repo_path=str(tmp_path),
@@ -495,9 +475,7 @@ class TestDiff:
 
     @pytest.mark.asyncio
     async def test_diff_secret_detected(self, tmp_path: Path) -> None:
-        secret_diff = (
-            "+TOKEN = 'github_pat_11CGTUK6Y0EDoe3IIuCHyF_test_secret_here'"
-        )
+        secret_diff = "+TOKEN = 'github_pat_11CGTUK6Y0EDoe3IIuCHyF_test_secret_here'"
         proc = _FakeProc(returncode=0, stdout=secret_diff.encode(), stderr=b"")
         with patch(
             "mcp_servers.git.server.asyncio.create_subprocess_exec",
@@ -522,9 +500,7 @@ class TestDiff:
             captured.append(list(args))
             return proc
 
-        with patch(
-            "mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake
-        ):
+        with patch("mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake):
             server = GitServer()
             await server.diff(
                 repo_path=str(tmp_path),
@@ -563,9 +539,7 @@ class TestTimeout:
         ):
             server = GitServer(default_timeout=1)
             with pytest.raises(GitTimeoutError, match="timed out"):
-                await server.create_branch(
-                    repo_path=str(tmp_path), branch_name="feature/test"
-                )
+                await server.create_branch(repo_path=str(tmp_path), branch_name="feature/test")
 
 
 # ─── Tool Implementations ────────────────────────────────────────────────────
@@ -585,9 +559,7 @@ class TestImplementations:
             call_count += 1
             return proc1 if call_count == 1 else proc2
 
-        with patch(
-            "mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake
-        ):
+        with patch("mcp_servers.git.server.asyncio.create_subprocess_exec", side_effect=_fake):
             impl = CreateBranchImplementation()
             result = await impl(
                 repo_path=str(tmp_path),
@@ -649,6 +621,4 @@ class TestGitIntegration:
 
         # Возвращаемся на base и удаляем ветку (cleanup).
         await server._run_subprocess(["git", "checkout", result.base], cwd=Path(repo).resolve())
-        await server._run_subprocess(
-            ["git", "branch", "-D", "test-facade-tmp"], cwd=Path(repo).resolve()
-        )
+        await server._run_subprocess(["git", "branch", "-D", "test-facade-tmp"], cwd=Path(repo).resolve())

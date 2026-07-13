@@ -8,6 +8,34 @@
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-07-13 — Stage 5 (Production Hardening) завершён
+
+### Added — Stage 5 (4 задачи)
+
+- **TD-S7-01: FacadeStateStore survival-restart** — `FacadeStateStore` через LangGraph
+  checkpointer (aput/aget_tuple). State по plan_id переживает рестарт контейнера
+  (PostgresSaver). In-memory fallback (backward compat). `_subtask_to_plan` cache.
+  19 тестов (in-memory, mock checkpointer, survive-restart, TaskState round-trip).
+  См. D-2026-07-13-13.
+- **TD-S7-02: REST API HTTP server** — `1c-ai serve` (FastAPI :8000).
+  GET /health (Docker/k8s probe), GET /servers, GET /tools/{server},
+  POST /facade/{tool}, POST /domain/{server}/{tool}. Stateless через store.
+  Dockerfile healthcheck обновлён (curl /health). 19 тестов. См. D-2026-07-13-14.
+- **TD-S7-03: ZaiLLM mypy cleanup (TD-011)** — все 14 mypy ошибок закрыты
+  (zai_llm.py, vector_store.py, form.py, library.py, codebase/server.py).
+  **mypy: 0 ошибок** (TD-011 закрыт). См. D-2026-07-13-15.
+- **TD-S7-04: CI integration + ruff format** — `ruff format` применён ко всем файлам
+  (CI `--check` зелёный). integration.yml: `docker compose up --build`. 4 новых
+  integration test (REST API smoke + FacadeStateStore survive-restart с Postgres).
+
+### Changed
+
+- **1032 теста** проходят + 14 skipped (было 991+12, +41 от Stage 5).
+- **mypy: 0 ошибок** (TD-011 закрыт, было 14).
+- **ruff check + format: чистые** (45 файлов отформатированы).
+- **0 boundary violations**.
+- **5 DECISIONS** (D-2026-07-13-13..15).
+
 ## [0.4.0] — 2026-07-13 — Stage 4 (Contract Compliance) завершён
 
 ### Added — Stage 4 (4 задачи)

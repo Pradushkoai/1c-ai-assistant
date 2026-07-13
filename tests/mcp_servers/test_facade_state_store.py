@@ -181,7 +181,9 @@ class TestInMemoryFallback:
 
 def _make_mock_checkpointer() -> MagicMock:
     """Mock LangGraph checkpointer с in-memory storage (dict thread_id → checkpoint)."""
-    storage: dict[str, dict[str, Any]] = {}  # thread_id → {checkpoint_ns → {checkpoint_id → (checkpoint, metadata, parent)}}
+    storage: dict[
+        str, dict[str, Any]
+    ] = {}  # thread_id → {checkpoint_ns → {checkpoint_id → (checkpoint, metadata, parent)}}
 
     cp = MagicMock()
 
@@ -200,9 +202,7 @@ def _make_mock_checkpointer() -> MagicMock:
         tuple_result = MagicMock()
         tuple_result.checkpoint = checkpoint_data
         tuple_result.metadata = metadata
-        tuple_result.parent_config = (
-            {"configurable": {"checkpoint_id": parent_id}} if parent_id else None
-        )
+        tuple_result.parent_config = {"configurable": {"checkpoint_id": parent_id}} if parent_id else None
         return tuple_result
 
     async def _aput(

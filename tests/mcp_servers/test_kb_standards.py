@@ -143,7 +143,7 @@ class TestDetectStandardsViolations:
     @pytest.mark.smoke
     def test_detect_tabs(self, kb_collection: KBCollection):
         """sto-6.1-no-tabs: табуляция в коде."""
-        code = "Процедура Тест()\n\tСообщить(\"Hello\");\nКонецПроцедуры"
+        code = 'Процедура Тест()\n\tСообщить("Hello");\nКонецПроцедуры'
         findings = kb_collection.detect_standards_violations(code)
         ids = [f["standard_id"] for f in findings]
         assert "sto-6.1-no-tabs" in ids
@@ -182,14 +182,14 @@ class TestDetectStandardsViolations:
 
     def test_detect_find_by_code(self, kb_collection: KBCollection):
         """bsp-find-by-code: НайтиПоКоду."""
-        code = "Элемент = Справочники.Товары.НайтиПоКоду(\"001\");"
+        code = 'Элемент = Справочники.Товары.НайтиПоКоду("001");'
         findings = kb_collection.detect_standards_violations(code)
         ids = [f["standard_id"] for f in findings]
         assert "bsp-find-by-code" in ids
 
     def test_detect_message_to_user(self, kb_collection: KBCollection):
         """bsp-message-to-user: Сообщить()."""
-        code = "Сообщить(\"Привет, мир!\");"
+        code = 'Сообщить("Привет, мир!");'
         findings = kb_collection.detect_standards_violations(code)
         ids = [f["standard_id"] for f in findings]
         assert "bsp-message-to-user" in ids
@@ -228,9 +228,7 @@ class TestDetectStandardsViolations:
     def test_severity_filter(self, kb_collection: KBCollection):
         """Фильтр по severity: только critical."""
         code = 'Сообщить("test");\nВыполнить("А=1");'  # warning + critical
-        findings = kb_collection.detect_standards_violations(
-            code, severity_filter=["critical"]
-        )
+        findings = kb_collection.detect_standards_violations(code, severity_filter=["critical"])
         ids = {f["standard_id"] for f in findings}
         # Только critical стандарты
         assert "bsp-no-execute-string-literal" in ids
@@ -240,16 +238,14 @@ class TestDetectStandardsViolations:
     def test_source_type_filter(self, kb_collection: KBCollection):
         """Фильтр по типу источника: только СТО."""
         code = 'Сообщить("test");\n\t// TODO: fix'
-        findings = kb_collection.detect_standards_violations(
-            code, source_type_filter=["СТО"]
-        )
+        findings = kb_collection.detect_standards_violations(code, source_type_filter=["СТО"])
         # Должны быть только СТО (no-tabs, no-english-markers)
         for f in findings:
             assert f["source"]["type"] == "СТО"
 
     def test_findings_have_line_numbers(self, kb_collection: KBCollection):
         """Findings содержат корректные номера строк."""
-        code = "Строка1\nСтрока2\nСтрока3\n\tСообщить(\"tab\");"  # таб на 4-й строке
+        code = 'Строка1\nСтрока2\nСтрока3\n\tСообщить("tab");'  # таб на 4-й строке
         findings = kb_collection.detect_standards_violations(code)
         std_finding = next(
             (f for f in findings if f["standard_id"] == "sto-6.1-no-tabs"),
@@ -260,7 +256,7 @@ class TestDetectStandardsViolations:
 
     def test_findings_have_source_info(self, kb_collection: KBCollection):
         """Каждый finding содержит полную информацию об источнике."""
-        code = "Сообщить(\"test\");"
+        code = 'Сообщить("test");'
         findings = kb_collection.detect_standards_violations(code)
         for f in findings:
             assert "source" in f
@@ -324,7 +320,7 @@ class TestKbServerStandards:
     @pytest.mark.asyncio
     async def test_check_standards_finds_violations(self, kb_server: KbServer):
         """Код с табами и английскими маркерами → findings."""
-        code = "// TODO: переписать\nПроцедура Тест()\n\tСообщить(\"Hi\");\nКонецПроцедуры"
+        code = '// TODO: переписать\nПроцедура Тест()\n\tСообщить("Hi");\nКонецПроцедуры'
         result = await kb_server.check_standards(code)
         assert len(result.findings) >= 2
         ids = {f["standard_id"] for f in result.findings}
@@ -334,24 +330,22 @@ class TestKbServerStandards:
     @pytest.mark.asyncio
     async def test_check_standards_clean_code(self, kb_server: KbServer):
         """Чистый код → 0 findings."""
-        code = "Процедура Тест()\n    СообщитьПользователю(\"Готово\");\nКонецПроцедуры"
+        code = 'Процедура Тест()\n    СообщитьПользователю("Готово");\nКонецПроцедуры'
         result = await kb_server.check_standards(code)
         assert len(result.findings) == 0
 
     @pytest.mark.asyncio
     async def test_check_standards_source_type_filter(self, kb_server: KbServer):
         """Фильтр по source_type='БСП' — только БСП-нарушения."""
-        code = "// TODO: fix\nСообщить(\"test\");"  # СТО + БСП нарушения
-        result = await kb_server.check_standards(
-            code, source_type_filter=["БСП"]
-        )
+        code = '// TODO: fix\nСообщить("test");'  # СТО + БСП нарушения
+        result = await kb_server.check_standards(code, source_type_filter=["БСП"])
         for f in result.findings:
             assert f["source"]["type"] == "БСП"
 
     @pytest.mark.asyncio
     async def test_check_standards_returns_source_info(self, kb_server: KbServer):
         """Каждый finding содержит полную информацию об источнике."""
-        code = "\tСообщить(\"test\");"
+        code = '\tСообщить("test");'
         result = await kb_server.check_standards(code)
         for f in result.findings:
             assert "source" in f

@@ -104,11 +104,9 @@ class TestValidateNodeThreeValidators:
     """Проверка, что validate_node вызывает все 3 валидатора."""
 
     @pytest.mark.asyncio
-    async def test_clean_code_passes(
-        self, kb_dir: Path, make_state_with_iteration
-    ):
+    async def test_clean_code_passes(self, kb_dir: Path, make_state_with_iteration):
         """Чистый код: нет BSL LS ошибок, нет антипаттернов, нет серверных методов на клиенте."""
-        code = 'Функция Сложить(А, Б) Экспорт\n\tВозврат А + Б;\nКонецФункции'
+        code = "Функция Сложить(А, Б) Экспорт\n\tВозврат А + Б;\nКонецФункции"
         state = make_state_with_iteration(code, target_context="server")
 
         mock_bsl_ls = _make_mock_bsl_ls(diagnostics=[])
@@ -128,11 +126,9 @@ class TestValidateNodeThreeValidators:
         assert validate_result["severity_breakdown"]["critical"] == 0
 
     @pytest.mark.asyncio
-    async def test_bsl_ls_critical_makes_fail(
-        self, kb_dir: Path, make_state_with_iteration
-    ):
+    async def test_bsl_ls_critical_makes_fail(self, kb_dir: Path, make_state_with_iteration):
         """BSL LS critical → validation_passed=False."""
-        code = 'Процедура Тест() КонецПроцедуры'  # пустое тело — BSL LS diagnostic
+        code = "Процедура Тест() КонецПроцедуры"  # пустое тело — BSL LS diagnostic
         state = make_state_with_iteration(code, target_context="server")
 
         mock_bsl_ls = _make_mock_bsl_ls(
@@ -162,9 +158,7 @@ class TestValidateNodeThreeValidators:
         assert validate_result["severity_breakdown"]["critical"] == 1
 
     @pytest.mark.asyncio
-    async def test_kb_antipattern_detected(
-        self, kb_dir: Path, make_state_with_iteration
-    ):
+    async def test_kb_antipattern_detected(self, kb_dir: Path, make_state_with_iteration):
         """Антипаттерн 'select-star' → warning finding."""
         code = 'Запрос.Текст = "ВЫБРАТЬ * FROM Справочник.Товары";'
         state = make_state_with_iteration(code, target_context="server")
@@ -188,18 +182,12 @@ class TestValidateNodeThreeValidators:
         assert "select-star" in codes
 
     @pytest.mark.asyncio
-    async def test_method_availability_violation_on_client(
-        self, kb_dir: Path, make_state_with_iteration
-    ):
+    async def test_method_availability_violation_on_client(self, kb_dir: Path, make_state_with_iteration):
         """Серверный метод (ЗаписьЖурналаРегистрации) на thin_client → critical finding.
 
         Использует хардкод-список из KBCollection (без SQLite).
         """
-        code = (
-            'Процедура Тест()\n'
-            '\tЗаписьЖурналаРегистрации("Событие", "Сообщение");\n'
-            'КонецПроцедуры'
-        )
+        code = 'Процедура Тест()\n\tЗаписьЖурналаРегистрации("Событие", "Сообщение");\nКонецПроцедуры'
         state = make_state_with_iteration(code, target_context="thin_client")
 
         mock_bsl_ls = _make_mock_bsl_ls(diagnostics=[])
@@ -224,15 +212,9 @@ class TestValidateNodeThreeValidators:
         assert "METHOD-CONTEXT-ЗаписьЖурналаРегистрации" in codes
 
     @pytest.mark.asyncio
-    async def test_method_availability_ok_on_server(
-        self, kb_dir: Path, make_state_with_iteration
-    ):
+    async def test_method_availability_ok_on_server(self, kb_dir: Path, make_state_with_iteration):
         """Серверный метод на server → НЕТ finding (метод доступен)."""
-        code = (
-            'Процедура Тест()\n'
-            '\tЗаписьЖурналаРегистрации("Событие", "Сообщение");\n'
-            'КонецПроцедуры'
-        )
+        code = 'Процедура Тест()\n\tЗаписьЖурналаРегистрации("Событие", "Сообщение");\nКонецПроцедуры'
         state = make_state_with_iteration(code, target_context="server")
 
         mock_bsl_ls = _make_mock_bsl_ls(diagnostics=[])
@@ -253,9 +235,7 @@ class TestValidateNodeThreeValidators:
         assert len(method_findings) == 0
 
     @pytest.mark.asyncio
-    async def test_three_validators_findings_summed(
-        self, kb_dir: Path, make_state_with_iteration
-    ):
+    async def test_three_validators_findings_summed(self, kb_dir: Path, make_state_with_iteration):
         """Все 3 валидатора срабатывают одновременно — findings суммируются.
 
         Код содержит:
@@ -264,10 +244,10 @@ class TestValidateNodeThreeValidators:
         - Method availability violation: ЗаписьЖурналаРегистрации на thin_client (critical)
         """
         code = (
-            'Процедура Тест()\n'
+            "Процедура Тест()\n"
             '\tЗапрос.Текст = "ВЫБРАТЬ * FROM Справочник.Товары";\n'
             '\tЗаписьЖурналаРегистрации("Событие");\n'
-            'КонецПроцедуры'
+            "КонецПроцедуры"
         )
         state = make_state_with_iteration(code, target_context="thin_client")
 
@@ -307,9 +287,7 @@ class TestValidateNodeThreeValidators:
         assert validate_result["severity_breakdown"]["warning"] >= 1
 
     @pytest.mark.asyncio
-    async def test_target_context_from_constraints(
-        self, kb_dir: Path, make_state_with_iteration
-    ):
+    async def test_target_context_from_constraints(self, kb_dir: Path, make_state_with_iteration):
         """target_context берётся из subtask.constraints (default='server')."""
         # Код с серверным методом — на thin_client это violation, на server — нет
         code = 'Процедура Тест()\n\tЗаписьЖурналаРегистрации("Событие");\nКонецПроцедуры'
@@ -338,9 +316,7 @@ class TestValidateNodeThreeValidators:
         assert result_server["validation_passed"] is True
 
     @pytest.mark.asyncio
-    async def test_failed_checks_contains_only_critical_and_warning(
-        self, kb_dir: Path, make_state_with_iteration
-    ):
+    async def test_failed_checks_contains_only_critical_and_warning(self, kb_dir: Path, make_state_with_iteration):
         """failed_checks содержит только critical+warning (не info)."""
         code = 'Запрос.Текст = "ВЫБРАТЬ * FROM Справочник.Товары";'
         state = make_state_with_iteration(code, target_context="server")
@@ -379,11 +355,9 @@ class TestValidateNodeErrorHandling:
     """Проверка, что validate_node не падает при ошибках валидаторов."""
 
     @pytest.mark.asyncio
-    async def test_bsl_ls_error_does_not_crash(
-        self, kb_dir: Path, make_state_with_iteration
-    ):
+    async def test_bsl_ls_error_does_not_crash(self, kb_dir: Path, make_state_with_iteration):
         """Если BSL LS падает — validate_node продолжает (без BSL LS findings)."""
-        code = 'Процедура Тест() КонецПроцедуры'
+        code = "Процедура Тест() КонецПроцедуры"
         state = make_state_with_iteration(code, target_context="server")
 
         mock_bsl_ls = MagicMock()
@@ -404,11 +378,9 @@ class TestValidateNodeErrorHandling:
         assert result["fsm_state"] == FSMState.REVIEWING
 
     @pytest.mark.asyncio
-    async def test_kb_server_none_does_not_crash(
-        self, make_state_with_iteration
-    ):
+    async def test_kb_server_none_does_not_crash(self, make_state_with_iteration):
         """Если kb_server=None — validate_node использует только BSL LS."""
-        code = 'Процедура Тест() КонецПроцедуры'
+        code = "Процедура Тест() КонецПроцедуры"
         state = make_state_with_iteration(code, target_context="server")
 
         mock_bsl_ls = _make_mock_bsl_ls(diagnostics=[])
@@ -433,9 +405,7 @@ class TestCheckMethodsAvailabilityHelper:
     """Прямые тесты _check_methods_availability_sync."""
 
     @pytest.mark.asyncio
-    async def test_multiple_server_methods_on_client(
-        self, kb_dir: Path
-    ):
+    async def test_multiple_server_methods_on_client(self, kb_dir: Path):
         """Несколько разных серверных методов на клиенте → несколько findings.
 
         Используем только реальные вызовы функций (со скобками).
@@ -446,11 +416,11 @@ class TestCheckMethodsAvailabilityHelper:
 
         kb_server = _make_real_kb_server(kb_dir)
         code = (
-            'Процедура Тест()\n'
+            "Процедура Тест()\n"
             '\tЗаписьЖурналаРегистрации("Событие");\n'
-            '\tНайтиПоСсылкам(Ссылка);\n'
-            '\tЗаблокировать(Объект);\n'
-            'КонецПроцедуры'
+            "\tНайтиПоСсылкам(Ссылка);\n"
+            "\tЗаблокировать(Объект);\n"
+            "КонецПроцедуры"
         )
 
         findings = _check_methods_availability_sync(
@@ -470,19 +440,17 @@ class TestCheckMethodsAvailabilityHelper:
             assert f.severity == "critical"
 
     @pytest.mark.asyncio
-    async def test_duplicate_method_one_finding(
-        self, kb_dir: Path
-    ):
+    async def test_duplicate_method_one_finding(self, kb_dir: Path):
         """Повторный вызов того же метода — только 1 finding (по первому вызову)."""
         from orchestrator.nodes.validate import _check_methods_availability_sync
 
         kb_server = _make_real_kb_server(kb_dir)
         code = (
-            'Процедура Тест()\n'
+            "Процедура Тест()\n"
             '\tЗаписьЖурналаРегистрации("1");\n'
             '\tЗаписьЖурналаРегистрации("2");\n'
             '\tЗаписьЖурналаРегистрации("3");\n'
-            'КонецПроцедуры'
+            "КонецПроцедуры"
         )
 
         findings = _check_methods_availability_sync(
@@ -497,21 +465,19 @@ class TestCheckMethodsAvailabilityHelper:
         assert len(method_findings) == 1
 
     @pytest.mark.asyncio
-    async def test_keywords_not_treated_as_methods(
-        self, kb_dir: Path
-    ):
+    async def test_keywords_not_treated_as_methods(self, kb_dir: Path):
         """Ключевые слова BSL (Если, Для, ...) не проверяются как методы."""
         from orchestrator.nodes.validate import _check_methods_availability_sync
 
         kb_server = _make_real_kb_server(kb_dir)
         code = (
-            'Процедура Тест()\n'
-            '\tДля Каждого Стр Из Товары Цикл\n'
-            '\t\tЕсли Стр.Сумма > 0 Тогда\n'
+            "Процедура Тест()\n"
+            "\tДля Каждого Стр Из Товары Цикл\n"
+            "\t\tЕсли Стр.Сумма > 0 Тогда\n"
             '\t\t\tСообщить("OK");\n'
-            '\t\tКонецЕсли;\n'
-            '\tКонецЦикла;\n'
-            'КонецПроцедуры'
+            "\t\tКонецЕсли;\n"
+            "\tКонецЦикла;\n"
+            "КонецПроцедуры"
         )
 
         findings = _check_methods_availability_sync(
@@ -523,8 +489,15 @@ class TestCheckMethodsAvailabilityHelper:
 
         # Ни один keyword не должен попасть в findings как METHOD-CONTEXT
         codes = [f.code for f in findings]
-        for kw in ("Для", "Цикл", "Если", "Тогда", "КонецЕсли", "КонецЦикла",
-                   "Процедура", "КонецПроцедуры", "Сообщить"):
-            assert f"METHOD-CONTEXT-{kw}" not in codes, (
-                f"Ключевое слово '{kw}' не должно проверяться как метод"
-            )
+        for kw in (
+            "Для",
+            "Цикл",
+            "Если",
+            "Тогда",
+            "КонецЕсли",
+            "КонецЦикла",
+            "Процедура",
+            "КонецПроцедуры",
+            "Сообщить",
+        ):
+            assert f"METHOD-CONTEXT-{kw}" not in codes, f"Ключевое слово '{kw}' не должно проверяться как метод"

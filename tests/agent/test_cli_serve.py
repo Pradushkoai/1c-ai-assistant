@@ -77,9 +77,7 @@ class TestHealth:
         # In-memory fallback → persistence.status == "skipped" или in-memory.
         assert data["checks"]["persistence"]["status"] in ("skipped", "ok")
 
-    def test_health_bsl_ls_skipped_without_env(
-        self, http_client: TestClient, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_health_bsl_ls_skipped_without_env(self, http_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("BSL_LS_HTTP_URL", raising=False)
         response = http_client.get("/health")
         data = response.json()
@@ -148,9 +146,7 @@ class TestTools:
 
 class TestFacadeTools:
     def test_data_status(self, http_client_with_handlers: TestClient) -> None:
-        response = http_client_with_handlers.post(
-            "/facade/data_status", json={"args": {}}
-        )
+        response = http_client_with_handlers.post("/facade/data_status", json={"args": {}})
         assert response.status_code == 200
         data = response.json()
         assert data["tool"] == "data_status"
@@ -162,9 +158,7 @@ class TestFacadeTools:
         assert response.status_code == 404
         assert "Unknown facade tool" in response.json()["detail"]
 
-    def test_facade_tool_error_400(
-        self, http_client_with_handlers: TestClient
-    ) -> None:
+    def test_facade_tool_error_400(self, http_client_with_handlers: TestClient) -> None:
         """FacadeNotConfiguredError → 400."""
         from mcp_servers.http_server import create_http_app
         from mcp_servers.facade.handlers import FacadeHandlers
@@ -198,9 +192,7 @@ class TestDomainTools:
         assert "Use /facade/" in response.json()["detail"]
 
     def test_domain_unknown_server_404(self, http_client: TestClient) -> None:
-        response = http_client.post(
-            "/domain/unknown_server/foo", json={"args": {}}
-        )
+        response = http_client.post("/domain/unknown_server/foo", json={"args": {}})
         assert response.status_code == 404
         assert "Unknown server" in response.json()["detail"]
 

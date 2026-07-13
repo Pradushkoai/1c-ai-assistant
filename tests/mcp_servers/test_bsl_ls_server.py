@@ -253,9 +253,7 @@ class TestLatencyMetric:
         lint_data = {
             "total": 1,
             "by_code": {"BSL-WS-001": 1},
-            "diagnostics": [
-                {"code": "BSL-WS-001", "severity": "critical", "line": 5, "column": 1, "message": "Test"}
-            ],
+            "diagnostics": [{"code": "BSL-WS-001", "severity": "critical", "line": 5, "column": 1, "message": "Test"}],
             "latency_ms": 1234,
         }
         transport = _make_mock_transport(lint_response=lint_data, latency_ms=1234)
@@ -289,6 +287,7 @@ class TestLatencyMetric:
     @pytest.mark.asyncio
     async def test_lint_default_latency_zero(self):
         """Если сервер не вернул latency_ms — значение по умолчанию 0."""
+
         # Эмулируем старый сервер без latency_ms
         def handler(request: httpx.Request) -> httpx.Response:
             if request.url.path == "/lint":
@@ -408,6 +407,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_health_check_connection_error(self):
         """health_check возвращает False при connection error."""
+
         def handler(request: httpx.Request) -> httpx.Response:
             raise httpx.ConnectError("Connection refused")
 
@@ -496,9 +496,8 @@ class TestBslLsIntegration:
         """BSL LS находит известные проблемы (например, BSL-WS-001)."""
         server = BslLsServer(base_url=real_bsl_ls_url, timeout=60)
         # Код с явным нарушением: лишний пробел, отсутствие отступа
-        bad_code = "Процедура Тест()\nСообщить(\"x\");\nКонецПроцедуры"
+        bad_code = 'Процедура Тест()\nСообщить("x");\nКонецПроцедуры'
         result = await server.lint(code=bad_code, file_path="/tmp/bad.bsl")
         assert isinstance(result, LintOutput)
         # BSL LS должен найти хотя бы одну диагностику на плохом коде
         # (но не делаем строгий assert — зависит от версии правил)
-
