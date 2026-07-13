@@ -1,7 +1,7 @@
 # CURRENT FOCUS — точка входа для каждой сессии
 
 > **Этот файл живёт в git репозитории (docs/process/), чтобы переживать сбросы окружения.**
-> Последнее обновление: 2026-07-13 (Stage 4 — **2/4 задачи завершены**, TD-S6-01/02 закрыты)
+> Последнее обновление: 2026-07-13 (Stage 4 — **3/4 задачи завершены**, TD-S6-01/02/03 закрыты)
 
 ---
 
@@ -13,7 +13,7 @@
 - **Этап 1:** ✅ ЗАВЕРШЁН (5/5 задач)
 - **Этап 2:** ✅ **ЗАВЕРШЁН** (7/7 задач) — TD-S4.2-01..07 все закрыты
 - **Stage 3 (Production-readiness):** ✅ **ЗАВЕРШЁН** (4/4) — TD-S5-01/02/03/04 все закрыты
-- **Stage 4 (Contract Compliance):** 🔄 В РАБОТЕ (2/4) — TD-S6-01/02 ✅ закрыты
+- **Stage 4 (Contract Compliance):** 🔄 В РАБОТЕ (3/4) — TD-S6-01/02/03 ✅ закрыты
 
 ### Что прочитать в порядке приоритета (первые 5 минут сессии)
 1. **Этот файл** (CURRENT_FOCUS.md) — целиком, до конца
@@ -23,11 +23,15 @@
 5. **`docs/architecture/CONCEPTUAL.md`** §2.1 (asyncio.TaskGroup) — если работаешь с validate_node
 
 ### Следующая задача Stage 4
-**TD-S6-03: `1c-ai mcp serve` CLI + режим C** (HIGH приоритет)
-- `packages/agent/src/agent/cli_commands/mcp.py` — `1c-ai mcp serve --server {facade|metadata|codebase|kb|bsl_ls|git}`.
-- 5 доменных серверов получают `create_*_server()` функции (по паттерну Facade).
-- `cli.py` — регистрация `@main.group() def mcp()` с подкомандой `serve`.
-- Режим C (power-user → напрямую к доменному MCP) заработает.
+**TD-S6-04: Integration tests с реальными контейнерами + docs sync** (MEDIUM приоритет)
+- `.github/workflows/integration.yml` — service containers (postgres, bsl-ls),
+  запустить integration tests с `TEST_POSTGRES_DSN` + `BSL_LS_HTTP_URL` + `TEST_GIT_REPO`.
+- `tests/integration/` — реальные e2e: persistence survive-restart, git roundtrip,
+  BSL LS lint, metadata server через mini_config.
+- `AGENTS.md` — актуализировать (Stage 3-4 завершены, 988+ тестов, 21 ADR).
+- `CHANGELOG.md` — entries для Этапов 1/2/Stage 3/Stage 4.
+- `INTERNAL_ROADMAP.md` — отметить Sprint 4 завершённым.
+- `CONTRIBUTING.md` — «21 ADR».
 
 ### Закрытые задачи Stage 4
 - ✅ **TD-S6-01: metadata MCP server + orchestrator wiring** (2026-07-13) —
@@ -44,6 +48,11 @@
   repo_path=...)`. Facade `handle_review → proceed → node_commit` пробрасывает
   git_server/repo_path. 14 тестов. Архитектурный пробел #2 закрыт (ADR-0004/0005/0010).
   См. D-2026-07-13-11.
+- ✅ **TD-S6-03: `1c-ai mcp serve` CLI + режим C** (2026-07-13) — `server_factory.py`
+  единая factory: `create_domain_server(name)` для 6 серверов (facade/metadata/
+  codebase/kb/bsl_ls/git). `1c-ai mcp serve --server NAME` (stdio). `--list` показывает
+  серверы + tools count. Cursor может подключиться к любому серверу напрямую (режим C,
+  CONCEPTUAL §1.2). 29 тестов. Архитектурный пробел #3 закрыт (ADR-0003). См. D-2026-07-13-12.
 
 ### Закрытые задачи Stage 3
 - ✅ **TD-S5-01: PostgresSaver persistence** (2026-07-13) — рабочая реализация
@@ -110,13 +119,14 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 
 ## 🎯 ФОКУС СЕССИИ (для продолжающей сессии)
 
-> **Задача:** Stage 4 (Contract Compliance) — **TD-S6-01/02 ЗАВЕРШЕНЫ** ✅ (2/4)
-> **Статус:** архитектурные пробелы #1 (metadata) + #2 (commit→git) закрыты
+> **Задача:** Stage 4 (Contract Compliance) — **TD-S6-01/02/03 ЗАВЕРШЕНЫ** ✅ (3/4)
+> **Статус:** все 3 архитектурных пробела закрыты (metadata + commit→git + mcp serve)
 > **Блокеры:** нет
 > **Что сделано:** ✅ PersistenceManager (TD-S5-01), ✅ FacadeHandlers (TD-S5-02),
 > ✅ GitServer (TD-S5-03), ✅ Docker production (TD-S5-04), ✅ MetadataServer +
-> gather/plan wiring (TD-S6-01), ✅ commit_node → git MCP (TD-S6-02)
-> **Следующий шаг:** TD-S6-03 (mcp serve CLI + режим C) → TD-S6-04 (integration tests + docs)
+> gather/plan wiring (TD-S6-01), ✅ commit_node → git MCP (TD-S6-02), ✅ `1c-ai mcp serve`
+> CLI + режим C (TD-S6-03)
+> **Следующий шаг:** TD-S6-04 (integration tests с контейнерами + docs sync) — ЗАВЕРШАЮЩАЯ
 >
 > **Принцип «Глубина сначала»** (D-2026-07-12-08): качество важнее скорости.
 >
@@ -132,8 +142,8 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 - **Этап 1 прогресс:** 5/5 задач ЗАВЕРШЁН ✅ (TD-S4.1-01..04 + контракт)
 - **Этап 2 прогресс:** **7/7 задач ЗАВЕРШЕНО** ✅ (TD-S4.2-01/02/03/04/05/06/07 ✅)
 - **Stage 3 прогресс:** ✅ 4/4 задач ЗАВЕРШЕНО (TD-S5-01/02/03/04 ✅)
-- **Stage 4 прогресс:** 2/4 задач ЗАВЕРШЕНО ✅ (TD-S6-01/02 ✅; TD-S6-03/04 открыты)
-- **Тесты:** 959 проходят + 7 skipped (3 BSL LS + 3 Postgres + 1 git integration)
+- **Stage 4 прогресс:** 3/4 задач ЗАВЕРШЕНО ✅ (TD-S6-01/02/03 ✅; TD-S6-04 открыта)
+- **Тесты:** 988 проходят + 7 skipped (3 BSL LS + 3 Postgres + 1 git integration)
 - **Persistence:** ✅ PostgresSaver (AsyncPostgresSaver + setup() + connection lifecycle);
   MemorySaver fallback (dev/tests); migrations/ (Alembic scaffolding + state-миграции)
 - **Facade:** ✅ 8 lifecycle tools (ADR-0013): plan/gather/generate/validate/review/explain/run_cli/data_status;
@@ -145,6 +155,9 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
   proxy поддерживает metadata.*
 - **commit_node:** ✅ real git flow (create_branch + commit + опц. open_pr через
   GitServer) если git_server + repo_path заданы; fallback file save иначе (backward compat)
+- **mcp serve CLI:** ✅ `1c-ai mcp serve --server {facade|metadata|codebase|kb|bsl_ls|git}`;
+  единая factory (server_factory.py); `--list` показывает 6 серверов + tools count;
+  режим C (power-user → доменный MCP напрямую) работает
 - **Docker:** ✅ multi-stage Dockerfile.app (builder + runtime, non-root user, OCI labels);
   `1c-ai health` CLI (persistence + BSL LS ping, JSON output); healthcheck в compose;
   .env.example; docker-compose.override.yml (dev hot reload)
@@ -156,7 +169,7 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 - **BSL LS Docker:** мульти-stage Dockerfile v0.25.5, HTTP API, healthcheck, .dockerignore
 - **Boundary violations:** 0 (DI через functools.partial)
 - **Данные:** УТ11 (5,575 объектов, 7,141 BSL модулей) + HBK 8.3.25 (80 файлов)
-- **Последний коммит:** TD-S6-02 commit_node → git MCP — Stage 4 2/4
+- **Последний коммит:** TD-S6-03 1c-ai mcp serve + режим C — Stage 4 3/4
 
 ---
 

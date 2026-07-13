@@ -1752,3 +1752,74 @@ proceed → node_commit` писал файл, не создавал branch/commi
 - Pipeline end-to-end контракт-совместим: plan → gather → code → validate → review →
   **real git commit** (если 1C_AI_REPO_PATH задан).
 - **Следующий шаг:** TD-S6-03 (`1c-ai mcp serve` CLI + режим C, пробел #3).
+
+---
+
+## 2026-07-13: TD-S6-03 — `1c-ai mcp serve` CLI + режим C (Stage 4, 3/4)
+
+**Task ID:** TD-S6-03
+**Agent:** main (GLM, продолжающая сессия)
+**Этап:** Stage 4 (Contract Compliance), третья задача
+
+### Контекст
+
+Архитектурный пробел #3: `1c-ai mcp serve` CLI не существовал. INTERNAL_ROADMAP
+Sprint 4 явно требовал `1c-ai mcp serve [--server NAME]`. Режим C (CONCEPTUAL §1.2:
+power-user → напрямую к доменному MCP) не работал — Cursor не мог подключиться к
+`metadata`/`codebase`/`kb`/`bsl_ls`/`git` как отдельным MCP stdio-серверам. Только
+Facade имел `create_facade_server()`.
+
+### Что сделано
+
+1. **DECISIONS.md** — D-2026-07-13-12: подход (единая factory + CLI + режим C).
+
+2. **`packages/mcp_servers/src/mcp_servers/server_factory.py`** — единая factory:
+   - `create_domain_server(server_name, **kwargs)` → `mcp.server.Server` для 6 серверов.
+   - Для каждого: `list_tools()` из `*_TOOLS` контрактов, `call_tool()` диспатчит
+     к Implementation (metadata/bsl_ls/codebase/git) или напрямую к KbServer методам (kb).
+   - `run_domain_server(server_name, **kwargs)` — stdio loop.
+   - `SERVER_NAMES` — frozenset 6 имён.
+   - `AVAILABLE_SERVERS` — dict {name: tools_count}: facade=8, metadata=4, codebase=4,
+     kb=7, bsl_ls=2, git=4 (total 29 tools).
+   - `list_servers()` — человекочитаемый список для `--list`.
+   - Boundary rule: mcp_servers НЕ импортирует agent (FacadeHandlers default если
+     handlers не передан; production DI — ответственность agent-слоя через kwargs).
+
+3. **`packages/mcp_servers/src/mcp_servers/__init__.py`** — экспорт factory:
+   `SERVER_NAMES`, `AVAILABLE_SERVERS`, `create_domain_server`, `run_domain_server`,
+   `list_servers`.
+
+4. **`packages/agent/src/agent/cli_commands/mcp.py`** — `cmd_mcp_serve(server, list_only)`:
+   - `--list` → показать 6 серверов + tools count.
+   - `--server NAME` → `run_domain_server(NAME)`.
+   - Для facade — создаёт handlers с DI через `create_facade_handlers()` (agent-слой).
+   - `--server unknown` → error.
+   - Логи в stderr (stdout занят MCP протоколом).
+
+5. **`packages/agent/src/agent/cli.py`** — `@main.group() def mcp()` +
+   `@mcp.command("serve")` с `--server` (click.Choice 6 имён) + `--list`.
+
+6. **`tests/agent/test_cli_mcp.py`** — 29 тестов:
+   - `TestServerFactory` (6): SERVER_NAMES, AVAILABLE_SERVERS, list_servers format,
+     create_domain_server для каждого имени, unknown raises, facade с handlers.
+   - `TestMcpCliRegistration` (4): mcp group exists, serve subcommand, --help shows mcp.
+   - `TestMcpServeList` (2): --list показывает 6 серверов + tool counts.
+   - `TestMcpServeServer` (8): unknown rejected (click.Choice), 6 серверов parametrized
+     (mock run), без --server → error, exception → exit 1.
+   - `TestCmdMcpServe` (3): list_only returns 0, unknown returns 1, valid server runs.
+
+### Проверки
+
+- [x] Тесты: **988 проходят + 7 skipped** (было 959+7, +29 от mcp CLI).
+- [x] ruff: чистый.
+- [x] mypy: 14 ошибок (базовая TD-011, **новых нет**).
+- [x] boundaries: 0 violations (исправлен mcp_servers → agent import; facade DI через kwargs).
+- [x] `1c-ai mcp serve --list` manually verified — показывает 6 серверов + tools count.
+
+### Stage Summary
+
+- **Stage 4: 3/4 задач ЗАВЕРШЕНО** ✅ (TD-S6-01, TD-S6-02, TD-S6-03)
+- Архитектурный пробел #3 закрыт: `1c-ai mcp serve` CLI работает, режим C активен.
+- Все 3 архитектурных пробела закрыты: metadata MCP (#1) + commit→git (#2) + mcp serve (#3).
+- Pipeline end-to-end контракт-совместим + Cursor может подключиться к любому из 6 MCP.
+- **Следующий шаг:** TD-S6-04 (integration tests с контейнерами + docs sync) — ЗАВЕРШАЮЩАЯ.

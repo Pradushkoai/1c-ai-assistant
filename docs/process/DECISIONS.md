@@ -12,6 +12,55 @@
 
 ## Записи (новые сверху)
 
+### D-2026-07-13-12: TD-S6-03 — `1c-ai mcp serve` CLI + режим C (закрыть архитектурный пробел #3)
+
+**Дата:** 2026-07-13
+**Тип:** architecture + implementation (TD-S6-03, Stage 4 задача 3/4)
+**Контекст:** Архитектурный пробел #3: `1c-ai mcp serve` CLI не существовал.
+INTERNAL_ROADMAP Sprint 4 явно требовал: `cli_commands/mcp.py`: `1c-ai mcp serve
+[--server NAME]`. Режим C (CONCEPTUAL: power-user → напрямую к доменному MCP) не
+работал — Cursor не мог подключиться к `metadata`/`codebase`/`kb`/`bsl_ls`/`git`
+как отдельным MCP stdio-серверам. Только Facade имел `create_facade_server()`.
+
+**Решение:**
+1. **`packages/mcp_servers/src/mcp_servers/server_factory.py`** — единая factory:
+   - `create_domain_server(server_name, **kwargs)` → `mcp.server.Server` для любого
+     из 6 серверов (facade, metadata, codebase, kb, bsl_ls, git).
+   - Для каждого: `list_tools()` из `*_TOOLS` контрактов, `call_tool()` диспатчит
+     к Implementation (metadata/bsl_ls/codebase/git) или напрямую к KbServer методам (kb).
+   - `run_domain_server(server_name, **kwargs)` — stdio loop.
+   - `SERVER_NAMES` — frozenset валидных имён.
+   - `AVAILABLE_SERVERS` — dict {name: tools_count} для `--list`.
+2. **`packages/agent/src/agent/cli_commands/mcp.py`** — `1c-ai mcp serve --server NAME`:
+   - `--server` (required): facade|metadata|codebase|kb|bsl_ls|git.
+   - `--list`: показать доступные серверы + tools count.
+   - Вызывает `create_domain_server(server_name)` → `run_domain_server(server_name)`.
+3. **`packages/agent/src/agent/cli.py`** — `@main.group() def mcp()` + `@mcp.command("serve")`.
+4. **Тесты** `tests/agent/test_cli_mcp.py`:
+   - `1c-ai mcp serve --list` показывает 6 серверов.
+   - `1c-ai mcp serve --server facade` создаёт Server (mock run).
+   - `--server unknown` → error.
+   - `create_domain_server()` для каждого имени → Server instance с tools.
+   - `SERVER_NAMES` содержит 6 имён.
+
+**ADR compliance (закрываются):**
+- ADR-0003 (MCP-архитектура: Facade + 5 доменных серверов) — все 6 серверов
+  доступны как MCP stdio.
+- CONCEPTUAL §1.2 (режим C: power-user → напрямую к доменному MCP) — работает.
+
+**Реализация:** commit (pending).
+
+**Последствия:**
+- Положительные: архитектурный пробел #3 закрыт; Cursor может подключиться к любому
+  серверу напрямую; единая factory (DRY); `--list` для discoverability.
+- Отрицательные: `create_domain_server()` для kb создаёт KbServer без DI (default
+  kb_dir) — для production нужна настройка через env (отдельный TD).
+
+**Связанные:** ADR-0003, CONCEPTUAL §1.2, BACKLOG TD-S6-03, D-2026-07-13-09
+(Facade create_facade_server pattern).
+
+---
+
 ### D-2026-07-13-11: TD-S6-02 — commit_node → git MCP интеграция (закрыть архитектурный пробел #2)
 
 **Дата:** 2026-07-13

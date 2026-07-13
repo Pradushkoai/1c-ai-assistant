@@ -8,6 +8,7 @@
     1c-ai config remove            — удалить конфигурацию
     1c-ai validate                 — preflight check
     1c-ai health                   — health check (persistence + BSL LS) для Docker
+    1c-ai mcp serve --server NAME  — запустить MCP stdio-сервер (facade/metadata/codebase/kb/bsl_ls/git)
     1c-ai hbk load                 — загрузить .hbk файлы (минимальная версия)
 
 Использует click для CLI, data_layer.PathManager для путей,
@@ -195,6 +196,48 @@ def health() -> None:
     from .cli_commands.health import cmd_health
 
     sys.exit(cmd_health())
+
+
+@main.group()
+def mcp() -> None:
+    """Управление MCP-серверами (Stage 4 TD-S6-03).
+
+    Поддерживает 6 серверов: facade, metadata, codebase, kb, bsl_ls, git.
+    """
+
+
+@mcp.command("serve")
+@click.option(
+    "--server",
+    "-s",
+    type=click.Choice(["facade", "metadata", "codebase", "kb", "bsl_ls", "git"]),
+    default=None,
+    help="Имя MCP-сервера для запуска (stdio).",
+)
+@click.option(
+    "--list",
+    "list_only",
+    is_flag=True,
+    help="Показать доступные серверы и выйти.",
+)
+def mcp_serve(server: str | None, list_only: bool) -> None:
+    """Запустить MCP stdio-сервер.
+
+    Cursor подключается к MCP через stdio. Поддерживается 6 серверов (ADR-0003).
+
+    Примеры:
+
+        1c-ai mcp serve --list
+
+        1c-ai mcp serve --server facade      # Facade (8 lifecycle tools)
+
+        1c-ai mcp serve --server metadata    # metadata MCP (4 tools)
+
+        1c-ai mcp serve --server kb          # KB MCP (7 tools)
+    """
+    from .cli_commands.mcp import cmd_mcp_serve
+
+    sys.exit(cmd_mcp_serve(server=server or "", list_only=list_only))
 
 
 @main.group()
