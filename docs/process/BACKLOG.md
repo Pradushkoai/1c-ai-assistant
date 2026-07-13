@@ -155,7 +155,7 @@
 
 ### TD-S5-03: git MCP (4 tools) — ЗАКРЫТО ✅
 - **Дата закрытия:** 2026-07-13
-- **Закрыто в:** commit (pending)
+- **Закрыто в:** commit `3a32362`
 - **Решение:**
   - `packages/mcp_servers/src/mcp_servers/git/server.py` — `GitServer` класс с 4 async
     methods (create_branch, commit, open_pr, diff) через `asyncio.create_subprocess_exec`
