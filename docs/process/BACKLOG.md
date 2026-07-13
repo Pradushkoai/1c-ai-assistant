@@ -92,21 +92,56 @@
 
 ## 🟢 Этап 3 (Production-readiness)
 
-### TD-S5-01: PostgresSaver persistence
+> **Статус:** НЕ НАЧАТ (после завершения Этапа 2, 2026-07-13).
+> **Цель этапа:** production-ready система для Cursor IDE — persistence, lifecycle,
+> git-интеграция, production Docker.
+
+### TD-S5-01: PostgresSaver persistence — ПЕРВАЯ ЗАДАЧА ЭТАПА 3
 - **Этап:** 3 (Sprint 5)
-- **Описание:** Миграции (см. ADR-0018). Рестарт контейнера не теряет state.
+- **Приоритет:** HIGH
+- **Описание:** Заменить InMemorySaver на PostgresSaver (LangGraph).
+  Рестарт контейнера не должен терять state.
+- **Архитектура:**
+  - `packages/orchestrator/src/orchestrator/persistence.py` — текущая заглушка, переписать.
+  - Миграции по ADR-0018 (`adr/0018-taskstate-migration-strategy.md`).
+  - Подключение через `DATABASE_URL=postgresql://agent:agent@postgres:5432/agent`.
+  - `docker/postgres/init.sql` — уже есть, проверить схему.
+- **Оценка:** 1-2 дня
+- **Тесты:** integration с testcontainers-python или mock PostgresSaver.
 
 ### TD-S5-02: Facade handlers (8 lifecycle tools)
 - **Этап:** 3 (Sprint 5)
-- **Описание:** Обвязка над orchestrator для Cursor.
+- **Приоритет:** HIGH
+- **Описание:** Обвязка над orchestrator для Cursor. 8 lifecycle tools + `_next_action`.
+- **Архитектура:**
+  - `packages/mcp_servers/src/mcp_servers/facade/handlers.py` — заглушка, реализовать.
+  - `packages/mcp_servers/src/mcp_servers/facade/next_action.py` — уже есть, расширить.
+  - `packages/mcp_servers/src/mcp_servers/facade/tool_definitions.py` — определения tools.
+- **Lifecycle tools (8):** start_task, get_status, get_plan, get_code, get_review,
+  validate_now, retry_iteration, complete_task.
+- **Оценка:** 2-3 дня
 
 ### TD-S5-03: git MCP (4 tools)
 - **Этап:** 3 (Sprint 5)
-- **Описание:** subprocess git CLI. create_branch, commit, open_pr, diff.
+- **Приоритет:** MEDIUM
+- **Описание:** subprocess git CLI. 4 tools: create_branch, commit, open_pr, diff.
+- **Архитектура:**
+  - `packages/mcp_servers/src/mcp_servers/git/contracts.py` — уже есть контракты.
+  - Создать `packages/mcp_servers/src/mcp_servers/git/server.py` (аналогично bsl_ls/server.py).
+  - Auth: GitHub token из env (без хардкода).
+  - Безопасность: валидация branch names, проверка на secrets в diff.
+- **Оценка:** 1-2 дня
 
 ### TD-S5-04: Docker production
 - **Этап:** 3 (Sprint 5)
-- **Описание:** Multi-stage Dockerfile, healthchecks, .env.example.
+- **Приоритет:** MEDIUM
+- **Описание:** Multi-stage Dockerfile.app, healthchecks, .env.example.
+- **Архитектура:**
+  - `docker/Dockerfile.app` — переписать на multi-stage (builder + runtime).
+  - `.env.example` — все переменные окружения с комментариями.
+  - `docker-compose.override.yml` — для dev (с hot reload).
+  - Healthcheck для `1c-ai-app` (HTTP /health endpoint).
+- **Оценка:** 1 день
 
 ---
 

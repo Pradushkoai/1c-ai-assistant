@@ -5,7 +5,73 @@
 
 ---
 
-## 🎯 ФОКУС СЕССИИ
+## 📌 START HERE — для НОВОЙ сессии / нового агента
+
+> **Если ты только что подключился к проекту — прочитай это первым делом!**
+
+### Текущее состояние (snapshot на 2026-07-13)
+- **Этап 1:** ✅ ЗАВЕРШЁН (5/5 задач)
+- **Этап 2:** ✅ **ЗАВЕРШЁН** (7/7 задач) — TD-S4.2-01..07 все закрыты
+- **Stage 3 (Production-readiness):** ⬜ НЕ НАЧАТ — это следующий этап
+
+### Что прочитать в порядке приоритета (первые 5 минут сессии)
+1. **Этот файл** (CURRENT_FOCUS.md) — целиком, до конца
+2. **`docs/process/PROJECT_BOOTSTRAP.md`** — точка входа, snapshot, архитектура
+3. **`docs/process/BACKLOG.md`** — раздел «Этап 3 (Production-readiness)»: TD-S5-01..04
+4. **`docs/process/worklog.md`** — последняя запись (TD-S4.2-04, дата 2026-07-13)
+5. **`docs/architecture/CONCEPTUAL.md`** §2.1 (asyncio.TaskGroup) — если работаешь с validate_node
+
+### Первая задача нового этапа
+**TD-S5-01: PostgresSaver persistence** (HIGH приоритет)
+- LangGraph checkpoints в Postgres вместо InMemorySaver.
+- Миграции (см. ADR-0018).
+- Рестарт контейнера не должен терять state.
+- Архитектура: см. `packages/orchestrator/src/orchestrator/persistence.py` (текущая заглушка).
+
+### Ключевые принципы (без знания которых нельзя работать)
+- **«Глубина сначала»** (D-2026-07-12-08): качество важнее скорости, никаких временных решений.
+- **«Всегда готов к завершению»**: после КАЖДОЙ задачи — коммит + push + обновление ВСЕХ
+  state-файлов (CURRENT_FOCUS, BACKLOG, DECISIONS, worklog, PROJECT_BOOTSTRAP). Сессия
+  может прерваться в любой момент.
+- **DI через functools.partial** — 0 boundary violations (см. `scripts/check_package_boundaries.py`).
+- **asyncio.TaskGroup** для parallel fan-out в validate_node (CONCEPTUAL.md §2.1).
+
+### Команды (не забыть!)
+```bash
+# Тесты (ВСЕГДА из директории проекта!)
+unset VIRTUAL_ENV && UV_CACHE_DIR=/tmp/uv-cache uv run --directory /home/z/my-project/1c-ai-assistant pytest tests/ -v
+
+# Lint (включая docker/)
+unset VIRTUAL_ENV && UV_CACHE_DIR=/tmp/uv-cache uv run --directory /home/z/my-project/1c-ai-assistant ruff check packages/ tests/ docker/
+
+# Boundaries
+unset VIRTUAL_ENV && UV_CACHE_DIR=/tmp/uv-cache uv run --directory /home/z/my-project/1c-ai-assistant python scripts/check_package_boundaries.py
+
+# Git push (НЕ git add -A, только конкретные файлы; использовать -C для git)
+TOKEN=$(cat /home/z/my-project/.github-token | tr -d '\n' | tr -d '[:space:]')
+git -C /home/z/my-project/1c-ai-assistant config user.name "Pradushkoai"
+git -C /home/z/my-project/1c-ai-assistant config user.email "Pradushkoai@users.noreply.github.com"
+git -C /home/z/my-project/1c-ai-assistant config core.fileMode false  # игнорировать mode changes
+git -C /home/z/my-project/1c-ai-assistant add <file1> <file2> ...
+git -C /home/z/my-project/1c-ai-assistant commit -m "feat(...): ..."
+git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://x-access-token:${TOKEN}@github.com/Pradushkoai/1c-ai-assistant.git"
+git -C /home/z/my-project/1c-ai-assistant push origin main
+git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.com/Pradushkoai/1c-ai-assistant.git"
+```
+
+### Известные грабли (наступать НЕ надо)
+- **Всегда используй `git -C /home/z/my-project/1c-ai-assistant ...`** — `cd` в Bash не сохраняется
+  между вызовами.
+- **Никогда не используй `git add -A`** — только конкретные файлы (правило безопасности).
+- **`git config core.fileMode false`** — обязательно, иначе будешь видеть кучу mode changes
+  (100644→100755), которые не несут реальных изменений.
+- **Данные УТ11 + HBK** — gitignored, после сброса окружения нужно перезагружать через
+  `1c-ai config build` и `1c-ai hbk parse`.
+- **uv.lock** — автоматически обновляется при `uv sync`, иногда нужно коммитить отдельно.
+
+---
+
+## 🎯 ФОКУС СЕССИИ (для продолжающей сессии)
 
 > **Задача:** Этап 2 (Поиск и качество) — **ЗАВЕРШЁН** ✅
 > **Статус:** TD-S4.2-04 ЗАВЕРШЁН (BSL LS Docker: Dockerfile, HTTP server, integration-тесты)

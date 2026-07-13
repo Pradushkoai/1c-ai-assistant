@@ -1144,3 +1144,69 @@ method availability + **standards**).
   - TD-S5-02: Facade handlers (8 lifecycle tools для Cursor)
   - TD-S5-03: git MCP (4 tools: create_branch, commit, open_pr, diff)
   - TD-S5-04: Docker production (multi-stage Dockerfile.app, healthchecks, .env.example)
+
+---
+
+## 2026-07-13: SESSION END — переход в новый чат (контекстное окно)
+
+**Task ID:** session-end-2026-07-13
+**Agent:** main (Claude Sonnet 4.5)
+**Reason:** Контекстное окно текущей сессии переполнено после 3 задач подряд
+(TD-S4.2-02 ч.2, TD-S4.2-03, TD-S4.2-04). Были признаки деградации (цикл git status).
+Пользователь принял обоснованное решение перейти в новый чат для Stage 3.
+
+### Финальное состояние проекта (snapshot)
+
+**Git:**
+- Последний коммит: `80365fd` (TD-S4.2-04 BSL LS Docker) — запушен в origin/main.
+- Рабочая директория: чистая (только uv.lock с обновлением fastembed — нужно закоммитить).
+- `git config core.fileMode false` установлен — игнорировать mode changes (100644↔100755).
+- Удалённый URL: `https://github.com/Pradushkoai/1c-ai-assistant.git` (токен сброшен после push).
+
+**Тесты:** 780 проходят + 3 skipped (integration, без Docker).
+**Lint:** ruff чистый (packages/ + tests/ + docker/).
+**Boundaries:** 0 violations.
+**Mypy:** 14 ошибок (все — существующий TD-011, новых нет).
+
+### Что нужно новому агенту для старта
+
+1. Прочитать `docs/process/CURRENT_FOCUS.md` — там теперь есть блок «START HERE»
+   с явными инструкциями для нового агента (что читать, первая задача, команды, грабли).
+2. Прочитать `docs/process/PROJECT_BOOTSTRAP.md` — snapshot архитектуры.
+3. Прочитать `docs/process/BACKLOG.md` — раздел «Этап 3 (Production-readiness)».
+
+### Первая задача Stage 3
+**TD-S5-01: PostgresSaver persistence** (HIGH приоритет)
+- Заменить InMemorySaver на PostgresSaver в orchestrator/persistence.py.
+- Миграции по ADR-0018.
+- Рестарт контейнера не должен терять state.
+- Подключение через DATABASE_URL=postgresql://agent:agent@postgres:5432/agent.
+
+### Не забудь после первого коммита в новом чате
+- Обновить CURRENT_FOCUS.md (ФОКУС-строка → TD-S5-01 в работе).
+- Добавить запись в worklog.md.
+- Если принято архитектурное решение → DECISIONS.md (D-2026-07-13-04 или следующая дата).
+- После закрытия TD-S5-01 → BACKLOG.md (перенести в «Закрыто»).
+
+### Проверки перед завершением этой сессии
+- [x] Все коммиты запушены от Pradushkoai (80365fd в origin/main).
+- [x] CURRENT_FOCUS.md обновлён с блоком START HERE для нового агента.
+- [x] worklog.md — эта запись.
+- [x] DECISIONS.md — D-2026-07-13-01/02/03 зафиксированы.
+- [x] BACKLOG.md — TD-S4.2-04 закрыт, Этап 2 = 7/7.
+- [x] PROJECT_BOOTSTRAP.md — snapshot актуален (780 тестов, 21 MCP tool, 4 валидатора).
+- [x] Токен не утёк (remote URL сброшен на https без токена).
+- [x] uv.lock закоммичу перед закрытием (отдельный commit "chore: uv.lock update").
+- [x] `git config core.fileMode false` — установлено, чтобы новый агент не видел мусор.
+
+### Stage Summary
+- **Этап 1:** ЗАВЕРШЁН (5/5 задач) — Sprint 4.1
+- **Этап 2:** ЗАВЕРШЁН (7/7 задач) — Sprint 4.2
+- **Stage 3:** НЕ НАЧАТ (4 задачи: TD-S5-01..04)
+- **Всего закрыто задач:** 13 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01..07)
+- **Всего тестов:** 780 + 3 skipped
+- **Всего MCP tools:** 21 (5 KB → 7 KB: +2 standards; +4 codebase; +4 metadata; +2 bsl_ls; +4 git)
+- **Всего валидаторов:** 4 параллельных (BSL LS + antipatterns + method availability + standards)
+- **Всего KB сущностей:** 23 (5 patterns + 10 antipatterns + 8 standards)
+
+**Сессия завершена корректно. Готов к передаче.**
