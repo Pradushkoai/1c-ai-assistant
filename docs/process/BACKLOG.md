@@ -125,7 +125,7 @@
 
 ### TD-S5-02: Facade handlers (8 lifecycle tools) — ЗАКРЫТО ✅
 - **Дата закрытия:** 2026-07-13
-- **Закрыто в:** commit (pending)
+- **Закрыто в:** commit `f9e454c`
 - **Решение:**
   - **8 tools по ADR-0013** (не BACKLOG-список `start_task` etc. — расхождение
     зафиксировано в D-2026-07-13-07): `plan, gather, generate, validate, review,
