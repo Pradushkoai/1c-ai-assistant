@@ -42,7 +42,7 @@
 
 ### TD-S4.2-03: standards (1С СТО, БСП) — ЗАКРЫТО ✅
 - **Дата закрытия:** 2026-07-13
-- **Закрыто в:** commit (pending)
+- **Закрыто в:** commit `2e09542`
 - **Решение:** knowledge-base/standards/ — 8 YAML-стандартов (4 СТО + 4 БСП).
   JSON Schema standard.schema.json. KBCollection.standards (3-й тип сущностей).
   2 новых MCP tools: kb.get_standard + kb.check_standards.
@@ -52,7 +52,7 @@
 
 ### TD-S4.2-04: BSL LS через Docker — ЗАКРЫТО ✅
 - **Дата закрытия:** 2026-07-13
-- **Закрыто в:** commit (pending)
+- **Закрыто в:** commit `80365fd`
 - **Решение:**
   - `.dockerignore` — ускоряет docker build, предотвращает утечку секретов.
   - `docker/Dockerfile.bsl-ls` — мульти-stage build (alpine downloader + python:3.12-slim runtime),
@@ -98,7 +98,7 @@
 
 ### TD-S5-01: PostgresSaver persistence — ЗАКРЫТО ✅
 - **Дата закрытия:** 2026-07-13
-- **Закрыто в:** commit (pending)
+- **Закрыто в:** commit `408abe9`
 - **Решение:**
   - `packages/orchestrator/src/orchestrator/persistence.py` — переписан из заглушки
     в рабочую реализацию: `AsyncPostgresSaver.from_conn_string()` (как async cm) +
