@@ -20,6 +20,24 @@ from pydantic import BaseModel, ConfigDict, Field
 log = logging.getLogger(__name__)
 
 
+def _content_to_str(content: str | list[str | dict[str, Any]]) -> str:
+    """Привести LangChain message content (str | list) к str.
+
+    LangChain content может быть str или list of parts (str | dict). Для z-ai CLI
+    нужен plain str.
+    """
+    if isinstance(content, str):
+        return content
+    # list of parts — конкатенируем str parts, dict parts сериализуем.
+    parts: list[str] = []
+    for part in content:
+        if isinstance(part, str):
+            parts.append(part)
+        else:
+            parts.append(json.dumps(part, ensure_ascii=False))
+    return "".join(parts)
+
+
 class ZaiLLMConfig(BaseModel):
     """Конфигурация ZaiLLM."""
 
@@ -38,7 +56,7 @@ class ZaiLLM(BaseChatModel):
     config: ZaiLLMConfig = Field(default_factory=ZaiLLMConfig)
 
     def __init__(self, config: ZaiLLMConfig | None = None, **kwargs: Any) -> None:
-        super().__init__(config=config or ZaiLLMConfig(), **kwargs)
+        super().__init__(config=config or ZaiLLMConfig(), **kwargs)  # type: ignore[call-arg]
 
     @property
     def _llm_type(self) -> str:
@@ -65,11 +83,11 @@ class ZaiLLM(BaseChatModel):
 
         for msg in messages:
             if msg.type == "system":
-                system_content += msg.content + "\n"
+                system_content += _content_to_str(msg.content) + "\n"
             elif msg.type in ("human", "user"):
-                user_contents.append(msg.content)
+                user_contents.append(_content_to_str(msg.content))
             elif msg.type in ("ai", "assistant"):
-                user_contents.append(f"[Previous AI response]: {msg.content}")
+                user_contents.append(f"[Previous AI response]: {_content_to_str(msg.content)}")
 
         user_content = "\n\n".join(user_contents) if user_contents else ""
 
@@ -100,9 +118,13 @@ class ZaiLLM(BaseChatModel):
         generation = ChatGeneration(message=message)
         return ChatResult(generations=[generation])
 
-    def with_structured_output(self, schema: type[BaseModel], **kwargs: Any) -> Any:
+    def with_structured_output(self, schema: type[BaseModel], **kwargs: Any) -> Any:  # type: ignore[override]
         """Обёртка для structured output."""
         return _ZaiStructuredOutput(parent=self, schema=schema)
+
+    async def _call_cli(self, system: str, user: str) -> str:
+        """Вызвать z-ai CLI (делегирует в _call_zai_cli)."""
+        return await _call_zai_cli(system, user, self.config)
 
 
 class _ZaiStructuredOutput:
@@ -229,7 +251,5 @@ async def _call_zai_cli(system: str, user: str, config: ZaiLLMConfig) -> str:
 
 
 async def _zai_call_cli_method(self: ZaiLLM, system: str, user: str) -> str:
+    """Legacy helper (для backward compat, если кто-то импортирует)."""
     return await _call_zai_cli(system, user, self.config)
-
-
-ZaiLLM._call_cli = _zai_call_cli_method  # type: ignore[attr-defined]

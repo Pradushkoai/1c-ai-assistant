@@ -436,7 +436,7 @@ class PgVectorStore:
                 )
             else:
                 cur.execute("DELETE FROM code_chunks WHERE source_config = %s", (source_config,))
-            return cur.rowcount
+            return int(cur.rowcount)
 
     async def health_check(self) -> bool:
         try:
@@ -493,7 +493,7 @@ def _build_where_clause(filters: dict[str, Any] | None) -> str:
     return "".join(clauses)
 
 
-def _row_to_dict(row: tuple, description: Any) -> dict[str, Any]:
+def _row_to_dict(row: tuple[Any, ...], description: Any) -> dict[str, Any]:
     cols = [desc[0] for desc in description]
     d = dict(zip(cols, row, strict=False))
     # Группируем metadata
@@ -516,4 +516,4 @@ def _cosine_similarity(a: list[float], b: list[float]) -> float:
     norm_b = sum(y * y for y in b) ** 0.5
     if norm_a == 0 or norm_b == 0:
         return 0.0
-    return dot / (norm_a * norm_b)
+    return float(dot / (norm_a * norm_b))

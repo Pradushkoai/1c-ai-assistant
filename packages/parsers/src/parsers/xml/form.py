@@ -290,13 +290,13 @@ def _extract_v8_content(elem: Any) -> str | None:
     """Извлечь текст из элемента с v8:item/v8:content структурой."""
     # Прямой текст
     if elem.text and elem.text.strip():
-        return elem.text.strip()
+        return str(elem.text.strip())
 
     # v8:item/v8:content — обходим детей по _local_name
     for item in elem:
         if _local_name(item) == "item":
             for sub in item:
                 if _local_name(sub) == "content" and sub.text:
-                    return sub.text.strip()
+                    return str(sub.text.strip())
 
     return None

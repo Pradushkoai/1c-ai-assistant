@@ -1,7 +1,7 @@
 # CURRENT FOCUS — точка входа для каждой сессии
 
 > **Этот файл живёт в git репозитории (docs/process/), чтобы переживать сбросы окружения.**
-> Последнее обновление: 2026-07-13 (Stage 5 — **2/4 задачи завершены**, TD-S7-01/02 закрыты)
+> Последнее обновление: 2026-07-13 (Stage 5 — **3/4 задачи завершены**, TD-S7-01/02/03 закрыты; mypy 0 ошибок)
 
 ---
 
@@ -14,7 +14,7 @@
 - **Этап 2:** ✅ **ЗАВЕРШЁН** (7/7 задач) — TD-S4.2-01..07 все закрыты
 - **Stage 3 (Production-readiness):** ✅ **ЗАВЕРШЁН** (4/4) — TD-S5-01/02/03/04 все закрыты
 - **Stage 4 (Contract Compliance):** ✅ **ЗАВЕРШЁН** (4/4) — TD-S6-01/02/03/04 все закрыты
-- **Stage 5 (Production Hardening):** 🔄 В РАБОТЕ (2/4) — TD-S7-01/02 ✅ закрыты
+- **Stage 5 (Production Hardening):** 🔄 В РАБОТЕ (3/4) — TD-S7-01/02/03 ✅ закрыты
 
 ### Что прочитать в порядке приоритета (первые 5 минут сессии)
 1. **Этот файл** (CURRENT_FOCUS.md) — целиком, до конца
@@ -24,10 +24,10 @@
 5. **`docs/architecture/CONCEPTUAL.md`** §2.1 (asyncio.TaskGroup) — если работаешь с validate_node
 
 ### Следующая задача Stage 5
-**TD-S7-03: ZaiLLM mypy cleanup (TD-011)** (MEDIUM приоритет)
-- 14 mypy ошибок в zai_llm.py (LangChain strict typing) — базовая линия, висит с Sprint 3.
-- type: ignore или RunnableLambda вместо BaseChatModel inheritance.
-- Очистка для mypy strict mode (сейчас 14 ошибок, цель — 0).
+**TD-S7-04: Real integration tests run в CI** (MEDIUM приоритет)
+- CI workflow `integration.yml` существует, но не запускался — может быть broken.
+- Проверить: docker compose up, env vars, tests/integration/ реально запускаются.
+- Возможно: fix workflow syntax, add more integration tests.
 
 ### Закрытые задачи Stage 5
 - ✅ **TD-S7-01: Production survival-restart для Facade** (2026-07-13) — `FacadeStateStore`
@@ -38,6 +38,9 @@
   GET /health (Docker/k8s probe), GET /servers, GET /tools/{server}, POST /facade/{tool},
   POST /domain/{server}/{tool}. Stateless (state через FacadeStateStore). Dockerfile
   healthcheck обновлён (curl /health). 19 тестов. См. D-2026-07-13-14.
+- ✅ **TD-S7-03: ZaiLLM mypy cleanup (TD-011)** (2026-07-13) — все 14 mypy ошибок
+  закрыты (zai_llm.py, vector_store.py, form.py, library.py, codebase/server.py).
+  **mypy: 0 ошибок** (базовая линия TD-011 ликвидирована). См. D-2026-07-13-15.
 - ✅ **TD-S6-01: metadata MCP server + orchestrator wiring** (2026-07-13) —
   `MetadataServer` с 4 tools. `gather_node` убран прямой FS-доступ, ходит через
   metadata_server (DI). `plan_node` — metadata_server DI (ADR-0005). 24 теста.
@@ -119,11 +122,11 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 
 ## 🎯 ФОКУС СЕССИИ (для продолжающей сессии)
 
-> **Задача:** Stage 5 (Production Hardening) — **TD-S7-01/02 ЗАВЕРШЕНЫ** ✅ (2/4)
-> **Статус:** survival-restart + REST API закрыты
+> **Задача:** Stage 5 (Production Hardening) — **TD-S7-01/02/03 ЗАВЕРШЕНЫ** ✅ (3/4)
+> **Статус:** survival-restart + REST API + mypy 0 ошибок
 > **Блокеры:** нет
-> **Что сделано:** ✅ Все 4 этапа (TD-S5/6) + ✅ TD-S7-01 (survival-restart) + ✅ TD-S7-02 (REST API)
-> **Следующий шаг:** TD-S7-03 (ZaiLLM mypy cleanup) → TD-S7-04 (CI integration)
+> **Что сделано:** ✅ Все 4 этапа (TD-S5/6) + ✅ TD-S7-01 (survival-restart) + ✅ TD-S7-02 (REST API) + ✅ TD-S7-03 (mypy cleanup)
+> **Следующий шаг:** TD-S7-04 (CI integration tests) — ЗАВЕРШАЮЩАЯ
 >
 > **Принцип «Глубина сначала»** (D-2026-07-12-08): качество важнее скорости.
 >
@@ -140,8 +143,9 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 - **Этап 2 прогресс:** **7/7 задач ЗАВЕРШЕНО** ✅ (TD-S4.2-01/02/03/04/05/06/07 ✅)
 - **Stage 3 прогресс:** ✅ 4/4 задач ЗАВЕРШЕНО (TD-S5-01/02/03/04 ✅)
 - **Stage 4 прогресс:** ✅ 4/4 задач ЗАВЕРШЕНО (TD-S6-01/02/03/04 ✅)
-- **Stage 5 прогресс:** 2/4 задач ЗАВЕРШЕНО ✅ (TD-S7-01/02 ✅; TD-S7-03/04 открыты)
+- **Stage 5 прогресс:** 3/4 задач ЗАВЕРШЕНО ✅ (TD-S7-01/02/03 ✅; TD-S7-04 открыта)
 - **Тесты:** 1028 проходят + 12 skipped (3 BSL LS + 3 Postgres + 1 git + 5 integration smoke)
+- **mypy:** ✅ 0 ошибок (базовая линия TD-011 ликвидирована, было 14)
 - **Persistence:** ✅ PostgresSaver (AsyncPostgresSaver + setup() + connection lifecycle);
   MemorySaver fallback (dev/tests); migrations/ (Alembic scaffolding + state-миграции)
 - **Facade:** ✅ 8 lifecycle tools (ADR-0013): plan/gather/generate/validate/review/explain/run_cli/data_status;
@@ -160,6 +164,7 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
   state по plan_id переживает рестарт контейнера (PostgresSaver); in-memory fallback
 - **REST API:** ✅ `1c-ai serve` (FastAPI :8000) — GET /health (Docker/k8s probe), GET /servers,
   GET /tools/{server}, POST /facade/{tool}, POST /domain/{server}/{tool}; stateless через store
+- **mypy:** ✅ 0 ошибок (TD-011 закрыт, было 14: zai_llm/vector_store/form/library/codebase)
 - **Docker:** ✅ multi-stage Dockerfile.app (builder + runtime, non-root user, OCI labels);
   `1c-ai health` CLI (persistence + BSL LS ping, JSON output); healthcheck в compose;
   .env.example; docker-compose.override.yml (dev hot reload)
@@ -171,7 +176,7 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 - **BSL LS Docker:** мульти-stage Dockerfile v0.25.5, HTTP API, healthcheck, .dockerignore
 - **Boundary violations:** 0 (DI через functools.partial)
 - **Данные:** УТ11 (5,575 объектов, 7,141 BSL модулей) + HBK 8.3.25 (80 файлов)
-- **Последний коммит:** TD-S7-02 REST API HTTP server — Stage 5 2/4
+- **Последний коммит:** TD-S7-03 mypy cleanup (TD-011 закрыт, 0 ошибок) — Stage 5 3/4
 
 ---
 

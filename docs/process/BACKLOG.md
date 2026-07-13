@@ -229,10 +229,19 @@
 - **Приоритет:** LOW
 - **Описание:** Planner=GPT-4o, Coder=Claude Sonnet. Сейчас одна модель на всё.
 
-### TD-011: ZaiLLM mypy cleanup (LangChain strict typing)
-- **Приоритет:** LOW (не блокирует работу)
-- **Описание:** 9 mypy ошибок в zai_llm.py (LangChain strict typing).
-  Решение: type: ignore или RunnableLambda вместо BaseChatModel inheritance.
+### TD-011: ZaiLLM mypy cleanup (LangChain strict typing) — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit (pending, TD-S7-03)
+- **Решение:**
+  - `zai_llm.py`: `_content_to_str()` helper для LangChain content (str | list) → str
+    (убрал `__add__`/`append` type errors). `type: ignore[call-arg]` на `super().__init__`.
+    `type: ignore[override]` на `with_structured_output` (LangChain LSP violation).
+    `_call_cli` как real метод класса (вместо monkey-patch в конце файла).
+  - `vector_store.py`: `int(cur.rowcount)`, `tuple[Any, ...]`, `float(dot / ...)`.
+  - `form.py`: `str(elem.text.strip())` для `_extract_v8_content`.
+  - `library.py`: `dict[str, Any]` вместо `dict` (type-arg) + `from typing import Any`.
+  - `codebase/server.py`: `embedding: list[float] | None = chunk.get("embedding")`.
+  - **mypy: 0 ошибок** (было 14, все закрыты). Базовая линия TD-011 ликвидирована.
 
 ---
 

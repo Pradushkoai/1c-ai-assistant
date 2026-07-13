@@ -484,7 +484,8 @@ def _get_embedding_from_result(
     if hasattr(vector_store, "_chunks"):
         for chunk in vector_store._chunks:
             if chunk.get("chunk_id") == chunk_id:
-                return chunk.get("embedding")
+                embedding: list[float] | None = chunk.get("embedding")
+                return embedding
 
     # PgVectorStore: нужен отдельный запрос
     # TODO: добавить метод get_embedding(chunk_id) в VectorStoreProtocol

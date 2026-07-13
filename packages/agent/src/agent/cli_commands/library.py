@@ -17,12 +17,13 @@ import shutil
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import click
 from data_layer import PathManager
 
 
-def _load_library_registry(pm: PathManager) -> list[dict]:
+def _load_library_registry(pm: PathManager) -> list[dict[str, Any]]:
     """Загрузить реестр библиотек."""
     path = pm.library_registry_path()
     if not path.exists():
@@ -31,7 +32,7 @@ def _load_library_registry(pm: PathManager) -> list[dict]:
     return data if isinstance(data, list) else []
 
 
-def _save_library_registry(pm: PathManager, entries: list[dict]) -> None:
+def _save_library_registry(pm: PathManager, entries: list[dict[str, Any]]) -> None:
     """Сохранить реестр библиотек."""
     path = pm.library_registry_path()
     path.parent.mkdir(parents=True, exist_ok=True)
