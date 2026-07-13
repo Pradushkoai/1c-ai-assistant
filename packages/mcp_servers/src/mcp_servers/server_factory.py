@@ -25,9 +25,7 @@ log = logging.getLogger(__name__)
 
 # ─── Server registry ─────────────────────────────────────────────────────────
 
-SERVER_NAMES: frozenset[str] = frozenset(
-    {"facade", "metadata", "codebase", "kb", "bsl_ls", "git"}
-)
+SERVER_NAMES: frozenset[str] = frozenset({"facade", "metadata", "codebase", "kb", "bsl_ls", "git"})
 
 
 def _get_tools_for_server(name: str) -> list[type[Any]]:
@@ -58,9 +56,7 @@ def _get_tools_for_server(name: str) -> list[type[Any]]:
         from mcp_servers.git import GIT_TOOLS
 
         return GIT_TOOLS
-    raise ValueError(
-        f"Unknown server name: {name!r}. Available: {sorted(SERVER_NAMES)}"
-    )
+    raise ValueError(f"Unknown server name: {name!r}. Available: {sorted(SERVER_NAMES)}")
 
 
 def _get_tool_count(name: str) -> int:
@@ -224,9 +220,7 @@ def create_domain_server(server_name: str, **kwargs: Any) -> Any:
         ValueError: если server_name неизвестен.
     """
     if server_name not in SERVER_NAMES:
-        raise ValueError(
-            f"Unknown server name: {server_name!r}. Available: {sorted(SERVER_NAMES)}"
-        )
+        raise ValueError(f"Unknown server name: {server_name!r}. Available: {sorted(SERVER_NAMES)}")
 
     # Facade — делегируем в create_facade_server (уже реализован в TD-S5-02).
     if server_name == "facade":
@@ -238,8 +232,7 @@ def create_domain_server(server_name: str, **kwargs: Any) -> Any:
             # деградированно). Production DI — ответственность agent-слоя
             # (caller передаёт handlers=... через kwargs).
             log.warning(
-                "server_factory: facade handlers not provided, using default (degraded). "
-                "Pass handlers=... for full DI."
+                "server_factory: facade handlers not provided, using default (degraded). Pass handlers=... for full DI."
             )
             handlers = FacadeHandlers()
         return create_facade_server(handlers)

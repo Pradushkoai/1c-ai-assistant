@@ -519,10 +519,14 @@ class KBCollection:
             method_data = db_methods[method_name]
             avail = method_data["availability"]
             available = bool(avail.get(target_context, False))
-            reason = None if available else (
-                f"Метод '{method_name}' недоступен в контексте '{target_context}' "
-                f"(доступно: server={avail['server']}, thin_client={avail['thin_client']}, "
-                f"web_client={avail['web_client']}, mobile_client={avail['mobile_client']})"
+            reason = (
+                None
+                if available
+                else (
+                    f"Метод '{method_name}' недоступен в контексте '{target_context}' "
+                    f"(доступно: server={avail['server']}, thin_client={avail['thin_client']}, "
+                    f"web_client={avail['web_client']}, mobile_client={avail['mobile_client']})"
+                )
             )
             return {
                 "method_name": method_name,

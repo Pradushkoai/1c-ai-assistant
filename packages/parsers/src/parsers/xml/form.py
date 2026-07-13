@@ -179,12 +179,14 @@ def _parse_ext_form(ext_form_path: Path, form_metadata: FormMetadata) -> FormMet
             if form_element is not None:
                 elements.append(form_element)
 
-    return form_metadata.model_copy(update={
-        "title": title,
-        "handlers": handlers,
-        "attributes": attributes,
-        "elements": elements,
-    })
+    return form_metadata.model_copy(
+        update={
+            "title": title,
+            "handlers": handlers,
+            "attributes": attributes,
+            "elements": elements,
+        }
+    )
 
 
 def _parse_form_element(

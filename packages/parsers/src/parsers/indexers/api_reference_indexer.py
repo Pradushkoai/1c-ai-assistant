@@ -96,12 +96,14 @@ def build_api_reference(
             # Определяем тип модуля и object_ref из пути
             module_kind, object_ref = _guess_module_info(bsl_path, config_dir)
 
-            modules.append({
-                "module_kind": module_kind,
-                "object_ref": object_ref,
-                "file_path": str(bsl_path.relative_to(config_dir)),
-                "export_methods": export_methods,
-            })
+            modules.append(
+                {
+                    "module_kind": module_kind,
+                    "object_ref": object_ref,
+                    "file_path": str(bsl_path.relative_to(config_dir)),
+                    "export_methods": export_methods,
+                }
+            )
             total_export_methods += len(export_methods)
 
         except Exception as exc:

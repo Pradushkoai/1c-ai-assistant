@@ -46,9 +46,8 @@ def parse_hbk_file(hbk_path: Path) -> list[HbkEntry]:
 
         header_data = data[pk_pos : pk_pos + 30]
         try:
-            (_sig, _ver, flags, method, _mtime, _mdate, _crc,
-             comp_size, _uncomp_size, name_len, extra_len) = struct.unpack(
-                "<IHHHHHIIIHH", header_data
+            (_sig, _ver, flags, method, _mtime, _mdate, _crc, comp_size, _uncomp_size, name_len, extra_len) = (
+                struct.unpack("<IHHHHHIIIHH", header_data)
             )
         except struct.error:
             pos = pk_pos + 4
@@ -136,9 +135,7 @@ def iter_html_entries(entries: list[HbkEntry]) -> list[tuple[str, str]]:
 
 
 _PAGETITLE_RE = re.compile(r'<h1[^>]*class="V8SH_pagetitle"[^>]*>(.+?)</h1>', re.DOTALL)
-_AVAILABILITY_RE = re.compile(
-    r'<p[^>]*class="V8SH_chapter">Доступность:\s*</p>\s*<p>([^<]+)</p>', re.DOTALL
-)
+_AVAILABILITY_RE = re.compile(r'<p[^>]*class="V8SH_chapter">Доступность:\s*</p>\s*<p>([^<]+)</p>', re.DOTALL)
 _AVAILABILITY_TEXT_RE = re.compile(r"Доступность:\s*</p>\s*<p>([^<]+)</p>", re.DOTALL)
 _TAG_RE = re.compile(r"<[^>]+>")
 _WHITESPACE_RE = re.compile(r"\s+")

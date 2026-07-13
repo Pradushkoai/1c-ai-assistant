@@ -32,8 +32,8 @@ jobs:
         run: uv sync --all-extras --all-packages
 
       - name: Start Docker containers
-        run: docker compose up -d --wait
-        timeout-minutes: 5
+        run: docker compose up -d --build --wait
+        timeout-minutes: 10
 
       - name: Show container status
         run: docker compose ps

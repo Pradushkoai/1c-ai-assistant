@@ -65,9 +65,7 @@ def cmd_mcp_serve(server: str, list_only: bool) -> int:
 
             kwargs["handlers"] = create_facade_handlers()
         except Exception as exc:  # noqa: BLE001
-            logging.getLogger(__name__).warning(
-                "mcp_serve: facade_entry failed, using default handlers: %s", exc
-            )
+            logging.getLogger(__name__).warning("mcp_serve: facade_entry failed, using default handlers: %s", exc)
 
     try:
         asyncio.run(run_domain_server(server, **kwargs))

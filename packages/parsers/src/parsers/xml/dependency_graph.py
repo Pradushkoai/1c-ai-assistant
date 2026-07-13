@@ -139,6 +139,7 @@ def build_dependency_graph(
 
             # 1. Реквизиты ссылочных типов — используем extract_attributes
             from parsers.xml._xml_utils import extract_attributes
+
             attributes, tabular_sections = extract_attributes(obj_elem)
             for attr in attributes:
                 refs = _extract_refs(attr.type)
@@ -149,16 +150,22 @@ def build_dependency_graph(
                         detail = f"реквизит {attr.name}"
                         if attr.tabular_section:
                             detail = f"ТЧ {attr.tabular_section}.{attr.name}"
-                        edges.append(DependencyEdge(
-                            source=source_ref,
-                            target=ObjectRef(type=ref_type, name=ref_name),
-                            edge_type="uses_attribute",
-                            detail=detail,
-                        ))
+                        edges.append(
+                            DependencyEdge(
+                                source=source_ref,
+                                target=ObjectRef(type=ref_type, name=ref_name),
+                                edge_type="uses_attribute",
+                                detail=detail,
+                            )
+                        )
 
             # 2. Регистраторы регистров
-            if metadata_type in ("AccumulationRegister", "InformationRegister",
-                                 "AccountingRegister", "CalculationRegister"):
+            if metadata_type in (
+                "AccumulationRegister",
+                "InformationRegister",
+                "AccountingRegister",
+                "CalculationRegister",
+            ):
                 properties = find_child(obj_elem, "Properties")
                 if properties is not None:
                     _scan_recorder(properties, source_ref_str, source_ref, edges, nodes)
@@ -216,6 +223,7 @@ def _scan_recorder(
     recorder_text = ""
     for child in recorder_elem:
         from parsers.xml._xml_utils import _local_name
+
         tag = _local_name(child)
         if tag == "Document" and child.text:
             recorder_text = f"Document.{child.text}"
@@ -229,12 +237,14 @@ def _scan_recorder(
         if len(parts) == 2:
             target = ObjectRef(type=parts[0], name=parts[1])
             nodes.add(str(target))
-            edges.append(DependencyEdge(
-                source=source_ref,
-                target=target,
-                edge_type="registered_by",
-                detail="регистратор",
-            ))
+            edges.append(
+                DependencyEdge(
+                    source=source_ref,
+                    target=target,
+                    edge_type="registered_by",
+                    detail="регистратор",
+                )
+            )
 
 
 def _extract_refs(type_str: str) -> list[tuple[str, str]]:
@@ -278,6 +288,7 @@ def _parse_ref_str(ref_str: str) -> ObjectRef | None:
 
 # Convenience-функции для querying графа
 
+
 def get_dependencies(
     dep_graph: dict[str, Any],
     object_ref: str,
@@ -292,9 +303,9 @@ def get_dependencies(
         Список рёбер [{source, target, edge_type, detail}, ...].
     """
     return [
-        e for e in dep_graph.get("edges", [])
-        if isinstance(e.get("source"), dict)
-        and f"{e['source'].get('type')}.{e['source'].get('name')}" == object_ref
+        e
+        for e in dep_graph.get("edges", [])
+        if isinstance(e.get("source"), dict) and f"{e['source'].get('type')}.{e['source'].get('name')}" == object_ref
     ]
 
 
@@ -312,9 +323,9 @@ def get_dependents(
         Список рёбер [{source, target, edge_type, detail}, ...].
     """
     return [
-        e for e in dep_graph.get("edges", [])
-        if isinstance(e.get("target"), dict)
-        and f"{e['target'].get('type')}.{e['target'].get('name')}" == object_ref
+        e
+        for e in dep_graph.get("edges", [])
+        if isinstance(e.get("target"), dict) and f"{e['target'].get('type')}.{e['target'].get('name')}" == object_ref
     ]
 
 

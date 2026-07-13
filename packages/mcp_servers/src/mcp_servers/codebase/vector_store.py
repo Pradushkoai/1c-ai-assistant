@@ -142,12 +142,14 @@ class InMemoryVectorStore:
                 continue
             # Cosine similarity
             score = _cosine_similarity(query_embedding, emb)
-            results.append({
-                "chunk_id": chunk.get("chunk_id"),
-                "score": score,
-                "code_text": chunk.get("code_text", ""),
-                "metadata": {k: v for k, v in chunk.items() if k != "embedding" and k != "code_text"},
-            })
+            results.append(
+                {
+                    "chunk_id": chunk.get("chunk_id"),
+                    "score": score,
+                    "code_text": chunk.get("code_text", ""),
+                    "metadata": {k: v for k, v in chunk.items() if k != "embedding" and k != "code_text"},
+                }
+            )
 
         results.sort(key=lambda x: x["score"], reverse=True)
         return results[:top_k]
@@ -167,12 +169,14 @@ class InMemoryVectorStore:
             code = chunk.get("code_text", "").lower()
             score = sum(1.0 for term in query_terms if term in code) / max(len(query_terms), 1)
             if score > 0:
-                results.append({
-                    "chunk_id": chunk.get("chunk_id"),
-                    "score": score,
-                    "code_text": chunk.get("code_text", ""),
-                    "metadata": {k: v for k, v in chunk.items() if k != "embedding" and k != "code_text"},
-                })
+                results.append(
+                    {
+                        "chunk_id": chunk.get("chunk_id"),
+                        "score": score,
+                        "code_text": chunk.get("code_text", ""),
+                        "metadata": {k: v for k, v in chunk.items() if k != "embedding" and k != "code_text"},
+                    }
+                )
 
         results.sort(key=lambda x: x["score"], reverse=True)
         return results[:top_k]
@@ -206,19 +210,22 @@ class InMemoryVectorStore:
         results: list[dict[str, Any]] = []
         for cid, score in sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]:
             data = chunk_data[cid]
-            results.append({
-                "chunk_id": cid,
-                "rrf_score": score,
-                "code_text": data.get("code_text", ""),
-                "metadata": data.get("metadata", {}),
-            })
+            results.append(
+                {
+                    "chunk_id": cid,
+                    "rrf_score": score,
+                    "code_text": data.get("code_text", ""),
+                    "metadata": data.get("metadata", {}),
+                }
+            )
 
         return results
 
     async def delete_by_source(self, source_config: str, source_version: str | None = None) -> int:
         before = len(self._chunks)
         self._chunks = [
-            c for c in self._chunks
+            c
+            for c in self._chunks
             if not (
                 c.get("source_config") == source_config
                 and (source_version is None or c.get("source_version") == source_version)
@@ -232,10 +239,7 @@ class InMemoryVectorStore:
     def _apply_filters(self, filters: dict[str, Any] | None) -> list[dict[str, Any]]:
         if not filters:
             return list(self._chunks)
-        return [
-            c for c in self._chunks
-            if all(c.get(k) == v for k, v in filters.items())
-        ]
+        return [c for c in self._chunks if all(c.get(k) == v for k, v in filters.items())]
 
 
 # ─── PgVectorStore (production, ADR-0015) ───────────────────────────────────
@@ -291,8 +295,12 @@ class PgVectorStore:
                 )
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_chunks_tsvector ON code_chunks USING GIN (tsvector)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON code_chunks USING IVFFLAT (embedding vector_cosine_ops) WITH (lists = 100)")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_chunks_layer ON code_chunks (source_layer, source_config, source_version)")
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON code_chunks USING IVFFLAT (embedding vector_cosine_ops) WITH (lists = 100)"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_chunks_layer ON code_chunks (source_layer, source_config, source_version)"
+            )
 
     async def upsert_chunks(self, chunks: list[dict[str, Any]]) -> int:
         conn = self._get_conn()
@@ -417,12 +425,14 @@ class PgVectorStore:
         results: list[dict[str, Any]] = []
         for cid, score in sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]:
             data = chunk_data[cid]
-            results.append({
-                "chunk_id": cid,
-                "rrf_score": score,
-                "code_text": data.get("code_text", ""),
-                "metadata": {k: v for k, v in data.items() if k not in ("code_text", "score")},
-            })
+            results.append(
+                {
+                    "chunk_id": cid,
+                    "rrf_score": score,
+                    "code_text": data.get("code_text", ""),
+                    "metadata": {k: v for k, v in data.items() if k not in ("code_text", "score")},
+                }
+            )
 
         return results
 
@@ -497,9 +507,17 @@ def _row_to_dict(row: tuple[Any, ...], description: Any) -> dict[str, Any]:
     cols = [desc[0] for desc in description]
     d = dict(zip(cols, row, strict=False))
     # Группируем metadata
-    metadata_keys = {"source_layer", "source_config", "source_version",
-                     "platform_version", "module_kind", "object_ref",
-                     "method_name", "is_function", "parameters"}
+    metadata_keys = {
+        "source_layer",
+        "source_config",
+        "source_version",
+        "platform_version",
+        "module_kind",
+        "object_ref",
+        "method_name",
+        "is_function",
+        "parameters",
+    }
     result = {
         "chunk_id": d.get("chunk_id"),
         "score": d.get("score"),

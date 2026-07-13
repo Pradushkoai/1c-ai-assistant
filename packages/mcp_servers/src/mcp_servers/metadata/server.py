@@ -133,8 +133,7 @@ class MetadataServer:
         index_path = self.path_manager.unified_metadata_index(config_name, config_version)
         if not index_path.exists():
             raise IndexNotFoundError(
-                f"unified-metadata-index.json not found: {index_path}. "
-                "Run: 1c-ai config build",
+                f"unified-metadata-index.json not found: {index_path}. Run: 1c-ai config build",
                 details={"path": str(index_path)},
             )
 
@@ -251,8 +250,7 @@ class MetadataServer:
         api_ref_path = self.path_manager.api_reference_index(config_name, config_version)
         if not api_ref_path.exists():
             raise IndexNotFoundError(
-                f"api-reference.json not found: {api_ref_path}. "
-                "Run: 1c-ai config build",
+                f"api-reference.json not found: {api_ref_path}. Run: 1c-ai config build",
                 details={"path": str(api_ref_path)},
             )
 
@@ -274,8 +272,7 @@ class MetadataServer:
 
         if not methods:
             raise MetadataNotFoundError(
-                f"Module {module_name!r} not found in api-reference "
-                f"(or has no export methods)",
+                f"Module {module_name!r} not found in api-reference (or has no export methods)",
                 details={"module_name": module_name},
             )
 
@@ -326,8 +323,7 @@ class MetadataServer:
         dep_path = self.path_manager.dependency_graph_index(config_name, config_version)
         if not dep_path.exists():
             raise IndexNotFoundError(
-                f"dependency-graph.json not found: {dep_path}. "
-                "Run: 1c-ai config build",
+                f"dependency-graph.json not found: {dep_path}. Run: 1c-ai config build",
                 details={"path": str(dep_path)},
             )
 

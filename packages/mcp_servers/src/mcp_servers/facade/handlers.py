@@ -65,9 +65,7 @@ _PLAN_ID_RE = re.compile(r"^[a-zA-Z0-9_\-]{1,128}$")
 def _validate_plan_id(plan_id: str) -> None:
     """Валидация plan_id — защита от инъекций в in-memory dict key."""
     if not plan_id or not _PLAN_ID_RE.match(plan_id):
-        raise ValueError(
-            f"Invalid plan_id: {plan_id!r}. Expected alphanumeric/underscore/hyphen, <=128 chars."
-        )
+        raise ValueError(f"Invalid plan_id: {plan_id!r}. Expected alphanumeric/underscore/hyphen, <=128 chars.")
 
 
 # Type aliases для DI (не импортируем orchestrator — см. CONCEPTUAL.md §1.1).
@@ -173,9 +171,7 @@ class FacadeHandlers:
         """Проверить, что DI dependency задана. Raises FacadeNotConfiguredError."""
         val = getattr(self, attr)
         if val is None:
-            raise FacadeNotConfiguredError(
-                f"{name} not configured. Pass it to FacadeHandlers(...) constructor."
-            )
+            raise FacadeNotConfiguredError(f"{name} not configured. Pass it to FacadeHandlers(...) constructor.")
         return val
 
     # ─── 1. plan ────────────────────────────────────────────────────────────
@@ -446,9 +442,7 @@ class FacadeHandlers:
                     config_version=parsed.config_version,
                     top_k=3,
                 )
-                similar_modules = [
-                    r.model_dump() if hasattr(r, "model_dump") else dict(r) for r in sim.results
-                ]
+                similar_modules = [r.model_dump() if hasattr(r, "model_dump") else dict(r) for r in sim.results]
                 explanation_parts.append(f"Codebase: найдено {len(similar_modules)} похожих модулей.")
             except Exception as exc:  # noqa: BLE001
                 log.warning("facade_explain_codebase_failed: %s", exc)
@@ -622,16 +616,12 @@ def _parse_artifact_id(artifact_id: str) -> tuple[str, int]:
         ValueError: если формат некорректен.
     """
     if "#" not in artifact_id:
-        raise ValueError(
-            f"Invalid artifact_id format: {artifact_id!r}. Expected '{{subtask_id}}#{{iteration}}'."
-        )
+        raise ValueError(f"Invalid artifact_id format: {artifact_id!r}. Expected '{{subtask_id}}#{{iteration}}'.")
     subtask_id, _, iter_str = artifact_id.rpartition("#")
     try:
         iteration = int(iter_str)
     except ValueError as exc:
-        raise ValueError(
-            f"Invalid iteration in artifact_id: {artifact_id!r}. Expected integer after '#'."
-        ) from exc
+        raise ValueError(f"Invalid iteration in artifact_id: {artifact_id!r}. Expected integer after '#'.") from exc
     if iteration < 1:
         raise ValueError(f"Iteration must be >= 1, got: {iteration}")
     return subtask_id, iteration

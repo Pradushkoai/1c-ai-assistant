@@ -110,7 +110,9 @@ def build_embeddings_index(
 
     log.info(
         "Building embeddings index for %s/%s (layer=%s)",
-        config_name, config_version, source_layer,
+        config_name,
+        config_version,
+        source_layer,
     )
 
     from parsers.bsl.module import parse_bsl_module

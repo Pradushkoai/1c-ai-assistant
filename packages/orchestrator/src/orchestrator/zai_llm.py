@@ -155,10 +155,7 @@ class _ZaiStructuredOutput:
                 exc,
                 content,
             )
-            raise ValueError(
-                f"LLM response is not valid JSON: {exc}. "
-                f"Content preview: {content[:200]}"
-            ) from exc
+            raise ValueError(f"LLM response is not valid JSON: {exc}. Content preview: {content[:200]}") from exc
 
         try:
             return self.schema.model_validate(data)
@@ -221,9 +218,7 @@ async def _call_cli_via_subprocess(
 
 async def _call_zai_cli(system: str, user: str, config: ZaiLLMConfig) -> str:
     """Вызвать z-ai chat CLI с system и user prompt."""
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".json", delete=False, encoding="utf-8"
-    ) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
         output_path = Path(f.name)
 
     try:

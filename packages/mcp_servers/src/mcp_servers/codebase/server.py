@@ -77,7 +77,10 @@ class CodebaseServer:
         """
         log.info(
             "semantic_search: query=%r config=%s/%s top_k=%d",
-            query[:50], config_name, config_version, top_k,
+            query[:50],
+            config_name,
+            config_version,
+            top_k,
         )
 
         # Фильтры: config + library (ADR-0020 multi-layer)
@@ -115,14 +118,16 @@ class CodebaseServer:
         formatted: list[dict[str, Any]] = []
         for r in results:
             meta = r.get("metadata", {})
-            formatted.append({
-                "module": meta.get("object_ref", "unknown"),
-                "method": meta.get("method_name", ""),
-                "score": r.get("rrf_score", r.get("score", 0.0)),
-                "snippet": r.get("code_text", "")[:200],
-                "object_ref": meta.get("object_ref", ""),
-                "module_kind": meta.get("module_kind", ""),
-            })
+            formatted.append(
+                {
+                    "module": meta.get("object_ref", "unknown"),
+                    "method": meta.get("method_name", ""),
+                    "score": r.get("rrf_score", r.get("score", 0.0)),
+                    "snippet": r.get("code_text", "")[:200],
+                    "object_ref": meta.get("object_ref", ""),
+                    "module_kind": meta.get("module_kind", ""),
+                }
+            )
 
         return SemanticSearchOutput(query=query, results=formatted)
 
@@ -224,11 +229,13 @@ class CodebaseServer:
             meta = r.get("metadata", {})
             if meta.get("object_ref") == object_ref:
                 continue
-            similar.append({
-                "module": meta.get("object_ref", "unknown"),
-                "score": r.get("score", 0.0),
-                "method": meta.get("method_name", ""),
-            })
+            similar.append(
+                {
+                    "module": meta.get("object_ref", "unknown"),
+                    "score": r.get("score", 0.0),
+                    "method": meta.get("method_name", ""),
+                }
+            )
             if len(similar) >= top_k:
                 break
 
@@ -254,8 +261,7 @@ class CodebaseServer:
         Returns:
             CallGraphOutput с рёбрами и статистикой.
         """
-        log.info("call_graph: config=%s/%s ref=%s method=%s",
-                 config_name, config_version, object_ref, method_name)
+        log.info("call_graph: config=%s/%s ref=%s method=%s", config_name, config_version, object_ref, method_name)
 
         from data_layer import PathManager
         from parsers.bsl import load_call_graph
@@ -275,17 +281,15 @@ class CodebaseServer:
         # Фильтрация по object_ref
         if object_ref:
             edges_raw = [
-                e for e in edges_raw
-                if _match_ref(e.get("source_module"), object_ref)
-                or _match_ref(e.get("target_module"), object_ref)
+                e
+                for e in edges_raw
+                if _match_ref(e.get("source_module"), object_ref) or _match_ref(e.get("target_module"), object_ref)
             ]
 
         # Фильтрация по method_name
         if method_name:
             edges_raw = [
-                e for e in edges_raw
-                if e.get("source_method") == method_name
-                or e.get("target_method") == method_name
+                e for e in edges_raw if e.get("source_method") == method_name or e.get("target_method") == method_name
             ]
 
         # Конвертируем в CallEdge модели
@@ -295,14 +299,16 @@ class CodebaseServer:
                 source_module = _dict_to_object_ref(e.get("source_module"))
                 target_module = _dict_to_object_ref(e.get("target_module"))
 
-                edges.append(CallEdge(
-                    source_module=source_module,
-                    source_method=e.get("source_method", ""),
-                    target_module=target_module,
-                    target_method=e.get("target_method", ""),
-                    line=e.get("line", 1),
-                    is_platform=e.get("is_platform", False),
-                ))
+                edges.append(
+                    CallEdge(
+                        source_module=source_module,
+                        source_method=e.get("source_method", ""),
+                        target_module=target_module,
+                        target_method=e.get("target_method", ""),
+                        line=e.get("line", 1),
+                        is_platform=e.get("is_platform", False),
+                    )
+                )
             except Exception as exc:
                 log.debug("Failed to parse edge: %s", exc)
 

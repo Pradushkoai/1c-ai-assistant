@@ -105,21 +105,20 @@ def build_graph(
     # Stage 4: plan_node + gather_node получают metadata_server (ADR-0005 compliance).
     graph.add_node(
         "plan",
-        partial(plan_node, llm=llm, metadata_server=metadata_server)
-        if llm or metadata_server
-        else plan_node,
+        partial(plan_node, llm=llm, metadata_server=metadata_server) if llm or metadata_server else plan_node,
     )
     graph.add_node("gather", partial(gather_node, kb_server=kb_server, metadata_server=metadata_server))
     graph.add_node("code", partial(code_node, llm=llm) if llm else code_node)
     graph.add_node("validate", partial(validate_node, bsl_ls_server=bsl_ls_server, kb_server=kb_server))
-    graph.add_node("review", partial(review_node, llm=llm, kb_server=kb_server) if llm else partial(review_node, kb_server=kb_server))
+    graph.add_node(
+        "review",
+        partial(review_node, llm=llm, kb_server=kb_server) if llm else partial(review_node, kb_server=kb_server),
+    )
     graph.add_node("retry", retry_node)
     # Stage 4 (TD-S6-02): commit_node получает git_server + repo_path (ADR-0005 COMMITTER).
     graph.add_node(
         "commit",
-        partial(commit_node, git_server=git_server, repo_path=repo_path)
-        if git_server or repo_path
-        else commit_node,
+        partial(commit_node, git_server=git_server, repo_path=repo_path) if git_server or repo_path else commit_node,
     )
     graph.add_node("escalate", escalate_node)
     graph.add_node("next_subtask", next_subtask_node)

@@ -82,9 +82,7 @@ class PersistenceManager:
         try:
             from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
         except ImportError:
-            log.warning(
-                "langgraph-checkpoint-postgres not installed; falling back to MemorySaver"
-            )
+            log.warning("langgraph-checkpoint-postgres not installed; falling back to MemorySaver")
             self._checkpointer = self._create_memory_saver()
             return self
 
@@ -157,9 +155,7 @@ class PersistenceManager:
         if not self._is_postgres:
             return True
         try:
-            await self._checkpointer.aget_tuple(
-                {"configurable": {"thread_id": "__healthcheck__"}}
-            )
+            await self._checkpointer.aget_tuple({"configurable": {"thread_id": "__healthcheck__"}})
             return True
         except Exception as exc:  # noqa: BLE001
             log.warning("persistence health_check failed: %s", exc)

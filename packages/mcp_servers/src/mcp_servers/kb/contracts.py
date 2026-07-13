@@ -117,9 +117,7 @@ class CheckStandardsInput(BaseModel):
     """Input для kb.check_standards (TD-S4.2-03)."""
 
     code: str = Field(description="BSL-код для проверки")
-    severity_filter: list[Literal["critical", "warning", "info"]] = Field(
-        default=["critical", "warning", "info"]
-    )
+    severity_filter: list[Literal["critical", "warning", "info"]] = Field(default=["critical", "warning", "info"])
     source_type_filter: list[Literal["СТО", "БСП", "1C-EDT", "internal"]] | None = None
     category_filter: list[str] | None = None
 
@@ -145,8 +143,7 @@ class CheckStandardsOutput(BaseModel):
 
     findings: list[dict[str, Any]] = Field(
         description=(
-            "[{standard_id, severity, source, line, message, match}] — "
-            "source = {type: СТО|БСП, code: '6.1', url: ...}"
+            "[{standard_id, severity, source, line, message, match}] — source = {type: СТО|БСП, code: '6.1', url: ...}"
         )
     )
 
@@ -171,9 +168,7 @@ class GetPattern:
     required_role: str = "GATHERER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError(
-            "kb.get_pattern — контракт. Реализация в mcp_servers.kb.server.KbServer.get_pattern"
-        )
+        raise NotImplementedError("kb.get_pattern — контракт. Реализация в mcp_servers.kb.server.KbServer.get_pattern")
 
 
 class GetAntipattern:
@@ -207,9 +202,7 @@ class SearchKb:
     required_role: str = "PLANNER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError(
-            "kb.search_kb — контракт. Реализация в mcp_servers.kb.server.KbServer.search_kb"
-        )
+        raise NotImplementedError("kb.search_kb — контракт. Реализация в mcp_servers.kb.server.KbServer.search_kb")
 
 
 class CheckMethodAvailability:

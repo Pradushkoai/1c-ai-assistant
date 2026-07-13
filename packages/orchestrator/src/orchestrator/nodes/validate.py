@@ -31,22 +31,63 @@ _METHOD_CALL_RE = re.compile(
 )
 
 _BSL_KEYWORDS = {
-    "Если", "Тогда", "Иначе", "ИначеЕсли", "КонецЕсли",
-    "Для", "Каждого", "Из", "Цикл", "КонецЦикла",
-    "Пока", "Новый", "Возврат",
-    "Попытка", "Исключение", "КонецПопытки",
-    "Процедура", "КонецПроцедуры",
-    "Функция", "КонецФункции",
-    "И", "ИЛИ", "НЕ", "Или",
-    "Экспорт", "Знач", "Лок",
-    "Истина", "Ложь", "Неопределено", "NULL", "Null",
-    "Перем", "Переменная",
-    "Else", "If", "Then", "For", "Each", "In", "Do", "EndDo",
-    "Procedure", "EndProcedure", "Function", "EndFunction",
-    "Try", "Exception", "EndTry",
-    "New", "Return",
-    "And", "Or", "Not",
-    "True", "False", "Undefined",
+    "Если",
+    "Тогда",
+    "Иначе",
+    "ИначеЕсли",
+    "КонецЕсли",
+    "Для",
+    "Каждого",
+    "Из",
+    "Цикл",
+    "КонецЦикла",
+    "Пока",
+    "Новый",
+    "Возврат",
+    "Попытка",
+    "Исключение",
+    "КонецПопытки",
+    "Процедура",
+    "КонецПроцедуры",
+    "Функция",
+    "КонецФункции",
+    "И",
+    "ИЛИ",
+    "НЕ",
+    "Или",
+    "Экспорт",
+    "Знач",
+    "Лок",
+    "Истина",
+    "Ложь",
+    "Неопределено",
+    "NULL",
+    "Null",
+    "Перем",
+    "Переменная",
+    "Else",
+    "If",
+    "Then",
+    "For",
+    "Each",
+    "In",
+    "Do",
+    "EndDo",
+    "Procedure",
+    "EndProcedure",
+    "Function",
+    "EndFunction",
+    "Try",
+    "Exception",
+    "EndTry",
+    "New",
+    "Return",
+    "And",
+    "Or",
+    "Not",
+    "True",
+    "False",
+    "Undefined",
     "Var",
 }
 
@@ -190,15 +231,17 @@ async def _run_bsl_ls_validator(
     try:
         lint_result = await bsl_ls_server.lint(code=code, file_path=file_path)
         for diag in lint_result.diagnostics:
-            findings.append(ValidationFinding(
-                severity=diag.get("severity", "info"),
-                code=diag.get("code", "UNKNOWN"),
-                message=diag.get("message", ""),
-                line=diag.get("line"),
-                column=diag.get("column"),
-                source="bsl_ls",
-                fix_hint=None,
-            ))
+            findings.append(
+                ValidationFinding(
+                    severity=diag.get("severity", "info"),
+                    code=diag.get("code", "UNKNOWN"),
+                    message=diag.get("message", ""),
+                    line=diag.get("line"),
+                    column=diag.get("column"),
+                    source="bsl_ls",
+                    fix_hint=None,
+                )
+            )
     except Exception as exc:
         log.warning("validate_bsl_ls_error: %s", exc)
     return findings
@@ -219,15 +262,17 @@ async def _run_kb_antipatterns_validator(
             severity_filter=["critical", "warning"],
         )
         for finding_dict in ap_result.findings:
-            findings.append(ValidationFinding(
-                severity=finding_dict.get("severity", "info"),
-                code=finding_dict.get("antipattern_id", "UNKNOWN"),
-                message=finding_dict.get("message", ""),
-                line=finding_dict.get("line"),
-                column=None,
-                source="kb_antipatterns",
-                fix_hint=None,
-            ))
+            findings.append(
+                ValidationFinding(
+                    severity=finding_dict.get("severity", "info"),
+                    code=finding_dict.get("antipattern_id", "UNKNOWN"),
+                    message=finding_dict.get("message", ""),
+                    line=finding_dict.get("line"),
+                    column=None,
+                    source="kb_antipatterns",
+                    fix_hint=None,
+                )
+            )
     except Exception as exc:
         log.warning("validate_kb_error: %s", exc)
     return findings
@@ -280,20 +325,20 @@ def _check_methods_availability_sync(
                 platform_version=platform_version,
             )
             if not result["available"]:
-                findings.append(ValidationFinding(
-                    severity="critical",
-                    code=f"METHOD-CONTEXT-{method_name}",
-                    message=result.get("reason") or (
-                        f"Метод '{method_name}' недоступен в контексте '{target_context}'"
-                    ),
-                    line=line,
-                    column=None,
-                    source="kb_antipatterns",
-                    fix_hint=(
-                        f"Перенесите вызов '{method_name}' в серверный контекст "
-                        "или используйте клиентский аналог"
-                    ),
-                ))
+                findings.append(
+                    ValidationFinding(
+                        severity="critical",
+                        code=f"METHOD-CONTEXT-{method_name}",
+                        message=result.get("reason")
+                        or (f"Метод '{method_name}' недоступен в контексте '{target_context}'"),
+                        line=line,
+                        column=None,
+                        source="kb_antipatterns",
+                        fix_hint=(
+                            f"Перенесите вызов '{method_name}' в серверный контекст или используйте клиентский аналог"
+                        ),
+                    )
+                )
         except Exception as exc:
             log.warning("validate_method_availability_error: method=%s error=%s", method_name, str(exc)[:100])
 
@@ -326,19 +371,19 @@ async def _run_standards_validator(
             source_type = source_info.get("type", "")
             source_url = source_info.get("url", "")
             fix_hint = (
-                f"{source_type} {source_code}: см. {source_url}"
-                if source_url
-                else f"{source_type} {source_code}"
+                f"{source_type} {source_code}: см. {source_url}" if source_url else f"{source_type} {source_code}"
             )
-            findings.append(ValidationFinding(
-                severity=finding_dict.get("severity", "info"),
-                code=finding_dict.get("standard_id", "UNKNOWN-STANDARD"),
-                message=finding_dict.get("message", ""),
-                line=finding_dict.get("line"),
-                column=None,
-                source="kb_standards",
-                fix_hint=fix_hint,
-            ))
+            findings.append(
+                ValidationFinding(
+                    severity=finding_dict.get("severity", "info"),
+                    code=finding_dict.get("standard_id", "UNKNOWN-STANDARD"),
+                    message=finding_dict.get("message", ""),
+                    line=finding_dict.get("line"),
+                    column=None,
+                    source="kb_standards",
+                    fix_hint=fix_hint,
+                )
+            )
     except Exception as exc:
         log.warning("validate_standards_error: %s", exc)
     return findings

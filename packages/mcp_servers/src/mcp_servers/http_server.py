@@ -126,10 +126,7 @@ def create_http_app(handlers: FacadeHandlers | None = None) -> FastAPI:
     async def list_servers() -> dict[str, Any]:
         """Список доступных MCP серверов."""
         return {
-            "servers": [
-                {"name": name, "tools_count": count}
-                for name, count in AVAILABLE_SERVERS.items()
-            ],
+            "servers": [{"name": name, "tools_count": count} for name, count in AVAILABLE_SERVERS.items()],
             "total": len(SERVER_NAMES),
         }
 
@@ -190,9 +187,7 @@ def create_http_app(handlers: FacadeHandlers | None = None) -> FastAPI:
 
     # ─── POST /domain/{server_name}/{tool} ───────────────────────────────────
     @app.post("/domain/{server_name}/{tool}")
-    async def call_domain_tool(
-        server_name: str, tool: str, request: ToolRequest
-    ) -> dict[str, Any]:
+    async def call_domain_tool(server_name: str, tool: str, request: ToolRequest) -> dict[str, Any]:
         """Вызов доменного tool (metadata/codebase/kb/bsl_ls/git)."""
         if server_name not in SERVER_NAMES:
             raise HTTPException(

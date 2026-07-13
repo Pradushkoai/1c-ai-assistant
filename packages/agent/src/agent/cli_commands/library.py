@@ -226,6 +226,7 @@ def cmd_library_remove(name: str, version: str) -> int:
 
     # Удаляем директории
     import contextlib
+
     with contextlib.suppress(Exception):
         shutil.rmtree(pm.data_library_dir(name, version))
     with contextlib.suppress(Exception):

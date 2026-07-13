@@ -248,8 +248,4 @@ class KbServer:
 
     def health_check(self) -> bool:
         """Проверить, что KB загружена."""
-        return (
-            len(self.kb.patterns) > 0
-            or len(self.kb.antipatterns) > 0
-            or len(self.kb.standards) > 0
-        )
+        return len(self.kb.patterns) > 0 or len(self.kb.antipatterns) > 0 or len(self.kb.standards) > 0

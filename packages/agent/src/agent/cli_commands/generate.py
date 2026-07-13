@@ -123,6 +123,7 @@ async def _run_pipeline(
         bsl_ls_server = BslLsServer()
     except Exception as exc:
         import logging
+
         logging.getLogger(__name__).warning("bsl_ls_server_init_failed: %s", exc)
 
     kb_server = None
@@ -132,6 +133,7 @@ async def _run_pipeline(
         kb_server = KbServer()
     except Exception as exc:
         import logging
+
         logging.getLogger(__name__).warning("kb_server_init_failed: %s", exc)
 
     # Stage 4 (TD-S6-01): metadata server для gather (api-reference) + plan (dep graph).
@@ -142,6 +144,7 @@ async def _run_pipeline(
         metadata_server = MetadataServer()
     except Exception as exc:
         import logging
+
         logging.getLogger(__name__).warning("metadata_server_init_failed: %s", exc)
 
     # Stage 4 (TD-S6-02): git server для commit (real git flow).
@@ -152,10 +155,12 @@ async def _run_pipeline(
         git_server = GitServer()
     except Exception as exc:
         import logging
+
         logging.getLogger(__name__).warning("git_server_init_failed: %s", exc)
 
     # repo_path: env 1C_AI_REPO_PATH (путь к git-репозиторию для коммитов).
     import os
+
     repo_path = os.environ.get("1C_AI_REPO_PATH")
 
     # Stage 3 (TD-S5-01): persistence. PostgresSaver (production) или MemorySaver.

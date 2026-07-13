@@ -63,10 +63,7 @@ class SecretDetectedError(RuntimeError):
     """В diff обнаружен секрет — операция ABORTed."""
 
     def __init__(self, pattern_name: str, snippet: str) -> None:
-        super().__init__(
-            f"Secret detected in diff (pattern: {pattern_name}). "
-            f"Snippet (masked): {snippet[:40]!r}..."
-        )
+        super().__init__(f"Secret detected in diff (pattern: {pattern_name}). Snippet (masked): {snippet[:40]!r}...")
         self.pattern_name = pattern_name
         self.snippet = snippet
 
@@ -79,9 +76,7 @@ class GitCommandError(RuntimeError):
     """git/gh subprocess вернул non-zero exit code."""
 
     def __init__(self, cmd: str, returncode: int, stderr: str) -> None:
-        super().__init__(
-            f"git command failed: {cmd!r} (exit {returncode}): {stderr.strip()[:200]}"
-        )
+        super().__init__(f"git command failed: {cmd!r} (exit {returncode}): {stderr.strip()[:200]}")
         self.cmd = cmd
         self.returncode = returncode
         self.stderr = stderr
@@ -184,17 +179,15 @@ class GitServer:
             stderr=asyncio.subprocess.PIPE,
         )
         try:
-            stdout_b, stderr_b = await asyncio.wait_for(
-                proc.communicate(), timeout=timeout or self.default_timeout
-            )
+            stdout_b, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=timeout or self.default_timeout)
         except TimeoutError as exc:
             proc.kill()
             await proc.wait()
-            raise GitTimeoutError(
-                f"subprocess timed out after {timeout or self.default_timeout}s: {args[0]}"
-            ) from exc
-        return proc.returncode or 0, stdout_b.decode("utf-8", errors="replace"), stderr_b.decode(
-            "utf-8", errors="replace"
+            raise GitTimeoutError(f"subprocess timed out after {timeout or self.default_timeout}s: {args[0]}") from exc
+        return (
+            proc.returncode or 0,
+            stdout_b.decode("utf-8", errors="replace"),
+            stderr_b.decode("utf-8", errors="replace"),
         )
 
     # ─── 1. create_branch ────────────────────────────────────────────────────
@@ -221,17 +214,13 @@ class GitServer:
         cwd = _validate_repo_path(repo_path)
 
         # Получаем текущую ветку (base).
-        rc, stdout, stderr = await self._run_subprocess(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=cwd
-        )
+        rc, stdout, stderr = await self._run_subprocess(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=cwd)
         if rc != 0:
             raise GitCommandError("git rev-parse", rc, stderr)
         base = stdout.strip()
 
         # Создаём ветку.
-        rc, _, stderr = await self._run_subprocess(
-            ["git", "checkout", "-b", branch_name], cwd=cwd
-        )
+        rc, _, stderr = await self._run_subprocess(["git", "checkout", "-b", branch_name], cwd=cwd)
         if rc != 0:
             raise GitCommandError("git checkout -b", rc, stderr)
 
@@ -271,30 +260,22 @@ class GitServer:
         # Переключаемся на ветку, если указана.
         if branch is not None:
             _validate_branch_name(branch)
-            rc, _, stderr = await self._run_subprocess(
-                ["git", "checkout", branch], cwd=cwd
-            )
+            rc, _, stderr = await self._run_subprocess(["git", "checkout", branch], cwd=cwd)
             if rc != 0:
                 raise GitCommandError("git checkout", rc, stderr)
 
         # git add <files>.
-        rc, _, stderr = await self._run_subprocess(
-            ["git", "add", "--", *files], cwd=cwd
-        )
+        rc, _, stderr = await self._run_subprocess(["git", "add", "--", *files], cwd=cwd)
         if rc != 0:
             raise GitCommandError("git add", rc, stderr)
 
         # git commit -m <message>.
-        rc, _, stderr = await self._run_subprocess(
-            ["git", "commit", "-m", message], cwd=cwd
-        )
+        rc, _, stderr = await self._run_subprocess(["git", "commit", "-m", message], cwd=cwd)
         if rc != 0:
             raise GitCommandError("git commit", rc, stderr)
 
         # Получаем commit SHA.
-        rc, stdout, stderr = await self._run_subprocess(
-            ["git", "rev-parse", "HEAD"], cwd=cwd
-        )
+        rc, stdout, stderr = await self._run_subprocess(["git", "rev-parse", "HEAD"], cwd=cwd)
         if rc != 0:
             raise GitCommandError("git rev-parse HEAD", rc, stderr)
         commit_sha = stdout.strip()

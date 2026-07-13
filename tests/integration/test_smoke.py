@@ -46,9 +46,7 @@ class TestPostgresSmoke:
         async with PersistenceManager(dsn=postgres_dsn) as pm:
             checkpointer = pm.get_checkpointer()
             # Пробный aget_tuple (несуществующий thread_id → None, без побочных эффектов).
-            result = await checkpointer.aget_tuple(
-                {"configurable": {"thread_id": "smoke-test-nonexistent"}}
-            )
+            result = await checkpointer.aget_tuple({"configurable": {"thread_id": "smoke-test-nonexistent"}})
             assert result is None  # не существует — ожидаемо
 
 
@@ -198,3 +196,157 @@ class TestMetadataSmoke:
                 await server.get_metadata("Catalog.Несуществующий", "test", "1.0")
         except FileNotFoundError:
             pytest.skip("PathManager not available")
+
+
+# ─── REST API smoke (TD-S7-04) ──────────────────────────────────────────────
+
+
+@pytest.mark.integration
+class TestRestApiSmoke:
+    """Smoke tests для REST API HTTP server (TD-S7-02)."""
+
+    def test_http_app_creates(self) -> None:
+        """FastAPI app создаётся с всеми endpoints."""
+        from mcp_servers.http_server import create_http_app
+
+        app = create_http_app()
+        routes = [r.path for r in app.routes if hasattr(r, "path")]
+        assert "/health" in routes
+        assert "/servers" in routes
+        assert "/facade/{tool}" in routes
+
+    def test_http_health_endpoint(self) -> None:
+        """GET /health через TestClient → 200 + JSON."""
+        from fastapi.testclient import TestClient
+
+        from mcp_servers.http_server import create_http_app
+
+        app = create_http_app()
+        client = TestClient(app)
+        response = client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert "status" in data
+        assert "checks" in data
+
+    def test_http_servers_endpoint(self) -> None:
+        """GET /servers → 200 + 6 серверов."""
+        from fastapi.testclient import TestClient
+
+        from mcp_servers.http_server import create_http_app
+
+        app = create_http_app()
+        client = TestClient(app)
+        response = client.get("/servers")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 6
+
+    def test_http_facade_data_status(self) -> None:
+        """POST /facade/data_status → 200 (degraded, no DI)."""
+        from fastapi.testclient import TestClient
+
+        from mcp_servers.facade.handlers import FacadeHandlers
+        from mcp_servers.http_server import create_http_app
+
+        app = create_http_app(FacadeHandlers())
+        client = TestClient(app)
+        response = client.post("/facade/data_status", json={"args": {}})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["tool"] == "data_status"
+        assert "result" in data
+
+
+# ─── FacadeStateStore survive-restart with real Postgres (TD-S7-04) ─────────
+
+
+@pytest.mark.integration
+class TestFacadeStateStorePostgresSmoke:
+    """Smoke tests для FacadeStateStore с реальным Postgres (survive-restart)."""
+
+    @pytest.mark.skipif(
+        "not os.environ.get('TEST_POSTGRES_DSN')",
+        reason="TEST_POSTGRES_DSN not set; requires running Postgres container",
+    )
+    @pytest.mark.asyncio
+    async def test_state_store_save_load_with_postgres(self, postgres_dsn: str) -> None:
+        """FacadeStateStore save → load через реальный Postgres checkpointer."""
+        from orchestrator.persistence import PersistenceManager
+        from orchestrator.state import FSMState, Subtask, TaskState
+        from parsers.models import ObjectRef
+        from mcp_servers.facade import FacadeStateStore
+
+        # Открываем PersistenceManager с реальным Postgres.
+        async with PersistenceManager(dsn=postgres_dsn) as pm:
+            checkpointer = pm.get_checkpointer()
+            store = FacadeStateStore(checkpointer=checkpointer, is_postgres=True, state_class=TaskState)
+
+            state = TaskState(
+                task_id="integration-test-1",
+                description="survive-restart integration test",
+                config_name="ut11",
+                config_version="4.5.3",
+                platform_version="8.3.20",
+                fsm_state=FSMState.GATHERING,
+                subtasks=[
+                    Subtask(
+                        id="st-int-1",
+                        name="TestSubtask",
+                        target_module=ObjectRef(type="CommonModule", name="TestModule"),
+                        description="test",
+                    )
+                ],
+            )
+
+            # Save.
+            await store.save_state("plan-integration-1", state)
+
+            # Load (тот же store instance).
+            loaded = await store.load_state("plan-integration-1")
+            assert loaded is not None
+            assert loaded.task_id == "integration-test-1"
+            assert loaded.fsm_state == FSMState.GATHERING
+            assert len(loaded.subtasks) == 1
+            assert loaded.subtasks[0].id == "st-int-1"
+
+    @pytest.mark.skipif(
+        "not os.environ.get('TEST_POSTGRES_DSN')",
+        reason="TEST_POSTGRES_DSN not set; requires running Postgres container",
+    )
+    @pytest.mark.asyncio
+    async def test_state_store_survive_restart_with_postgres(self, postgres_dsn: str) -> None:
+        """Survive-restart: 2 PersistenceManager instances — второй находит state от первого."""
+        from orchestrator.persistence import PersistenceManager
+        from orchestrator.state import FSMState, TaskState
+        from mcp_servers.facade import FacadeStateStore
+
+        # "Первый запуск": store1 сохраняет state.
+        async with PersistenceManager(dsn=postgres_dsn) as pm1:
+            store1 = FacadeStateStore(
+                checkpointer=pm1.get_checkpointer(),
+                is_postgres=True,
+                state_class=TaskState,
+            )
+            state = TaskState(
+                task_id="survive-restart-test",
+                description="survive restart with real postgres",
+                config_name="ut11",
+                config_version="4.5.3",
+                platform_version="8.3.20",
+                fsm_state=FSMState.CODING,
+            )
+            await store1.save_state("plan-survive-1", state)
+
+        # "Рестарт контейнера": pm2 — новый PersistenceManager, тот же Postgres.
+        async with PersistenceManager(dsn=postgres_dsn) as pm2:
+            store2 = FacadeStateStore(
+                checkpointer=pm2.get_checkpointer(),
+                is_postgres=True,
+                state_class=TaskState,
+            )
+            loaded = await store2.load_state("plan-survive-1")
+            assert loaded is not None
+            assert loaded.task_id == "survive-restart-test"
+            assert loaded.fsm_state == FSMState.CODING
+            assert loaded.description == "survive restart with real postgres"
