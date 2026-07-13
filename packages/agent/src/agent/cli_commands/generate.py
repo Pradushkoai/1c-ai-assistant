@@ -134,6 +134,16 @@ async def _run_pipeline(
         import logging
         logging.getLogger(__name__).warning("kb_server_init_failed: %s", exc)
 
+    # Stage 4 (TD-S6-01): metadata server для gather (api-reference) + plan (dep graph).
+    metadata_server = None
+    try:
+        from mcp_servers.metadata.server import MetadataServer
+
+        metadata_server = MetadataServer()
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("metadata_server_init_failed: %s", exc)
+
     # Stage 3 (TD-S5-01): persistence. PostgresSaver (production) или MemorySaver.
     async with PersistenceManager.from_env() as pm:
         # Собираем граф с DI + checkpointer из PersistenceManager.
@@ -141,6 +151,7 @@ async def _run_pipeline(
             checkpointer=pm.get_checkpointer(),
             bsl_ls_server=bsl_ls_server,
             kb_server=kb_server,
+            metadata_server=metadata_server,
         )
 
         config: dict[str, Any] = {"configurable": {"thread_id": initial_state.task_id}}

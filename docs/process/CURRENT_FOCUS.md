@@ -1,7 +1,7 @@
 # CURRENT FOCUS — точка входа для каждой сессии
 
 > **Этот файл живёт в git репозитории (docs/process/), чтобы переживать сбросы окружения.**
-> Последнее обновление: 2026-07-13 (**Stage 3 ЗАВЕРШЁН** — 4/4 задачи, TD-S5-01/02/03/04 закрыты)
+> Последнее обновление: 2026-07-13 (Stage 4 — **1/4 задача завершена**, TD-S6-01 закрыт)
 
 ---
 
@@ -13,6 +13,7 @@
 - **Этап 1:** ✅ ЗАВЕРШЁН (5/5 задач)
 - **Этап 2:** ✅ **ЗАВЕРШЁН** (7/7 задач) — TD-S4.2-01..07 все закрыты
 - **Stage 3 (Production-readiness):** ✅ **ЗАВЕРШЁН** (4/4) — TD-S5-01/02/03/04 все закрыты
+- **Stage 4 (Contract Compliance):** 🔄 В РАБОТЕ (1/4) — TD-S6-01 ✅ закрыт
 
 ### Что прочитать в порядке приоритета (первые 5 минут сессии)
 1. **Этот файл** (CURRENT_FOCUS.md) — целиком, до конца
@@ -21,15 +22,25 @@
 4. **`docs/process/worklog.md`** — последняя запись (TD-S4.2-04, дата 2026-07-13)
 5. **`docs/architecture/CONCEPTUAL.md`** §2.1 (asyncio.TaskGroup) — если работаешь с validate_node
 
-### Следующий этап (post-Stage 3)
-Stage 3 (Production-readiness) завершён. Возможные следующие направления:
-- **Post-MVP** (TD-005..011): Streaming responses, prompt caching, multi-LLM routing.
-- **REST API** (HTTP server на :8000, Facade через HTTP вместо stdio — для k8s probes).
-- **Production survival-restart** для Facade (hooks в checkpointer.aput/aget_tuple
-  через PersistenceManager — in-memory state dict сейчас не переживает рестарт процесса).
-- **ZaiLLM mypy cleanup** (TD-011: 14 ошибок, LangChain strict typing).
-- **Integration tests** с реальными контейнерами (TEST_POSTGRES_DSN, TEST_GIT_REPO,
-  BSL_LS_HTTP_URL — skip-if-not-set сейчас).
+### Следующая задача Stage 4
+**TD-S6-02: commit_node → git MCP интеграция** (HIGH приоритет)
+- `orchestrator/nodes/commit.py` сейчас пишет файлы в `runtime/generated/` (Sprint 2
+  логика: `commit_sha="n/a (Sprint 2: file save)"`). Нужно: вызывать `GitServer`
+  (TD-S5-03) для реального branch + commit (+ open_pr при настройках).
+- DI через конструктор (`git_server: Any = None`). Fallback: если None → старая
+  логика (file save) для dev/tests.
+- `graph.py` — `build_graph(git_server=...)`. `generate.py` + `facade_entry.py` —
+  создать GitServer, передать в graph.
+- Facade `handle_review → proceed → node_commit` теперь реально создаёт branch/commit.
+
+### Закрытые задачи Stage 4
+- ✅ **TD-S6-01: metadata MCP server + orchestrator wiring** (2026-07-13) —
+  `MetadataServer` с 4 tools (get_metadata, get_form_structure, get_api_reference,
+  get_dependency_graph). `gather_node` убран прямой FS-доступ (PathManager +
+  load_api_reference), теперь ходит через `metadata_server` (DI). `plan_node` —
+  `metadata_server` DI (signature контракт-совместим, ADR-0005). `graph.py` —
+  `build_graph(metadata_server=...)`. Facade `run_cli` proxy поддерживает `metadata.*`.
+  24 теста. Архитектурный пробел #1 закрыт (ADR-0003/0005/0010). См. D-2026-07-13-10.
 
 ### Закрытые задачи Stage 3
 - ✅ **TD-S5-01: PostgresSaver persistence** (2026-07-13) — рабочая реализация
@@ -96,14 +107,14 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 
 ## 🎯 ФОКУС СЕССИИ (для продолжающей сессии)
 
-> **Задача:** Stage 3 (Production-readiness) — **ЗАВЕРШЁН** ✅ (4/4)
-> **Статус:** все 4 задачи закрыты (persistence + Facade + git MCP + Docker production)
+> **Задача:** Stage 4 (Contract Compliance) — **TD-S6-01 ЗАВЕРШЁН** ✅ (1/4)
+> **Статус:** архитектурный пробел #1 закрыт (metadata MCP server + gather/plan wiring)
 > **Блокеры:** нет
-> **Что сделано:** ✅ PersistenceManager (TD-S5-01), ✅ FacadeHandlers с 8 tools + MCP
-> server (TD-S5-02), ✅ GitServer с 4 tools + безопасность (TD-S5-03),
-> ✅ Multi-stage Docker + `1c-ai health` + .env.example + dev override (TD-S5-04)
-> **Следующий шаг:** post-Stage 3 — см. «Следующий этап» выше (post-MVP / REST API /
-> production survival-restart / ZaiLLM mypy / integration tests с контейнерами)
+> **Что сделано:** ✅ PersistenceManager (TD-S5-01), ✅ FacadeHandlers (TD-S5-02),
+> ✅ GitServer (TD-S5-03), ✅ Docker production (TD-S5-04), ✅ MetadataServer +
+> gather/plan wiring (TD-S6-01)
+> **Следующий шаг:** TD-S6-02 (commit_node → git MCP) → TD-S6-03 (mcp serve) →
+> TD-S6-04 (integration tests + docs)
 >
 > **Принцип «Глубина сначала»** (D-2026-07-12-08): качество важнее скорости.
 >
@@ -119,13 +130,17 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 - **Этап 1 прогресс:** 5/5 задач ЗАВЕРШЁН ✅ (TD-S4.1-01..04 + контракт)
 - **Этап 2 прогресс:** **7/7 задач ЗАВЕРШЕНО** ✅ (TD-S4.2-01/02/03/04/05/06/07 ✅)
 - **Stage 3 прогресс:** ✅ 4/4 задач ЗАВЕРШЕНО (TD-S5-01/02/03/04 ✅)
-- **Тесты:** 921 проходят + 7 skipped (3 BSL LS + 3 Postgres + 1 git integration)
+- **Stage 4 прогресс:** 1/4 задач ЗАВЕРШЕНО ✅ (TD-S6-01 ✅; TD-S6-02/03/04 открыты)
+- **Тесты:** 945 проходят + 7 skipped (3 BSL LS + 3 Postgres + 1 git integration)
 - **Persistence:** ✅ PostgresSaver (AsyncPostgresSaver + setup() + connection lifecycle);
   MemorySaver fallback (dev/tests); migrations/ (Alembic scaffolding + state-миграции)
 - **Facade:** ✅ 8 lifecycle tools (ADR-0013): plan/gather/generate/validate/review/explain/run_cli/data_status;
   MCP stdio server; DI через конструктор; in-memory state dict
 - **git MCP:** ✅ 4 tools (create_branch, commit, open_pr, diff) через async subprocess;
   безопасность (branch/path validation, secrets scan в diff)
+- **metadata MCP:** ✅ 4 tools (get_metadata, get_form_structure, get_api_reference,
+  get_dependency_graph); gather/plan ходят через MCP (контракт-совместимо); run_cli
+  proxy поддерживает metadata.*
 - **Docker:** ✅ multi-stage Dockerfile.app (builder + runtime, non-root user, OCI labels);
   `1c-ai health` CLI (persistence + BSL LS ping, JSON output); healthcheck в compose;
   .env.example; docker-compose.override.yml (dev hot reload)
@@ -137,7 +152,7 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 - **BSL LS Docker:** мульти-stage Dockerfile v0.25.5, HTTP API, healthcheck, .dockerignore
 - **Boundary violations:** 0 (DI через functools.partial)
 - **Данные:** УТ11 (5,575 объектов, 7,141 BSL модулей) + HBK 8.3.25 (80 файлов)
-- **Последний коммит:** TD-S5-04 Docker production — Stage 3 ЗАВЕРШЁН (4/4)
+- **Последний коммит:** TD-S6-01 metadata MCP server + wiring — Stage 4 1/4
 
 ---
 

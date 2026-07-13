@@ -119,6 +119,7 @@ class FacadeHandlers:
         persistence_manager: Any = None,
         kb_server: Any = None,
         bsl_ls_server: Any = None,
+        metadata_server: Any = None,
         llm: Any = None,
         path_manager: Any = None,
         config_registry: Any = None,
@@ -133,6 +134,7 @@ class FacadeHandlers:
         self.persistence_manager = persistence_manager
         self.kb_server = kb_server
         self.bsl_ls_server = bsl_ls_server
+        self.metadata_server = metadata_server
         self.llm = llm
         self.path_manager = path_manager
         self.config_registry = config_registry
@@ -188,7 +190,7 @@ class FacadeHandlers:
             fsm_state="planning",
         )
 
-        update = await node_plan(state, llm=self.llm)
+        update = await node_plan(state, llm=self.llm, metadata_server=self.metadata_server)
         state = state.model_copy(update=update)
         self._save_state(plan_id, state)
 
@@ -220,7 +222,7 @@ class FacadeHandlers:
         if idx != state.current_subtask_idx:
             state = state.model_copy(update={"current_subtask_idx": idx})
 
-        update = await node_gather(state, kb_server=self.kb_server)
+        update = await node_gather(state, kb_server=self.kb_server, metadata_server=self.metadata_server)
         state = state.model_copy(update=update)
         self._save_state(parsed.plan_id, state)
 
@@ -461,11 +463,14 @@ class FacadeHandlers:
                 result = await self._proxy_kb(tool_name, parsed.args)
             elif tool_name.startswith("bsl_ls.") and self.bsl_ls_server is not None:
                 result = await self._proxy_bsl_ls(tool_name, parsed.args)
+            elif tool_name.startswith("metadata.") and self.metadata_server is not None:
+                result = await self._proxy_metadata(tool_name, parsed.args)
             else:
                 warning = (
                     f"Tool {tool_name!r} not available. "
-                    "Поддерживаются: kb.* (если kb_server задан), bsl_ls.* (если bsl_ls_server задан). "
-                    "metadata.*/codebase.*/git.* — будут добавлены в следующих спринтах."
+                    "Поддерживаются: kb.* (если kb_server задан), bsl_ls.* (если bsl_ls_server задан), "
+                    "metadata.* (если metadata_server задан). "
+                    "codebase.*/git.* — будут добавлены в следующих спринтах."
                 )
                 result = {}
         except Exception as exc:  # noqa: BLE001
@@ -505,6 +510,21 @@ class FacadeHandlers:
         fn = getattr(self.bsl_ls_server, method_map[method])
         out = await fn(**args)
         return out.model_dump() if hasattr(out, "model_dump") else dict(out)
+
+    async def _proxy_metadata(self, tool_name: str, args: dict[str, Any]) -> dict[str, Any]:
+        """Proxy к metadata_server methods (Stage 4 TD-S6-01)."""
+        method = tool_name.removeprefix("metadata.")
+        method_map = {
+            "get_metadata": "get_metadata",
+            "get_form_structure": "get_form_structure",
+            "get_api_reference": "get_api_reference",
+            "get_dependency_graph": "get_dependency_graph",
+        }
+        if method not in method_map:
+            raise ValueError(f"Unknown metadata tool: {tool_name!r}. Available: {list(method_map)}")
+        fn = getattr(self.metadata_server, method_map[method])
+        out = await fn(**args)
+        return out.model_dump(mode="json") if hasattr(out, "model_dump") else dict(out)
 
     # ─── 8. data_status ─────────────────────────────────────────────────────
 

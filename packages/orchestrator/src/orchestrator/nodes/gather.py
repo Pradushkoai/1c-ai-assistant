@@ -1,9 +1,11 @@
 """gather node — сбор контекста для подзадачи.
 
-Sprint 3: KB context (паттерны + антипаттерны) через KbServer.
-Sprint 4: + metadata + codebase MCP (полный fan-out).
+Stage 3: KB context (паттерны + антипаттерны) через KbServer.
+Stage 4 (TD-S6-01): + metadata через MetadataServer (DI, контракт-совместимо —
+убран прямой FS-доступ к api-reference.json).
 
-См. ADR-0004 (Hierarchical orchestration) и ADR-0009 (Pipeline contracts).
+См. ADR-0004 (Hierarchical orchestration), ADR-0009 (Pipeline contracts),
+ADR-0003 (MCP-архитектура), D-2026-07-13-10.
 """
 
 from __future__ import annotations
@@ -20,15 +22,18 @@ log = get_logger(__name__)
 async def gather_node(
     state: TaskState,
     kb_server: Any = None,
+    metadata_server: Any = None,
 ) -> dict[str, Any]:
-    """Собрать контекст: KB паттерны + антипаттерны.
+    """Собрать контекст: KB паттерны + антипаттерны + metadata (API reference).
 
-    Sprint 3: KB context (patterns + antipatterns).
-    Sprint 4: + metadata (metadata-server) + codebase (codebase-server).
+    Stage 3: KB context (patterns + antipatterns) через kb_server.
+    Stage 4 (TD-S6-01): + metadata (api-reference) через metadata_server.
 
     Args:
         state: текущее состояние pipeline.
-        kb_server: KbServer инстанс. Если None — создаётся.
+        kb_server: KbServer инстанс. Если None — warning.
+        metadata_server: MetadataServer инстанс. Если None — warning, контекст
+            без API reference (backward compat для тестов без DI).
 
     Returns:
         dict с gather_result, fsm_state.
@@ -38,10 +43,12 @@ async def gather_node(
 
     log.info("gather_start", task_id=state.task_id, subtask_id=subtask.id)
 
-    # Sprint 3.2.1: kb_server должен передаваться через DI.
+    # Sprint 3.2.1: servers должны передаваться через DI.
     # Создание сервера — ответственность agent/facade, не orchestrator.
     if kb_server is None:
         log.warning("gather_kb_not_provided", hint="Use build_graph(kb_server=...)")
+    if metadata_server is None:
+        log.warning("gather_metadata_not_provided", hint="Use build_graph(metadata_server=...)")
 
     patterns: list[dict[str, Any]] = []
     antipatterns: list[dict[str, Any]] = []
@@ -77,33 +84,36 @@ async def gather_node(
     summary_lines.append(f"## Целевой объект: {subtask.target_module}")
     summary_lines.append(f"## Задача: {subtask.description}")
 
-    # ─── Sprint 4.2 (TD-S4.2-07): api-reference ────────────────────────────
-    # Загружаем export-методы конфигурации, чтобы Coder видел существующий API
+    # ─── Stage 4 (TD-S6-01): api-reference через metadata_server (MCP) ──────
+    # Загружаем export-методы конфигурации, чтобы Coder видел существующий API.
+    # Контракт-совместимо: раньше был прямой FS-доступ (PathManager + load_api_reference),
+    # теперь — через metadata_server.get_api_reference (ADR-0003, ADR-0010).
     available_methods: list[dict[str, Any]] = []
-    try:
-        from data_layer import PathManager
-        from parsers.indexers import load_api_reference
-
-        pm = PathManager()
-        api_ref_path = pm.unified_metadata_index(state.config_name, state.config_version).parent / "api-reference.json"
-        api_ref = load_api_reference(api_ref_path)
-        if api_ref is not None:
-            # Ищем методы для целевого объекта
-            from parsers.indexers import get_methods_for_object
+    if metadata_server is not None:
+        try:
             target_ref = str(subtask.target_module)
-            available_methods = get_methods_for_object(api_ref, target_ref)
-            mcp_calls_made.append("api_reference.get_methods")
+            # Если target_module — CommonModule.X, запрашиваем API reference для X.
+            # Иначе — пропускаем (api-reference только для общих модулей).
+            if target_ref.startswith("CommonModule."):
+                module_name = target_ref.split(".", 1)[1]
+                api_ref_result = await metadata_server.get_api_reference(
+                    module_name=module_name,
+                    config_name=state.config_name,
+                    config_version=state.config_version,
+                )
+                available_methods = list(api_ref_result.methods)
+                mcp_calls_made.append("metadata.get_api_reference")
 
-            if available_methods:
-                summary_lines.append(f"\n## Существующие методы ({target_ref}):")
-                for m in available_methods[:10]:
-                    params = ", ".join(m.get("parameters", []))
-                    kind = "Функция" if m.get("is_function") else "Процедура"
-                    summary_lines.append(f"- {kind} {m['name']}({params})")
-                if len(available_methods) > 10:
-                    summary_lines.append(f"... и ещё {len(available_methods) - 10} методов")
-    except Exception as exc:
-        log.warning("gather_api_reference_error: %s", exc)
+                if available_methods:
+                    summary_lines.append(f"\n## Существующие методы ({target_ref}):")
+                    for m in available_methods[:10]:
+                        params = ", ".join(m.get("parameters", []))
+                        kind = "Функция" if m.get("is_function") else "Процедура"
+                        summary_lines.append(f"- {kind} {m['name']}({params})")
+                    if len(available_methods) > 10:
+                        summary_lines.append(f"... и ещё {len(available_methods) - 10} методов")
+        except Exception as exc:
+            log.warning("gather_api_reference_error: %s", exc)
 
     if patterns:
         summary_lines.append("\n## Релевантные паттерны:")
@@ -140,6 +150,7 @@ async def gather_node(
         subtask_id=subtask.id,
         patterns=len(patterns),
         antipatterns=len(antipatterns),
+        api_methods=len(available_methods),
         mcp_calls=len(mcp_calls_made),
     )
 

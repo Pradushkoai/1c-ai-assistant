@@ -132,8 +132,8 @@ class GetMetadata:
     required_role: str = "GATHERER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        """Выполнить tool. Реализация в Sprint 4 (metadata server)."""
-        raise NotImplementedError("metadata.get_metadata — реализация в Sprint 4")
+        """Выполнить tool. Реализация — GetMetadataImplementation."""
+        raise NotImplementedError("metadata.get_metadata — вызовите через GetMetadataImplementation")
 
 
 class GetFormStructure:
@@ -153,7 +153,7 @@ class GetFormStructure:
     required_role: str = "GATHERER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError("metadata.get_form_structure — реализация в Sprint 4")
+        raise NotImplementedError("metadata.get_form_structure — вызовите через GetFormStructureImplementation")
 
 
 class GetApiReference:
@@ -173,7 +173,7 @@ class GetApiReference:
     required_role: str = "GATHERER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError("metadata.get_api_reference — реализация в Sprint 4")
+        raise NotImplementedError("metadata.get_api_reference — вызовите через GetApiReferenceImplementation")
 
 
 class GetDependencyGraph:
@@ -194,7 +194,7 @@ class GetDependencyGraph:
     required_role: str = "PLANNER"
 
     async def __call__(self, **kwargs: Any) -> dict[str, Any]:
-        raise NotImplementedError("metadata.get_dependency_graph — реализация в Sprint 4")
+        raise NotImplementedError("metadata.get_dependency_graph — вызовите через GetDependencyGraphImplementation")
 
 
 # Реестр tools metadata-server'а

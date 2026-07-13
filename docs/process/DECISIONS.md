@@ -12,6 +12,78 @@
 
 ## Записи (новые сверху)
 
+### D-2026-07-13-10: TD-S6-01 — metadata MCP server + orchestrator wiring (закрыть архитектурный пробел #1)
+
+**Дата:** 2026-07-13
+**Тип:** architecture + implementation (TD-S6-01, Stage 4 задача 1/4)
+**Контекст:** Stage 3 завершён, но архитектурный аудит выявил 3 пробела. TD-S6-01
+закрывает первый: `metadata/server.py` НЕ существовал (только contracts с
+NotImplementedError). `gather_node` читал `api-reference.json` напрямую из FS
+через `PathManager` (нарушение ADR-0003 MCP-архитектура + ADR-0010 tool contracts —
+оркестратор должен ходить через MCP, не FS). `plan_node` вообще не получал
+структурный контекст (`metadata.get_dependency_graph` в TOOL_GROUPS[PLANNER], но
+никто не вызывал). Facade `run_cli` proxy возвращал warning "metadata.* будут
+добавлены в следующих спринтах".
+
+**Решение:**
+1. **`packages/mcp_servers/src/mcp_servers/metadata/server.py`** — `MetadataServer`
+   класс с 4 async methods:
+   - `get_metadata(object_ref, config_name, config_version)` → `load_metadata_index`
+     + `get_object_from_index` → Pydantic ObjectMetadata/CatalogMetadata/...
+   - `get_form_structure(object_ref, form_name, config_name, config_version)` →
+     парсинг Form.xml через `parsers.xml.form.parse_form` (read-only, по запросу).
+   - `get_api_reference(module_name, config_name, config_version)` →
+     `load_api_reference` + фильтрация по module_name.
+   - `get_dependency_graph(config_name, config_version, object_ref, direction, depth)`
+     → `load_dependency_graph` + фильтрация по object_ref + direction + depth
+     (transitive closure для Planner).
+   - DI через конструктор: `path_manager: PathManager | None = None`. Если None —
+     создаётся через `PathManager()`.
+2. **4 Tool Implementations** (`GetMetadataImplementation`, etc.) — обёртки для
+   MCP server (по паттерну bsl_ls/git).
+3. **`metadata/__init__.py`** — экспорт `MetadataServer`, `METADATA_TOOLS`, 4
+   Implementation.
+4. **`orchestrator/nodes/gather.py`** — убрать прямой FS-доступ (`PathManager` +
+   `load_api_reference`). Вместо этого — DI `metadata_server: Any = None`. Если
+   задан — `await metadata_server.get_api_reference(...)` для target_module. Если
+   None — warning, контекст без API reference (backward compat для тестов без DI).
+5. **`orchestrator/nodes/plan.py`** — добавить `metadata_server: Any = None`. Если
+   задан — `await metadata_server.get_dependency_graph(...)` для структурного
+   анализа (blAST radius для декомпозиции). Если None — fallback на single subtask
+   (как сейчас).
+6. **`orchestrator/graph.py`** — `build_graph(metadata_server=...)`. `plan_node` и
+   `gather_node` получают `partial(..., metadata_server=metadata_server)`.
+7. **`agent/cli_commands/facade_entry.py`** + **`generate.py`** — создать
+   `MetadataServer`, передать в `build_graph` + `FacadeHandlers`.
+8. **`facade/handlers.py`** — `run_cli` proxy расширить на `metadata.*` (4 methods).
+9. **Тесты** `tests/mcp_servers/test_metadata_server.py`:
+   - Unit: 4 tools happy path (mock PathManager/load_*), error cases (файл не
+     найден, невалидный object_ref), Tool Implementations.
+   - Обновить `test_facade_handlers.py`: `run_cli` proxy metadata.* happy path.
+
+**ADR compliance (закрываются):**
+- ADR-0003 (MCP-архитектура: Facade + 5 доменных серверов) — metadata server
+  существует и работает.
+- ADR-0005 (TOOL_GROUPS registry) — Planner/Gatherer реально вызывают tools из
+  своих групп через MCP.
+- ADR-0010 (MCP tool contracts — двойной контракт) — 4 tools с реализацией.
+- CONCEPTUAL §1.1 (зависимости только вниз) — orchestrator НЕ импортирует
+  parsers/data_layer напрямую для metadata (через MCP server).
+
+**Реализация:** commit (pending).
+
+**Последствия:**
+- Положительные: архитектурный пробел #1 закрыт; gather/plan ходят через MCP
+  (контракт-совместимо); run_cli proxy поддерживает metadata.*; foundation для
+  TD-S6-02 (commit_node → git) и TD-S6-03 (mcp serve).
+- Отрицательные: gather/plan теперь требуют metadata_server для полного
+  контекста (без него — деградация с warning, backward compat сохранён).
+
+**Связанные:** ADR-0003, ADR-0005, ADR-0010, CONCEPTUAL §1.1, BACKLOG TD-S6-01,
+D-2026-07-13-09 (предыдущая задача).
+
+---
+
 ### D-2026-07-13-09: TD-S5-04 — Docker production: multi-stage + `1c-ai health` + .env.example
 
 **Дата:** 2026-07-13

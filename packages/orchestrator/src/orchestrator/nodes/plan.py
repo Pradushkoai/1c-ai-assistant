@@ -2,8 +2,12 @@
 
 Sprint 3: LLM planner через planner.system.j2 промпт.
 Если LLM недоступен — fallback на single subtask (Sprint 2 логика).
+Stage 4 (TD-S6-01): + metadata_server DI (ADR-0005 compliance —
+TOOL_GROUPS[PLANNER] включает metadata.get_dependency_graph). Реальный вызов —
+когда planner научится определять target object из description (future).
 
-См. ADR-0004 (Hierarchical orchestration) и ADR-0009 (Pipeline contracts).
+См. ADR-0004 (Hierarchical orchestration), ADR-0009 (Pipeline contracts),
+ADR-0005 (TOOL_GROUPS), D-2026-07-13-10.
 """
 
 from __future__ import annotations
@@ -25,15 +29,24 @@ PROMPT_PATH = str(
 )
 
 
-async def plan_node(state: TaskState, llm: Any = None) -> dict[str, Any]:
+async def plan_node(
+    state: TaskState,
+    llm: Any = None,
+    metadata_server: Any = None,
+) -> dict[str, Any]:
     """Декомпозировать задачу на подзадачи через LLM.
 
     Sprint 3: LLM planner с structured_output.
     Если LLM недоступен — fallback на single subtask.
+    Stage 4 (TD-S6-01): metadata_server DI (ADR-0005 compliance).
 
     Args:
         state: текущее состояние pipeline.
         llm: LLM инстанс. Если None — создаётся из env.
+        metadata_server: MetadataServer инстанс для структурного анализа
+            (dependency graph). Если None — dep_graph_summary=None.
+            Stage 4: signature контракт-совместим; реальный вызов — когда
+            planner научится определять target object из description (future).
 
     Returns:
         dict с subtasks, plan_result, fsm_state.
@@ -50,6 +63,14 @@ async def plan_node(state: TaskState, llm: Any = None) -> dict[str, Any]:
 
             llm = create_llm()
 
+        # Stage 4 (TD-S6-01): dep_graph_summary через metadata_server.
+        # Пока None — planner не знает target object на этом этапе.
+        # Future: LLM tool calling или pre-parsing description для object_ref.
+        dep_graph_summary: str | None = None
+        if metadata_server is not None:
+            # Заглушка: signature контракт-совместим, реальный вызов — future.
+            log.debug("plan_metadata_available", hint="metadata_server ready for future use")
+
         # Рендерим промпт
         from ..llm import render_prompt
 
@@ -58,7 +79,7 @@ async def plan_node(state: TaskState, llm: Any = None) -> dict[str, Any]:
             task_description=state.description,
             config_name=state.config_name,
             config_version=state.config_version,
-            dep_graph_summary=None,
+            dep_graph_summary=dep_graph_summary,
         )
 
         # Вызов LLM с structured_output

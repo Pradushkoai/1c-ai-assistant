@@ -128,7 +128,7 @@ def _make_handlers(
 ) -> FacadeHandlers:
     """Создать FacadeHandlers с mock node callables."""
 
-    async def _plan_node(state: Any, llm: Any = None) -> dict[str, Any]:
+    async def _plan_node(state: Any, llm: Any = None, metadata_server: Any = None) -> dict[str, Any]:
         state.subtasks = [_FakeSubtask("st-001"), _FakeSubtask("st-002")]
         return {
             "subtasks": state.subtasks,
@@ -136,7 +136,7 @@ def _make_handlers(
             "fsm_state": "planning",
         }
 
-    async def _gather_node(state: Any, kb_server: Any = None) -> dict[str, Any]:
+    async def _gather_node(state: Any, kb_server: Any = None, metadata_server: Any = None) -> dict[str, Any]:
         return {
             "gather_result": gather_result
             or {"context_summary": "ctx", "patterns_applied": ["p1"], "mcp_calls_made": ["kb.search_kb"]},

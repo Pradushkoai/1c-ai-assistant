@@ -66,6 +66,9 @@ def create_facade_handlers() -> FacadeHandlers:
     # ─── bsl_ls_server (опц.) ───────────────────────────────────────────────
     bsl_ls_server = _try_create_bsl_ls_server()
 
+    # ─── metadata_server (опц., Stage 4 TD-S6-01) ───────────────────────────
+    metadata_server = _try_create_metadata_server()
+
     # ─── llm (опц.) ─────────────────────────────────────────────────────────
     llm = _try_create_llm()
 
@@ -86,6 +89,7 @@ def create_facade_handlers() -> FacadeHandlers:
         llm=llm,
         path_manager=path_manager,
         config_registry=config_registry,
+        metadata_server=metadata_server,
     )
 
 
@@ -108,6 +112,20 @@ def _try_create_bsl_ls_server() -> Any:
         return BslLsServer()
     except Exception as exc:  # noqa: BLE001
         log.warning("facade_entry: bsl_ls_server init failed: %s", exc)
+        return None
+
+
+def _try_create_metadata_server() -> Any:
+    """Создать MetadataServer, если доступно (Stage 4 TD-S6-01)."""
+    try:
+        from mcp_servers.metadata.server import MetadataServer
+
+        return MetadataServer()
+    except FileNotFoundError as exc:
+        log.warning("facade_entry: metadata_server init failed (paths.env?): %s", exc)
+        return None
+    except Exception as exc:  # noqa: BLE001
+        log.warning("facade_entry: metadata_server init failed: %s", exc)
         return None
 
 

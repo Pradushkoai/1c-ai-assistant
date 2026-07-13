@@ -80,6 +80,7 @@ def build_graph(
     checkpointer: Any = None,
     bsl_ls_server: Any = None,
     kb_server: Any = None,
+    metadata_server: Any = None,
     llm: Any = None,
 ) -> Any:
     """Собрать главный pipeline с dependency injection.
@@ -87,6 +88,8 @@ def build_graph(
     Sprint 3.2.1: устранены boundary violations (orchestrator → mcp_servers).
     Серверы и LLM создаются ВНЕ orchestrator и передаются сюда через DI.
     Соответствует CONCEPTUAL.md §1.1: «зависимости только вниз».
+
+    Stage 4 (TD-S6-01): + metadata_server DI для plan/gather (ADR-0003/0005/0010).
     """
     from functools import partial
 
@@ -96,8 +99,14 @@ def build_graph(
 
     # Узлы — с пробросом зависимостей через partial.
     graph.add_node("preflight", preflight_node)
-    graph.add_node("plan", partial(plan_node, llm=llm) if llm else plan_node)
-    graph.add_node("gather", partial(gather_node, kb_server=kb_server))
+    # Stage 4: plan_node + gather_node получают metadata_server (ADR-0005 compliance).
+    graph.add_node(
+        "plan",
+        partial(plan_node, llm=llm, metadata_server=metadata_server)
+        if llm or metadata_server
+        else plan_node,
+    )
+    graph.add_node("gather", partial(gather_node, kb_server=kb_server, metadata_server=metadata_server))
     graph.add_node("code", partial(code_node, llm=llm) if llm else code_node)
     graph.add_node("validate", partial(validate_node, bsl_ls_server=bsl_ls_server, kb_server=kb_server))
     graph.add_node("review", partial(review_node, llm=llm, kb_server=kb_server) if llm else partial(review_node, kb_server=kb_server))
