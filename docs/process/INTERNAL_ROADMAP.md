@@ -61,12 +61,34 @@
 
 ## 0. Текущий статус
 
+> **Обновлено 2026-07-13:** Все 4 этапа завершены (Этап 1, Этап 2, Stage 3, Stage 4).
+> 991 тестов + 12 skipped. 21 ADR. 29 MCP tools. 0 boundary violations.
+> См. `docs/process/CURRENT_FOCUS.md` для актуального snapshot.
+
 ### Что готово:
+
+**Stage 4 — Contract Compliance (завершён 2026-07-13, 4 задачи)**
+- [x] TD-S6-01: metadata MCP server + gather/plan wiring (ADR-0003/0005/0010)
+- [x] TD-S6-02: commit_node → git MCP (real git flow, ADR-0004/0005/0010)
+- [x] TD-S6-03: `1c-ai mcp serve` CLI + режим C (6 серверов, ADR-0003)
+- [x] TD-S6-04: integration tests + docs sync
+
+**Stage 3 — Production-readiness (завершён 2026-07-13, 4 задачи)**
+- [x] TD-S5-01: PostgresSaver persistence (AsyncPostgresSaver + setup() + migrations)
+- [x] TD-S5-02: Facade handlers (8 lifecycle tools, MCP stdio server)
+- [x] TD-S5-03: git MCP (4 tools + security: branch/path validation, secrets scan)
+- [x] TD-S5-04: Docker production (multi-stage + `1c-ai health` + .env.example + dev override)
+
+**Этап 2 — Поиск и качество (завершён 2026-07-13, 7 задач)**
+- [x] TD-S4.2-01..07: ADR-0020, codebase MCP, standards, BSL LS Docker, library, transitive closure, api-reference
+
+**Этап 1 — Контекст для Coder (завершён 2026-07-12, 5 задач)**
+- [x] TD-S4.1-01..04: Form/Subsystem/Role, api-reference, call graph, dependency graph, asyncio.TaskGroup
 
 **Sprint 0 — Архитектурный (завершён)**
 - [x] Концептуальная архитектура (CONCEPTUAL.md, 10 разделов)
 - [x] 9 шагов проектирования с детальными контрактами (docs/architecture/01-09)
-- [x] 17 ADR (adr/0001-0017)
+- [x] 21 ADR (adr/0001-0021)
 - [x] Репозиторий создан: https://github.com/Pradushkoai/1c-ai-assistant
 - [x] Initial commit (dfb609d): структура пакетов, Dockerfile'ы, docker-compose, CI-скрипты
 - [x] 5 Python пакетов uv workspace

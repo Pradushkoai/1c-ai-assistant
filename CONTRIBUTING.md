@@ -5,7 +5,7 @@
 ## Перед началом работы
 
 1. Прочтите [docs/architecture/CONCEPTUAL.md](docs/architecture/CONCEPTUAL.md) — концептуальная архитектура без кода
-2. Прочтите [adr/](adr/) — 17 ADR с обоснованием решений
+2. Прочтите [adr/](adr/) — 21 ADR с обоснованием решений
 3. Прочтите [AGENTS.md](AGENTS.md) — правила для AI-агентов
 4. Прочтите [CHANGELOG.md](CHANGELOG.md) — история изменений
 

@@ -51,11 +51,23 @@ jobs:
           docker compose logs postgres
           exit 1
 
+      - name: Create temp git repo for tests
+        run: |
+          git init -b main test-git-repo
+          cd test-git-repo
+          git config user.email "ci@test.com"
+          git config user.name "CI"
+          echo "# Test repo" > README.md
+          git add README.md
+          git commit -m "initial"
+
       - name: Run integration tests
         run: uv run pytest tests/integration/ -m integration --tb=short -v
         env:
           DATABASE_URL: postgresql://agent:agent@localhost:5432/agent
+          TEST_POSTGRES_DSN: postgresql://agent:agent@localhost:5432/agent
           BSL_LS_HTTP_URL: http://localhost:8080
+          TEST_GIT_REPO: ${{ github.workspace }}/test-git-repo
 
       - name: Dump logs on failure
         if: failure()

@@ -68,6 +68,7 @@ markers = [
     "snapshot: MCP contract snapshot tests",
     "golden: end-to-end pipeline tests",
     "benchmark: performance benchmarks (not run by default)",
+    "integration: integration tests with real containers (postgres, bsl-ls, git)",
 ]
 
 # ─── Coverage ────────────────────────────────────────────────────────────────

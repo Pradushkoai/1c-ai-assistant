@@ -7,24 +7,32 @@
 
 ## Текущий статус
 
-**Sprint 1 завершён.** `1c-ai config build` работает end-to-end.
-344 теста проходят. CI зелёная (после фикса mypy).
+**Stage 4 (Contract Compliance) завершён.** Все 4 этапа закрыты.
+**991 тест** проходят + 12 skipped (integration без контейнеров). CI зелёная.
 
-**Что готово:**
-- `parsers/models/` — 22 Pydantic v2 модели
-- `parsers/xml/` — 4 парсера + универсальный парсер
-- `parsers/indexers/` — metadata_indexer
-- `data_layer/` — PathManager, ConfigRegistry, freshness
-- `agent/` — CLI `1c-ai` (init, config add/build/list/remove, validate, hbk load)
-- `tests/` — 344 теста (smoke, property-based, persistence, end-to-end)
-- CI/CD — `.github/workflows/ci.yml` + `integration.yml`
+**Что готово (Этапы 1-4):**
+- **Этап 1** (5/5): parsers (xml/bsl/hbk/models/indexers), data_layer, agent CLI
+- **Этап 2** (7/7): ADR-0020 embeddings, codebase MCP, standards (4 СТО + 4 БСП),
+  BSL LS Docker, library add, transitive closure, api-reference в pipeline
+- **Stage 3** (4/4): PostgresSaver persistence, Facade handlers (8 lifecycle tools),
+  git MCP (4 tools + безопасность), Docker production (multi-stage + `1c-ai health`)
+- **Stage 4** (4/4): metadata MCP server + gather/plan wiring (ADR-0003/0005/0010),
+  commit_node → git MCP (real git flow), `1c-ai mcp serve` CLI + режим C (6 серверов),
+  integration tests + docs sync
 
-**Что не готово (Sprint 2+):**
-- `parsers/bsl/` — парсер .bsl файлов (Sprint 2)
-- `mcp_servers/` — все 5 MCP серверов (Sprint 2-4)
-- `orchestrator/` — LangGraph pipeline (Sprint 2)
-- `knowledge-base/` — KB-as-code (Sprint 3)
-- Docker — 3 контейнера (Sprint 4)
+**Метрики:**
+- **21 ADR** (Architecture Decision Records) в `adr/`
+- **29 MCP tools** (21 domain + 8 facade) в 6 серверах
+- **4 параллельных валидатора** в validate_node (asyncio.TaskGroup)
+- **23 KB сущности** (5 patterns + 10 antipatterns + 8 standards)
+- **0 boundary violations** (DI через functools.partial)
+- **HBK**: 10,150 методов платформы 8.3.25
+
+**CLI команды:**
+- `1c-ai init` / `config add|build|list|remove` / `validate` / `health`
+- `1c-ai generate` — pipeline end-to-end (real git commit если `1C_AI_REPO_PATH` задан)
+- `1c-ai mcp serve --server {facade|metadata|codebase|kb|bsl_ls|git}` — MCP stdio
+- `1c-ai hbk load` / `library add|build|list|remove`
 
 ---
 
@@ -32,7 +40,7 @@
 
 1. **Прочитай AGENTS.md** (этот файл)
 2. **Прочитай [docs/architecture/CONCEPTUAL.md](docs/architecture/CONCEPTUAL.md)** — концептуальная архитектура
-3. **Прочитай [adr/](adr/)** — 17 ADR с обоснованием решений
+3. **Прочитай [adr/](adr/)** — 21 ADR с обоснованием решений
 4. **Прочитай [CHANGELOG.md](CHANGELOG.md)** — история изменений
 5. **Пойми контекст задачи** — какой спринт, какой компонент
 

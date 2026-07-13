@@ -1,7 +1,7 @@
 # CURRENT FOCUS — точка входа для каждой сессии
 
 > **Этот файл живёт в git репозитории (docs/process/), чтобы переживать сбросы окружения.**
-> Последнее обновление: 2026-07-13 (Stage 4 — **3/4 задачи завершены**, TD-S6-01/02/03 закрыты)
+> Последнее обновление: 2026-07-13 (**Stage 4 ЗАВЕРШЁН** — 4/4 задачи, TD-S6-01/02/03/04 закрыты; все этапы завершены)
 
 ---
 
@@ -13,7 +13,7 @@
 - **Этап 1:** ✅ ЗАВЕРШЁН (5/5 задач)
 - **Этап 2:** ✅ **ЗАВЕРШЁН** (7/7 задач) — TD-S4.2-01..07 все закрыты
 - **Stage 3 (Production-readiness):** ✅ **ЗАВЕРШЁН** (4/4) — TD-S5-01/02/03/04 все закрыты
-- **Stage 4 (Contract Compliance):** 🔄 В РАБОТЕ (3/4) — TD-S6-01/02/03 ✅ закрыты
+- **Stage 4 (Contract Compliance):** ✅ **ЗАВЕРШЁН** (4/4) — TD-S6-01/02/03/04 все закрыты
 
 ### Что прочитать в порядке приоритета (первые 5 минут сессии)
 1. **Этот файл** (CURRENT_FOCUS.md) — целиком, до конца
@@ -22,37 +22,35 @@
 4. **`docs/process/worklog.md`** — последняя запись (TD-S4.2-04, дата 2026-07-13)
 5. **`docs/architecture/CONCEPTUAL.md`** §2.1 (asyncio.TaskGroup) — если работаешь с validate_node
 
-### Следующая задача Stage 4
-**TD-S6-04: Integration tests с реальными контейнерами + docs sync** (MEDIUM приоритет)
-- `.github/workflows/integration.yml` — service containers (postgres, bsl-ls),
-  запустить integration tests с `TEST_POSTGRES_DSN` + `BSL_LS_HTTP_URL` + `TEST_GIT_REPO`.
-- `tests/integration/` — реальные e2e: persistence survive-restart, git roundtrip,
-  BSL LS lint, metadata server через mini_config.
-- `AGENTS.md` — актуализировать (Stage 3-4 завершены, 988+ тестов, 21 ADR).
-- `CHANGELOG.md` — entries для Этапов 1/2/Stage 3/Stage 4.
-- `INTERNAL_ROADMAP.md` — отметить Sprint 4 завершённым.
-- `CONTRIBUTING.md` — «21 ADR».
+### Следующий этап (post-Stage 4)
+Все 4 этапа завершены (Этап 1, Этап 2, Stage 3, Stage 4). Возможные следующие
+направления:
+- **Post-MVP** (TD-005..011): Streaming responses, prompt caching, multi-LLM routing.
+- **REST API** (HTTP server на :8000, Facade через HTTP вместо stdio — для k8s probes).
+- **Production survival-restart** для Facade (hooks в checkpointer.aput/aget_tuple
+  через PersistenceManager — in-memory state dict сейчас не переживает рестарт процесса).
+- **ZaiLLM mypy cleanup** (TD-011: 14 ошибок, LangChain strict typing).
+- **Integration tests** с реальными контейнерами в CI (tests/integration/ создан,
+  skip-if-no-env; CI workflow готов).
+- **SDBL парсер** (ANTLR4) и **SKD парсер** (DataCompositionSchema) — Sprint 4 unchecked.
+- **Qdrant store** (ADR-0017 предусматривает, pgvector покрывает).
 
 ### Закрытые задачи Stage 4
 - ✅ **TD-S6-01: metadata MCP server + orchestrator wiring** (2026-07-13) —
-  `MetadataServer` с 4 tools (get_metadata, get_form_structure, get_api_reference,
-  get_dependency_graph). `gather_node` убран прямой FS-доступ (PathManager +
-  load_api_reference), теперь ходит через `metadata_server` (DI). `plan_node` —
-  `metadata_server` DI (signature контракт-совместим, ADR-0005). `graph.py` —
-  `build_graph(metadata_server=...)`. Facade `run_cli` proxy поддерживает `metadata.*`.
-  24 теста. Архитектурный пробел #1 закрыт (ADR-0003/0005/0010). См. D-2026-07-13-10.
-- ✅ **TD-S6-02: commit_node → git MCP интеграция** (2026-07-13) — `commit_node`
-  переписан: real git flow (create_branch + write file + commit + опц. open_pr через
-  GitServer) если `git_server` + `repo_path` (env `1C_AI_REPO_PATH`) заданы; fallback
-  file save иначе (backward compat). `graph.py` — `build_graph(git_server=...,
-  repo_path=...)`. Facade `handle_review → proceed → node_commit` пробрасывает
-  git_server/repo_path. 14 тестов. Архитектурный пробел #2 закрыт (ADR-0004/0005/0010).
+  `MetadataServer` с 4 tools. `gather_node` убран прямой FS-доступ, ходит через
+  metadata_server (DI). `plan_node` — metadata_server DI (ADR-0005). 24 теста.
+  Архитектурный пробел #1 закрыт (ADR-0003/0005/0010). См. D-2026-07-13-10.
+- ✅ **TD-S6-02: commit_node → git MCP интеграция** (2026-07-13) — real git flow
+  (create_branch + commit + опц. open_pr) если git_server + repo_path заданы;
+  fallback file save иначе. 14 тестов. Пробел #2 закрыт (ADR-0004/0005/0010).
   См. D-2026-07-13-11.
 - ✅ **TD-S6-03: `1c-ai mcp serve` CLI + режим C** (2026-07-13) — `server_factory.py`
-  единая factory: `create_domain_server(name)` для 6 серверов (facade/metadata/
-  codebase/kb/bsl_ls/git). `1c-ai mcp serve --server NAME` (stdio). `--list` показывает
-  серверы + tools count. Cursor может подключиться к любому серверу напрямую (режим C,
-  CONCEPTUAL §1.2). 29 тестов. Архитектурный пробел #3 закрыт (ADR-0003). См. D-2026-07-13-12.
+  единая factory для 6 серверов. `1c-ai mcp serve --server NAME` (stdio). `--list`.
+  29 тестов. Пробел #3 закрыт (ADR-0003). См. D-2026-07-13-12.
+- ✅ **TD-S6-04: Integration tests + docs sync** (2026-07-13) — `tests/integration/`
+  с smoke tests (Postgres, BSL LS, git, metadata). CI workflow обновлён (env vars +
+  temp git repo). AGENTS.md, CHANGELOG.md, INTERNAL_ROADMAP.md, CONTRIBUTING.md
+  актуализированы. См. D-2026-07-13-13.
 
 ### Закрытые задачи Stage 3
 - ✅ **TD-S5-01: PostgresSaver persistence** (2026-07-13) — рабочая реализация
@@ -119,14 +117,12 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 
 ## 🎯 ФОКУС СЕССИИ (для продолжающей сессии)
 
-> **Задача:** Stage 4 (Contract Compliance) — **TD-S6-01/02/03 ЗАВЕРШЕНЫ** ✅ (3/4)
-> **Статус:** все 3 архитектурных пробела закрыты (metadata + commit→git + mcp serve)
+> **Задача:** Stage 4 (Contract Compliance) — **ЗАВЕРШЁН** ✅ (4/4)
+> **Статус:** все 4 этапа закрыты (Этап 1 + Этап 2 + Stage 3 + Stage 4)
 > **Блокеры:** нет
-> **Что сделано:** ✅ PersistenceManager (TD-S5-01), ✅ FacadeHandlers (TD-S5-02),
-> ✅ GitServer (TD-S5-03), ✅ Docker production (TD-S5-04), ✅ MetadataServer +
-> gather/plan wiring (TD-S6-01), ✅ commit_node → git MCP (TD-S6-02), ✅ `1c-ai mcp serve`
-> CLI + режим C (TD-S6-03)
-> **Следующий шаг:** TD-S6-04 (integration tests с контейнерами + docs sync) — ЗАВЕРШАЮЩАЯ
+> **Что сделано:** ✅ Все 3 архитектурных пробела закрыты (metadata MCP + commit→git +
+> mcp serve) + integration tests + docs sync
+> **Следующий шаг:** post-Stage 4 — см. «Следующий этап» выше
 >
 > **Принцип «Глубина сначала»** (D-2026-07-12-08): качество важнее скорости.
 >
@@ -142,8 +138,8 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 - **Этап 1 прогресс:** 5/5 задач ЗАВЕРШЁН ✅ (TD-S4.1-01..04 + контракт)
 - **Этап 2 прогресс:** **7/7 задач ЗАВЕРШЕНО** ✅ (TD-S4.2-01/02/03/04/05/06/07 ✅)
 - **Stage 3 прогресс:** ✅ 4/4 задач ЗАВЕРШЕНО (TD-S5-01/02/03/04 ✅)
-- **Stage 4 прогресс:** 3/4 задач ЗАВЕРШЕНО ✅ (TD-S6-01/02/03 ✅; TD-S6-04 открыта)
-- **Тесты:** 988 проходят + 7 skipped (3 BSL LS + 3 Postgres + 1 git integration)
+- **Stage 4 прогресс:** ✅ 4/4 задач ЗАВЕРШЕНО (TD-S6-01/02/03/04 ✅)
+- **Тесты:** 991 проходят + 12 skipped (3 BSL LS + 3 Postgres + 1 git + 5 integration smoke)
 - **Persistence:** ✅ PostgresSaver (AsyncPostgresSaver + setup() + connection lifecycle);
   MemorySaver fallback (dev/tests); migrations/ (Alembic scaffolding + state-миграции)
 - **Facade:** ✅ 8 lifecycle tools (ADR-0013): plan/gather/generate/validate/review/explain/run_cli/data_status;
@@ -169,7 +165,7 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 - **BSL LS Docker:** мульти-stage Dockerfile v0.25.5, HTTP API, healthcheck, .dockerignore
 - **Boundary violations:** 0 (DI через functools.partial)
 - **Данные:** УТ11 (5,575 объектов, 7,141 BSL модулей) + HBK 8.3.25 (80 файлов)
-- **Последний коммит:** TD-S6-03 1c-ai mcp serve + режим C — Stage 4 3/4
+- **Последний коммит:** TD-S6-04 integration tests + docs sync — Stage 4 ЗАВЕРШЁН (4/4)
 
 ---
 

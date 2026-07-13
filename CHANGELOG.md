@@ -8,6 +8,75 @@
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-07-13 — Stage 4 (Contract Compliance) завершён
+
+### Added — Stage 4 (4 задачи)
+
+- **TD-S6-01: metadata MCP server** — `MetadataServer` с 4 tools (get_metadata,
+  get_form_structure, get_api_reference, get_dependency_graph). `gather_node` убран
+  прямой FS-доступ, ходит через MCP (DI). `plan_node` — metadata_server DI
+  (ADR-0005 compliance). Facade `run_cli` proxy поддерживает `metadata.*`.
+  Архитектурный пробел #1 закрыт (ADR-0003/0005/0010). См. D-2026-07-13-10.
+- **TD-S6-02: commit_node → git MCP** — `commit_node` переписан: real git flow
+  (create_branch + commit + опц. open_pr через GitServer) если `git_server` +
+  `1C_AI_REPO_PATH` заданы; fallback file save иначе. Facade `handle_review → proceed`
+  реально коммитит. Архитектурный пробел #2 закрыт (ADR-0004/0005/0010). См. D-2026-07-13-11.
+- **TD-S6-03: `1c-ai mcp serve` CLI + режим C** — `server_factory.py` единая factory
+  для 6 серверов (facade/metadata/codebase/kb/bsl_ls/git). `1c-ai mcp serve --server NAME`
+  (stdio). Cursor может подключиться к любому MCP напрямую (режим C, CONCEPTUAL §1.2).
+  Архитектурный пробел #3 закрыт (ADR-0003). См. D-2026-07-13-12.
+- **TD-S6-04: Integration tests + docs sync** — `tests/integration/` с smoke tests
+  (Postgres, BSL LS, git, metadata). CI workflow обновлён (env vars + temp git repo).
+  AGENTS.md, CHANGELOG.md, INTERNAL_ROADMAP.md, CONTRIBUTING.md актуализированы.
+
+### Changed
+
+- **991 тест** проходят + 12 skipped (было 921+7, +70 от Stage 4).
+- **0 boundary violations** — mcp_servers НЕ импортирует agent (DI через kwargs).
+- **mypy**: 14 ошибок (базовая TD-011, новых нет).
+- **21 ADR** (было 19, +ADR-0020 embeddings strategy, +ADR-0021 будет в future).
+
+## [0.3.0] — 2026-07-13 — Stage 3 (Production-readiness) завершён
+
+### Added — Stage 3 (4 задачи)
+
+- **TD-S5-01: PostgresSaver persistence** — `PersistenceManager` рабочая реализация
+  (AsyncPostgresSaver + setup() + connection lifecycle). `schema_version` в TaskState
+  (ADR-0018). Миграции: Alembic scaffolding + state-миграции. 21 unit + 3 integration
+  тестов. См. D-2026-07-13-04, D-2026-07-13-05.
+- **TD-S5-02: Facade handlers** — 8 lifecycle tools по ADR-0013 (plan/gather/generate/
+  validate/review/explain/run_cli/data_status). FacadeHandlers с DI, MCP stdio server.
+  См. D-2026-07-13-07.
+- **TD-S5-03: git MCP** — GitServer с 4 tools (create_branch, commit, open_pr, diff)
+  через async subprocess. Безопасность: branch/path validation, secrets scan (7 паттернов).
+  См. D-2026-07-13-08.
+- **TD-S5-04: Docker production** — multi-stage Dockerfile.app (builder + runtime,
+  non-root user, OCI labels). `1c-ai health` CLI (persistence + BSL LS ping, JSON output).
+  healthcheck в compose. `.env.example`. `docker-compose.override.yml` (dev hot reload).
+  См. D-2026-07-13-09.
+
+## [0.2.0] — 2026-07-13 — Этап 2 (Поиск и качество) завершён
+
+### Added — Этап 2 (7 задач)
+
+- **TD-S4.2-01**: ADR-0020 — гибридный BM25+pgvector+RRF, multilingual-e5-large 1024 dim.
+- **TD-S4.2-02**: codebase MCP (4 tools: semantic_search, get_module, get_similar, call_graph).
+- **TD-S4.2-03**: standards (8 YAML: 4 СТО + 4 БСП, 4-й валидатор).
+- **TD-S4.2-04**: BSL LS Docker (multi-stage, HTTP API, healthcheck, .dockerignore).
+- **TD-S4.2-05**: `1c-ai library add` (БСП/БПО индексация).
+- **TD-S4.2-06**: transitive closure для Planner/Reviewer.
+- **TD-S4.2-07**: api-reference в pipeline (Gatherer).
+
+## [0.1.1] — 2026-07-12 — Этап 1 (Контекст для Coder) завершён
+
+### Added — Этап 1 (5 задач)
+
+- Form/Subsystem/Role парсеры (parsers/xml/)
+- api-reference indexer (parsers/indexers/)
+- call graph builder (parsers/bsl/)
+- dependency graph builder (parsers/xml/dependency_graph.py)
+- asyncio.TaskGroup в validate_node (4 параллельных валидатора)
+
 ## [0.1.0] — 2026-07-11
 
 ### Added
