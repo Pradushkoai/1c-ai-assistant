@@ -1,8 +1,9 @@
-"""mcp_servers.facade — 7 lifecycle tools + data_status.
+"""mcp_servers.facade — 8 lifecycle tools (TD-S5-02, ADR-0013).
 
-Контракты и заглушки handlers. Реализация — Sprint 2-4.
+Контракты, handlers, MCP server. 8 tools: plan, gather, generate, validate,
+review, explain, run_cli, data_status.
 
-См. ADR-0013 (Agent-Facade — 7 lifecycle tools).
+См. ADR-0013 (Agent-Facade — 7 lifecycle tools + data_status).
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ from .next_action import (
     after_review,
     after_validate,
 )
+from .server import create_facade_server, run_facade_server, run_sync
 from .tool_definitions import FACADE_TOOL_NAMES, FACADE_TOOLS
 
 __all__ = [
@@ -55,6 +57,10 @@ __all__ = [
     "DataStatusOutput",
     # handlers
     "FacadeHandlers",
+    # server
+    "create_facade_server",
+    "run_facade_server",
+    "run_sync",
     # next_action builders
     "after_plan",
     "after_gather",

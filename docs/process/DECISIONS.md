@@ -12,6 +12,77 @@
 
 ## Записи (новые сверху)
 
+### D-2026-07-13-07: TD-S5-02 — Facade handlers: in-memory state + 8 tools по ADR-0013 (расхождение с BACKLOG)
+
+**Дата:** 2026-07-13
+**Тип:** architecture + implementation (TD-S5-02, Stage 3 задача 2/4)
+**Контекст:** BACKLOG TD-S5-02 перечислил 8 lifecycle tools: `start_task, get_status,
+get_plan, get_code, get_review, validate_now, retry_iteration, complete_task`. Но
+ADR-0013 (главный контракт, принят 2026-07-11) определяет **другой** набор из 8
+tools: `plan, gather, generate, validate, review, explain, run_cli, data_status`.
+Контракты (`facade/contracts.py`), `tool_definitions.py` (`FACADE_TOOLS`),
+`next_action.py` (5 builder'ов) уже реализованы по ADR-0013. BACKLOG-список —
+более поздняя мысль автора BACKLOG, не отражённая в коде.
+
+Дополнительно: orchestrator — это LangGraph StateGraph, запускаемый целиком через
+`graph.ainvoke()`. Facade требует **пошагового** выполнения (plan → gather → ...).
+В ADR-0013: «CLI и MCP-Facade — один код под капотом (handlers переиспользуются)».
+
+**Решение:**
+1. **Следовать ADR-0013** (контракт выше предпочтений). 8 tools: `plan, gather,
+   generate, validate, review, explain, run_cli, data_status`. BACKLOG-список
+   (`start_task` etc.) **не применяется** — он противоречит контракту и уже
+   реализованным `contracts.py` / `tool_definitions.py` / `next_action.py`.
+2. **FacadeHandlers** — класс с DI через конструктор: `persistence_manager`,
+   `kb_server`, `bsl_ls_server`, `llm`, `path_manager`, `config_registry`.
+   Соответствует принципу DI (нет boundary violations: mcp_servers.facade может
+   импортировать orchestrator, parsers, data_layer).
+3. **State management** — in-memory dict `plan_id → TaskState`. Каждый handler:
+   - валидирует input через Pydantic Input-контракт
+   - загружает/создаёт TaskState (in-memory; опц. persistence через
+     `PersistenceManager` для будущего production survival-restart)
+   - вызывает соответствующий node напрямую (`plan_node`, `gather_node`,
+     `code_node`, `validate_node`, `review_node`, `commit_node`)
+   - применяет обновление: `state.model_copy(update=node_result)`
+   - сохраняет в in-memory dict
+   - формирует Output через Pydantic Output-контракт + `next_action` builder
+4. **handle_review** с `decision="proceed"` дополнительно вызывает `commit_node`
+   (review → commit в одном tool, согласно ADR-0013: «при proceed — открывается PR»).
+5. **handle_data_status** — `PathManager.validate()` + `ConfigRegistry.list()` +
+   `freshness_check()`. Без state, без persistence.
+6. **handle_explain** — read-only: `kb_server.search_kb()` + `codebase.semantic_search()`.
+   Без state, без persistence.
+7. **handle_run_cli** — proxy к доменным MCP tools через lookup-таблицу. Пока
+   возвращает warning для нерелизованных tools.
+8. **server.py** — `create_facade_server()` возвращает `mcp.server.Server` с 8
+   tools (через `FACADE_TOOLS` definitions + handlers dispatch).
+   `run_facade_server()` — stdio loop. `run_sync()` — для `[project.scripts]`.
+
+**Persistence notes:** In-memory state dict достаточен для MCP stdio server
+(один процесс, state в памяти переживает несколько tool-вызовов в рамках сессии
+Cursor). Для production survival-restart (пережить рестарт контейнера) —
+отдельный TD: hooks в `checkpointer.aput/aget_tuple` через `PersistenceManager`.
+Фундамент (TD-S5-01) уже готов.
+
+**Тесты** (`tests/mcp_servers/test_facade_handlers.py`):
+- 8 handlers: happy path (mock nodes) + input validation (extra/missing fields)
+  + next_action correctness + state propagation между вызовами + error cases.
+- `test_facade_server.py`: tools registered (8), snapshot tool names, input
+  schemas valid JSON Schema.
+
+**Реализация:** commit (pending).
+
+**Последствия:**
+- Положительные: Facade реально работает (были заглушки NotImplementedError);
+  ADR-0013 соблюдён; DI чистый; 8 tools экспонируются через MCP stdio.
+- Отрицательные: in-memory state не переживает рестарт процесса — задокументировано
+  (отдельный TD для production hooks).
+
+**Связанные:** ADR-0013, ADR-0010, ADR-0003, ADR-0009, D-2026-07-13-04 (persistence),
+TD-S5-02.
+
+---
+
 ### D-2026-07-13-05: Стратегия миграций — Alembic scaffolding + разделение ответственности с LangGraph setup()
 
 **Дата:** 2026-07-13

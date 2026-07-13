@@ -187,23 +187,62 @@ class TestFacadeTools:
 
 class TestFacadeHandlers:
     @pytest.mark.asyncio
-    async def test_all_handlers_raise_not_implemented(self):
+    async def test_handlers_without_di_raise_not_configured(self):
+        """Handlers без DI поднимают FacadeNotConfiguredError (не NotImplementedError).
+
+        TD-S5-02: handlers реализованы, требуют DI через конструктор.
+        explain / run_cli / data_status не требуют node_* — работают с servers/path_manager.
+        """
+        from mcp_servers.facade.handlers import FacadeNotConfiguredError, FacadeHandlers
+
+        handlers = FacadeHandlers()  # нет DI
+
+        # Эти handlers требуют node_* / state_factory.
+        with pytest.raises(FacadeNotConfiguredError, match="state_factory"):
+            await handlers.handle_plan(
+                {
+                    "task": "test",
+                    "config_name": "ut11",
+                    "config_version": "4.5.3",
+                    "platform_version": "8.3.20",
+                }
+            )
+
+        with pytest.raises(FacadeNotConfiguredError, match="node_gather"):
+            await handlers.handle_gather({"plan_id": "plan-x", "subtask_id": "st-x"})
+
+        with pytest.raises(FacadeNotConfiguredError, match="node_code"):
+            await handlers.handle_generate(
+                {"plan_id": "plan-x", "subtask_id": "st-x", "iteration": 1}
+            )
+
+        with pytest.raises(FacadeNotConfiguredError, match="node_validate"):
+            await handlers.handle_validate({"artifact_id": "st-x#1"})
+
+        with pytest.raises(FacadeNotConfiguredError, match="node_review"):
+            await handlers.handle_review({"artifact_id": "st-x#1"})
+
+    @pytest.mark.asyncio
+    async def test_explain_run_cli_data_status_work_without_di(self):
+        """explain / run_cli / data_status работают без node_* (деградируют)."""
         from mcp_servers.facade.handlers import FacadeHandlers
 
-        handlers = FacadeHandlers()
-        methods = [
-            handlers.handle_plan,
-            handlers.handle_gather,
-            handlers.handle_generate,
-            handlers.handle_validate,
-            handlers.handle_review,
-            handlers.handle_explain,
-            handlers.handle_run_cli,
-            handlers.handle_data_status,
-        ]
-        for method in methods:
-            with pytest.raises(NotImplementedError):
-                await method({})
+        handlers = FacadeHandlers()  # нет DI
+
+        # explain без kb_server → explanation содержит "KB сервер не настроен".
+        result = await handlers.handle_explain({"query": "test"})
+        assert "KB сервер не настроен" in result["explanation"]
+
+        # run_cli без kb_server/bsl_ls_server → warning.
+        result = await handlers.handle_run_cli(
+            {"tool_name": "kb.search_kb", "args": {"query": "test"}}
+        )
+        assert result["warning"] is not None
+        assert "not available" in result["warning"]
+
+        # data_status без path_manager → missing_prerequisites содержит "PathManager".
+        result = await handlers.handle_data_status({})
+        assert any("PathManager" in m for m in result["missing_prerequisites"])
 
 
 class TestNextActionBuilders:

@@ -1315,3 +1315,89 @@ LangGraph checkpoints переживали рестарт контейнера. 
 - Foundation для TD-S5-02 (Facade: health_check + восстановление state) готов.
 - Foundation для TD-S5-04 (Docker healthcheck) готов.
 - **Следующий шаг:** TD-S5-02 (Facade handlers, 8 lifecycle tools).
+
+---
+
+## 2026-07-13: TD-S5-02 — Facade handlers (8 lifecycle tools, Stage 3 задача 2/4)
+
+**Task ID:** TD-S5-02
+**Agent:** main (GLM, продолжающая сессия)
+**Этап:** Stage 3 (Production-readiness), вторая задача
+
+### Контекст
+
+TD-S5-01 (persistence) закрыт. Следующая задача — Facade handlers: обвязка над
+orchestrator для Cursor. В `facade/handlers.py` были заглушки `NotImplementedError`,
+`server.py` — заглушка. Контракты (`contracts.py`), `tool_definitions.py`,
+`next_action.py` уже реализованы по ADR-0013 (8 tools: plan/gather/generate/validate/
+review/explain/run_cli/data_status).
+
+### Аудит
+
+- BACKLOG TD-S5-02 перечислил другой набор 8 tools (`start_task, get_status, ...`) —
+  **расхождение с ADR-0013**. Контракт выше предпочтений → следую ADR-0013.
+  Зафиксировано в D-2026-07-13-07.
+- orchestrator — LangGraph StateGraph (запускается целиком через `graph.ainvoke()`),
+  но Facade требует пошагового выполнения. Решение: handlers вызывают nodes напрямую
+  (DI), in-memory state dict по plan_id.
+- Boundary rule (CONCEPTUAL §1.1): `mcp_servers` НЕ импортирует `orchestrator`.
+  Первая попытка — прямой импорт `orchestrator.nodes` в handlers — сломала
+  `check_package_boundaries.py`. Переделал на чистый DI: `state_factory` + `node_*`
+  callables через конструктор. Точка сборки — `agent/cli_commands/facade_entry.py`
+  (agent-слой может импортировать откуда угодно).
+
+### Что сделано
+
+1. **DECISIONS.md** — D-2026-07-13-07: расхождение BACKLOG vs ADR-0013 + подход
+   handlers (in-memory state + DI через конструктор).
+
+2. **`packages/mcp_servers/src/mcp_servers/facade/handlers.py`** — реализация
+   `FacadeHandlers` (были заглушки):
+   - DI через конструктор: `state_factory`, `node_plan/gather/code/validate/review/commit`,
+     `kb_server`, `bsl_ls_server`, `llm`, `path_manager`, `config_registry`.
+   - In-memory state dict `plan_id → state`.
+   - 8 handlers: plan (создаёт state, plan_node, next=gather), gather (node_gather,
+     next=generate), generate (node_code, next=validate), validate (node_validate,
+     next=review или generate-retry), review (node_review + node_commit при proceed,
+     next=gather-next или data_status), explain (read-only kb+codebase), run_cli
+     (proxy к kb.*/bsl_ls.*), data_status (PathManager + ConfigRegistry + freshness).
+   - `FacadeNotConfiguredError` при отсутствии DI.
+   - Helpers: `_validate_plan_id` (защита от инъекций), `_parse_artifact_id`,
+     `_find_subtask_idx`, `_find_plan_id_by_subtask`.
+
+3. **`packages/mcp_servers/src/mcp_servers/facade/server.py`** — реализация
+   `create_facade_server()` (mcp.server.Server с 8 tools), `run_facade_server()`
+   (stdio), `run_sync()` (для `[project.scripts]`).
+
+4. **`packages/agent/src/agent/cli_commands/facade_entry.py`** — `create_facade_handlers()`
+   собирает handlers с DI из orchestrator.nodes + data_layer + mcp_servers.
+   Единственное место встречи mcp_servers.facade ↔ orchestrator.
+
+5. **`packages/mcp_servers/src/mcp_servers/facade/__init__.py`** — экспорты
+   `create_facade_server`, `run_facade_server`, `run_sync`.
+
+6. **`tests/mcp_servers/test_facade_handlers.py`** — 35 новых тестов: helpers
+   (plan_id validation, artifact_id parsing), 8 handlers (happy path с mock nodes
+   + input validation + next_action correctness + state propagation + error cases),
+   full workflow (plan→gather→generate→validate→review).
+
+7. **`tests/mcp_servers/test_mcp_contracts.py`** — `TestFacadeHandlers` обновлён:
+   было `test_all_handlers_raise_not_implemented` → стало
+   `test_handlers_without_di_raise_not_configured` + `test_explain_run_cli_data_status_work_without_di`.
+
+### Проверки
+
+- [x] Тесты: **846 проходят + 6 skipped** (было 801+6, +45 от facade).
+- [x] ruff: чистый (packages/ + tests/ + docker/ + migrations/).
+- [x] mypy: 14 ошибок (базовая линия TD-011, **новых нет**).
+- [x] boundaries: 0 violations (mcp_servers НЕ импортирует orchestrator — DI).
+- [x] Contract Check: facade → ADR-0013 (8 tools) + ADR-0010 (MCP contracts) +
+  ADR-0003 (MCP-архитектура) + CONCEPTUAL §1.1 (DI).
+
+### Stage Summary
+
+- **Stage 3: 2/4 задач ЗАВЕРШЕНО** ✅ (TD-S5-01, TD-S5-02)
+- FacadeHandlers — рабочая реализация (были заглушки NotImplementedError).
+- 8 tools экспонируются через MCP stdio (`1c-ai-mcp` script).
+- Foundation для TD-S5-03 (git MCP, run_cli proxy расширится) готов.
+- **Следующий шаг:** TD-S5-03 (git MCP, 4 tools: create_branch, commit, open_pr, diff).

@@ -92,7 +92,7 @@
 
 ## 🟢 Этап 3 (Production-readiness)
 
-> **Статус:** В РАБОТЕ (TD-S5-01 ЗАКРЫТ 2026-07-13, 1/4 задач).
+> **Статус:** В РАБОТЕ (TD-S5-01/02 ЗАКРЫТЫ 2026-07-13, 2/4 задач).
 > **Цель этапа:** production-ready система для Cursor IDE — persistence, lifecycle,
 > git-интеграция, production Docker.
 
@@ -123,17 +123,35 @@
   - Тесты: 801 проходят + 6 skipped (3 BSL LS + 3 Postgres integration).
   - См. D-2026-07-13-04 (реализация), D-2026-07-13-05 (миграции).
 
-### TD-S5-02: Facade handlers (8 lifecycle tools)
-- **Этап:** 3 (Sprint 5)
-- **Приоритет:** HIGH
-- **Описание:** Обвязка над orchestrator для Cursor. 8 lifecycle tools + `_next_action`.
-- **Архитектура:**
-  - `packages/mcp_servers/src/mcp_servers/facade/handlers.py` — заглушка, реализовать.
-  - `packages/mcp_servers/src/mcp_servers/facade/next_action.py` — уже есть, расширить.
-  - `packages/mcp_servers/src/mcp_servers/facade/tool_definitions.py` — определения tools.
-- **Lifecycle tools (8):** start_task, get_status, get_plan, get_code, get_review,
-  validate_now, retry_iteration, complete_task.
-- **Оценка:** 2-3 дня
+### TD-S5-02: Facade handlers (8 lifecycle tools) — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit (pending)
+- **Решение:**
+  - **8 tools по ADR-0013** (не BACKLOG-список `start_task` etc. — расхождение
+    зафиксировано в D-2026-07-13-07): `plan, gather, generate, validate, review,
+    explain, run_cli, data_status`. Контракт выше предпочтений.
+  - `packages/mcp_servers/src/mcp_servers/facade/handlers.py` — реализация
+    `FacadeHandlers` с DI через конструктор: `state_factory`, `node_plan/gather/
+    code/validate/review/commit` callables, `kb_server`, `bsl_ls_server`, `llm`,
+    `path_manager`, `config_registry`. In-memory state dict (`plan_id → state`).
+    `handle_review` с `proceed` → дополнительно `node_commit`. `FacadeNotConfiguredError`
+    при отсутствии DI. Helpers: `_validate_plan_id`, `_parse_artifact_id`,
+    `_find_subtask_idx`, `_find_plan_id_by_subtask`.
+  - `packages/mcp_servers/src/mcp_servers/facade/server.py` — `create_facade_server()`
+    возвращает `mcp.server.Server` с 8 tools (через `FACADE_TOOLS` + handlers dispatch).
+    `run_facade_server()` (stdio), `run_sync()` (для `[project.scripts]`).
+  - `packages/agent/src/agent/cli_commands/facade_entry.py` — `create_facade_handlers()`
+    собирает handlers с DI из orchestrator.nodes + data_layer + mcp_servers
+    (единственное место встречи mcp_servers.facade ↔ orchestrator, CONCEPTUAL §1.1).
+  - Boundaries: 0 violations (mcp_servers НЕ импортирует orchestrator — DI через
+    конструктор; facade → codebase intra-package разрешён).
+  - `tests/mcp_servers/test_facade_handlers.py` — 35 тестов: 8 handlers happy path
+    (mock nodes) + input validation + next_action correctness + state propagation
+    + full workflow (plan→gather→generate→validate→review). `test_mcp_contracts.py`
+    обновлён: `TestFacadeHandlers` проверяет `FacadeNotConfiguredError` (было
+    NotImplementedError).
+  - Тесты: 846 проходят + 6 skipped (+45 от facade). ruff чист. mypy 14 (базовая).
+  - См. D-2026-07-13-07.
 
 ### TD-S5-03: git MCP (4 tools)
 - **Этап:** 3 (Sprint 5)
@@ -221,10 +239,10 @@
 | В работе (Этап 1) | 0 (Этап 1 завершён) |
 | Этап 2 — открыто | 0 (**Этап 2 ЗАВЕРШЁН**) |
 | Этап 2 — закрыто | 7 (TD-S4.2-01/02/03/04/05/06/07) |
-| Этап 3 — открыто | 3 (TD-S5-02/03/04) |
-| Этап 3 — закрыто | 1 (TD-S5-01) |
+| Этап 3 — открыто | 2 (TD-S5-03/04) |
+| Этап 3 — закрыто | 2 (TD-S5-01, TD-S5-02) |
 | Когда-нибудь | 4 (TD-005..011) |
-| Закрыто | 14 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01..07, TD-S5-01) |
+| Закрыто | 15 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01..07, TD-S5-01, TD-S5-02) |
 | **Всего** | **21** |
 
 ---
