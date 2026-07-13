@@ -94,9 +94,14 @@ async def _run_pipeline(
 
     Sprint 3.2.1: серверы (BslLsServer, KbServer) создаются ЗДЕСЬ, в agent-слое,
     и передаются в build_graph через DI. Это устраняет boundary violations.
+
+    Stage 3 (TD-S5-01): persistence через PersistenceManager — если задана env
+    DATABASE_URL, используется AsyncPostgresSaver (checkpoints переживают рестарт
+    контейнера); иначе MemorySaver (dev/tests).
     """
     from orchestrator.graph import build_graph
     from orchestrator.logging import configure_logging
+    from orchestrator.persistence import PersistenceManager
     from orchestrator.state import FSMState, TaskState
 
     configure_logging()
@@ -129,14 +134,17 @@ async def _run_pipeline(
         import logging
         logging.getLogger(__name__).warning("kb_server_init_failed: %s", exc)
 
-    # Собираем граф с DI
-    graph = build_graph(
-        bsl_ls_server=bsl_ls_server,
-        kb_server=kb_server,
-    )
+    # Stage 3 (TD-S5-01): persistence. PostgresSaver (production) или MemorySaver.
+    async with PersistenceManager.from_env() as pm:
+        # Собираем граф с DI + checkpointer из PersistenceManager.
+        graph = build_graph(
+            checkpointer=pm.get_checkpointer(),
+            bsl_ls_server=bsl_ls_server,
+            kb_server=kb_server,
+        )
 
-    config: dict[str, Any] = {"configurable": {"thread_id": initial_state.task_id}}
-    final_state = await graph.ainvoke(initial_state.model_dump(), config=config)
+        config: dict[str, Any] = {"configurable": {"thread_id": initial_state.task_id}}
+        final_state = await graph.ainvoke(initial_state.model_dump(), config=config)
 
     return dict(final_state) if final_state else {}
 

@@ -4,8 +4,8 @@
 > в новый чат — агент активируется с полным контекстом проекта 1c-ai-assistant.
 >
 > **Дата генерации:** 2026-07-13
-> **Последний коммит в репозитории:** `5154e5e` (Sprint 4.2 session record)
-> **Версия файла:** 3.0
+> **Последний коммит в репозитории:** TD-S5-01 PostgresSaver persistence (Stage 3 начат)
+> **Версия файла:** 3.1
 
 ---
 
@@ -62,11 +62,12 @@
 | **Проект** | 1c-ai-assistant — AI-ассистент для 1С-разработчиков |
 | **Репозиторий** | https://github.com/Pradushkoai/1c-ai-assistant |
 | **Локальный путь** | `/home/z/my-project/1c-ai-assistant/` |
-| **Последний коммит** | TD-S4.2-04 — BSL LS Docker (Этап 2 ЗАВЕРШЁН) |
-| **Тесты** | 780 проходят + 3 skipped (integration), ruff чистый, 0 boundary violations |
+| **Последний коммит** | TD-S5-01 — PostgresSaver persistence (Stage 3, 1/4) |
+| **Тесты** | 801 проходят + 6 skipped (3 BSL LS + 3 Postgres integration), ruff чистый, 0 boundary violations |
 | **Спринты завершены** | 0, 1, 1.5, 2, 3, 3.1, 3.2, 3.2.1, 3.3 |
 | **Этап 1** | ✅ ЗАВЕРШЁН (5/5: Form/Subsystem/Role, api-reference, call graph, dependency graph, asyncio.TaskGroup) |
 | **Этап 2** | ✅ **ЗАВЕРШЁН** (7/7: ADR-0020, codebase MCP, standards, BSL LS Docker, library, transitive closure, api-ref) |
+| **Stage 3** | 🔄 В РАБОТЕ (1/4): ✅ TD-S5-01 (PostgresSaver persistence); TD-S5-02/03/04 открыты |
 | **MVP** | ✅ `1c-ai generate` работает с реальной LLM (ZaiLLM через z-ai CLI) |
 | **LLM** | ZaiLLM adapter (z-ai CLI subprocess, без внешнего API ключа) |
 | **HBK** | 10,150 методов платформы 8.3.25 (Container32 парсер) |
@@ -74,6 +75,7 @@
 | **MCP tools** | 21 (5 KB → 7 KB: добавлены get_standard + check_standards) |
 | **Валидаторы** | 4 параллельных в validate_node (BSL LS + antipatterns + method + standards) |
 | **BSL LS Docker** | мульти-stage Dockerfile v0.25.5, HTTP API, healthcheck, .dockerignore |
+| **Persistence** | ✅ PostgresSaver (AsyncPostgresSaver + setup() + connection lifecycle); MemorySaver fallback; migrations/ (Alembic + state-миграции) |
 | **Архитектура** | CONCEPTUAL.md §1.1 соблюдён (DI), §2.1 соблюдён (asyncio.TaskGroup) |
 | **Принцип** | Глубина сначала (D-2026-07-12-08) |
 
@@ -96,10 +98,11 @@
 
 ### Следующий этап: Stage 3 (Production-readiness) — 4 задачи
 
-- **TD-S5-01 (HIGH):** PostgresSaver persistence — LangGraph checkpoints в Postgres,
-  миграции (ADR-0018), рестарт контейнера не теряет state.
+- ✅ **TD-S5-01 (HIGH):** PostgresSaver persistence — ЗАКРЫТО (2026-07-13).
+  Рабочая реализация PersistenceManager (AsyncPostgresSaver + setup()),
+  schema_version в TaskState, миграции (Alembic scaffolding + state-миграции).
 - **TD-S5-02 (HIGH):** Facade handlers — обвязка над orchestrator для Cursor,
-  8 lifecycle tools + `_next_action`.
+  8 lifecycle tools + `_next_action`. (Фундамент persistence готов.)
 - **TD-S5-03 (MEDIUM):** git MCP — 4 tools (create_branch, commit, open_pr, diff),
   subprocess git CLI.
 - **TD-S5-04 (MEDIUM):** Docker production — multi-stage Dockerfile.app, healthchecks,

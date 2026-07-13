@@ -98,6 +98,10 @@ class TaskState(ModelConfig):
     config_version: str = Field(description="Версия конфигурации: '4.5.3'")
     platform_version: str = Field(description="Версия платформы: '8.3.20'")
 
+    # Версия схемы TaskState (ADR-0018). Bump только при breaking change
+    # (rename/type-change поля). Добавление/удаление полей — bump НЕ нужен.
+    schema_version: int = Field(default=1, ge=1, description="Версия схемы TaskState (ADR-0018)")
+
     # Декомпозиция
     subtasks: list[Subtask] = Field(default_factory=list)
     current_subtask_idx: int = Field(default=0, ge=0)

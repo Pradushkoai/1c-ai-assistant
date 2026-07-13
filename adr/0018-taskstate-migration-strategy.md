@@ -105,10 +105,27 @@ def downgrade(checkpoint_data: dict) -> dict:
 
 ## Реализация
 
-- [ ] Добавить `schema_version: int = Field(default=1)` в TaskState (Sprint 2)
-- [ ] Настроить Alembic (Sprint 4, при переходе на PostgresSaver)
-- [ ] Создать `migrations/` директорию (Sprint 4)
-- [ ] Написать первый migration script как шаблон (Sprint 4)
+- [x] Добавить `schema_version: int = Field(default=1)` в TaskState (Sprint 2 / TD-S5-01, 2026-07-13)
+- [x] Настроить Alembic (Sprint 4 / TD-S5-01, 2026-07-13) — scaffolding: `alembic.ini`
+  + `migrations/alembic/` + baseline `0001_baseline` (brownfield stamp, без DDL)
+- [x] Создать `migrations/` директорию (Sprint 4 / TD-S5-01, 2026-07-13)
+- [x] Написать первый migration script как шаблон (Sprint 4 / TD-S5-01, 2026-07-13)
+  — `migrations/state/0001_initial.py` (TaskState pickle-миграция, ADR-0018 §5)
+
+### Уточнение (D-2026-07-13-05): разделение schema-owner'ов
+
+ADR-0018 §4 исходно предписывал «Alembic управляет SQL-схемой (таблицы LangGraph)».
+Уточнено в D-2026-07-13-05: `langgraph-checkpoint-postgres` 1.0.9 сам управляет
+своими таблицами через `AsyncPostgresSaver.setup()` (внутренний `MIGRATIONS` список).
+Во избежание конфликта двух schema-owner'ов:
+
+- **LangGraph checkpoint-таблицы** (`checkpoints`, `checkpoint_blobs`,
+  `checkpoint_writes`, `checkpoint_migrations`) → `AsyncPostgresSaver.setup()`
+  в `PersistenceManager.__aenter__`. Alembic их НЕ трогает.
+- **Приложенческие таблицы** (`bsl_modules`, `health_check`) → пока
+  `docker/postgres/init.sql` (идемпотентно); будущие изменения — через Alembic
+  поверх baseline `0001_baseline`.
+- **TaskState pickle-миграции** → `migrations/state/` (Python, по `schema_version`).
 
 ## Связанные документы
 

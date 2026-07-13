@@ -1,7 +1,7 @@
 # CURRENT FOCUS — точка входа для каждой сессии
 
 > **Этот файл живёт в git репозитории (docs/process/), чтобы переживать сбросы окружения.**
-> Последнее обновление: 2026-07-13 (Этап 2 — **7/7 задач завершены**, TD-S4.2-04 закрыт)
+> Последнее обновление: 2026-07-13 (Stage 3 — **1/4 задач завершена**, TD-S5-01 закрыт)
 
 ---
 
@@ -12,7 +12,7 @@
 ### Текущее состояние (snapshot на 2026-07-13)
 - **Этап 1:** ✅ ЗАВЕРШЁН (5/5 задач)
 - **Этап 2:** ✅ **ЗАВЕРШЁН** (7/7 задач) — TD-S4.2-01..07 все закрыты
-- **Stage 3 (Production-readiness):** ⬜ НЕ НАЧАТ — это следующий этап
+- **Stage 3 (Production-readiness):** 🔄 В РАБОТЕ (1/4) — TD-S5-01 ✅ закрыт
 
 ### Что прочитать в порядке приоритета (первые 5 минут сессии)
 1. **Этот файл** (CURRENT_FOCUS.md) — целиком, до конца
@@ -21,12 +21,22 @@
 4. **`docs/process/worklog.md`** — последняя запись (TD-S4.2-04, дата 2026-07-13)
 5. **`docs/architecture/CONCEPTUAL.md`** §2.1 (asyncio.TaskGroup) — если работаешь с validate_node
 
-### Первая задача нового этапа
-**TD-S5-01: PostgresSaver persistence** (HIGH приоритет)
-- LangGraph checkpoints в Postgres вместо InMemorySaver.
-- Миграции (см. ADR-0018).
-- Рестарт контейнера не должен терять state.
-- Архитектура: см. `packages/orchestrator/src/orchestrator/persistence.py` (текущая заглушка).
+### Следующая задача Stage 3
+**TD-S5-02: Facade handlers (8 lifecycle tools)** (HIGH приоритет)
+- Обвязка над orchestrator для Cursor. 8 lifecycle tools + `_next_action`.
+- Архитектура: `packages/mcp_servers/src/mcp_servers/facade/handlers.py` (заглушка),
+  `facade/next_action.py`, `facade/tool_definitions.py`.
+- Lifecycle tools (8): start_task, get_status, get_plan, get_code, get_review,
+  validate_now, retry_iteration, complete_task.
+- **Фундамент готов:** TD-S5-01 (PostgresSaver persistence) закрыт —
+  `PersistenceManager.from_env()` + `health_check()` для Facade.
+
+### Закрытые задачи Stage 3
+- ✅ **TD-S5-01: PostgresSaver persistence** (2026-07-13) — рабочая реализация
+  PersistenceManager (AsyncPostgresSaver + setup() + connection lifecycle),
+  schema_version в TaskState, миграции (Alembic scaffolding + state-миграции),
+  generate.py обёрнут в PersistenceManager. 21 unit + 3 integration тестов.
+  См. D-2026-07-13-04, D-2026-07-13-05.
 
 ### Ключевые принципы (без знания которых нельзя работать)
 - **«Глубина сначала»** (D-2026-07-12-08): качество важнее скорости, никаких временных решений.
@@ -73,15 +83,14 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 
 ## 🎯 ФОКУС СЕССИИ (для продолжающей сессии)
 
-> **Задача:** Этап 2 (Поиск и качество) — **ЗАВЕРШЁН** ✅
-> **Статус:** TD-S4.2-04 ЗАВЕРШЁН (BSL LS Docker: Dockerfile, HTTP server, integration-тесты)
+> **Задача:** Stage 3 (Production-readiness) — **TD-S5-01 ЗАВЕРШЁН** ✅
+> **Статус:** TD-S5-01 закрыт (PostgresSaver persistence: рабочая реализация + миграции)
 > **Блокеры:** нет
-> **Что сделано:** ✅ Этап 1, ✅ ADR-0020, ✅ api-reference в pipeline, ✅ transitive closure, ✅ library add,
-> ✅ codebase MCP (indexer + VectorStoreProtocol + PgVectorStore + server 4 tools),
-> ✅ TD-S4.2-03 standards (8 YAML: 4 СТО + 4 БСП, 4-й валидатор),
-> ✅ **TD-S4.2-04 BSL LS Docker** (мульти-stage Dockerfile, исправлен CLI-синтаксис,
-> healthcheck в docker-compose, .dockerignore, latency_ms метрика, 10 новых тестов + 3 integration)
-> **Следующий шаг:** Stage 3 (Production-readiness): PostgresSaver persistence → Facade handlers → git MCP → Docker production
+> **Что сделано:** ✅ PersistenceManager переписан (AsyncPostgresSaver + setup() +
+> connection lifecycle), ✅ schema_version в TaskState (ADR-0018), ✅ generate.py
+> обёрнут в PersistenceManager.from_env(), ✅ миграции (Alembic scaffolding +
+> state-миграции, D-2026-07-13-05), ✅ 21 unit + 3 integration теста (skip-if-no-PG)
+> **Следующий шаг:** TD-S5-02 (Facade handlers, 8 lifecycle tools) → TD-S5-03 (git MCP) → TD-S5-04 (Docker production)
 >
 > **Принцип «Глубина сначала»** (D-2026-07-12-08): качество важнее скорости.
 >
@@ -96,7 +105,10 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 - **Спринты завершены:** 0, 1, 1.5, 2, 3, 3.1, 3.2, 3.2.1, 3.3
 - **Этап 1 прогресс:** 5/5 задач ЗАВЕРШЁН ✅ (TD-S4.1-01..04 + контракт)
 - **Этап 2 прогресс:** **7/7 задач ЗАВЕРШЕНО** ✅ (TD-S4.2-01/02/03/04/05/06/07 ✅)
-- **Тесты:** 780 проходят + 3 skipped (integration, без Docker) (+10 от BSL LS)
+- **Stage 3 прогресс:** 1/4 задач ЗАВЕРШЕНО ✅ (TD-S5-01 ✅; TD-S5-02/03/04 открыты)
+- **Тесты:** 801 проходят + 6 skipped (3 BSL LS + 3 Postgres integration, без Docker/PG)
+- **Persistence:** ✅ PostgresSaver (AsyncPostgresSaver + setup() + connection lifecycle);
+  MemorySaver fallback (dev/tests); migrations/ (Alembic scaffolding + state-миграции)
 - **MVP:** ✅ `1c-ai generate` работает с реальной LLM (ZaiLLM через z-ai CLI)
 - **HBK:** 10,150 методов платформы 8.3.25 (Container32 парсер)
 - **KB:** 5 patterns + 10 antipatterns + 8 standards (4 СТО + 4 БСП) — 3 типа сущностей
@@ -105,7 +117,7 @@ git -C /home/z/my-project/1c-ai-assistant remote set-url origin "https://github.
 - **BSL LS Docker:** мульти-stage Dockerfile v0.25.5, HTTP API, healthcheck, .dockerignore
 - **Boundary violations:** 0 (DI через functools.partial)
 - **Данные:** УТ11 (5,575 объектов, 7,141 BSL модулей) + HBK 8.3.25 (80 файлов)
-- **Последний коммит:** TD-S4.2-04 BSL LS Docker — Этап 2 ЗАВЕРШЁН
+- **Последний коммит:** TD-S5-01 PostgresSaver persistence — Stage 3 начат
 
 ---
 

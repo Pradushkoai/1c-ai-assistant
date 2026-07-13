@@ -37,8 +37,12 @@ CREATE INDEX IF NOT EXISTS bsl_modules_config_idx
 -- Пока оставлено как комментарий, используется JSON-файл.
 
 -- ─── LangGraph checkpoints ────────────────────────────────────────────────
--- Таблицы checkpoints, writes, migration_blobs создаются
--- AsyncPostgresSaver.setup() автоматически при первом запуске orchestrator.
+-- Таблицы checkpoints, checkpoint_blobs, checkpoint_writes, checkpoint_migrations
+-- создаются AsyncPostgresSaver.setup() автоматически при первом запуске
+-- orchestrator (PersistenceManager.__aenter__). Alembic их НЕ трогает —
+-- LangGraph сам управляет своей схемой (ADR-0018, D-2026-07-13-05).
+-- Приложенческие таблицы (bsl_modules, health_check ниже) создаются здесь
+-- идемпотентно; будущие их schema-изменения — через Alembic (migrations/alembic/).
 
 -- ─── Health check ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS health_check (

@@ -92,22 +92,36 @@
 
 ## 🟢 Этап 3 (Production-readiness)
 
-> **Статус:** НЕ НАЧАТ (после завершения Этапа 2, 2026-07-13).
+> **Статус:** В РАБОТЕ (TD-S5-01 ЗАКРЫТ 2026-07-13, 1/4 задач).
 > **Цель этапа:** production-ready система для Cursor IDE — persistence, lifecycle,
 > git-интеграция, production Docker.
 
-### TD-S5-01: PostgresSaver persistence — ПЕРВАЯ ЗАДАЧА ЭТАПА 3
-- **Этап:** 3 (Sprint 5)
-- **Приоритет:** HIGH
-- **Описание:** Заменить InMemorySaver на PostgresSaver (LangGraph).
-  Рестарт контейнера не должен терять state.
-- **Архитектура:**
-  - `packages/orchestrator/src/orchestrator/persistence.py` — текущая заглушка, переписать.
-  - Миграции по ADR-0018 (`adr/0018-taskstate-migration-strategy.md`).
-  - Подключение через `DATABASE_URL=postgresql://agent:agent@postgres:5432/agent`.
-  - `docker/postgres/init.sql` — уже есть, проверить схему.
-- **Оценка:** 1-2 дня
-- **Тесты:** integration с testcontainers-python или mock PostgresSaver.
+### TD-S5-01: PostgresSaver persistence — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit (pending)
+- **Решение:**
+  - `packages/orchestrator/src/orchestrator/persistence.py` — переписан из заглушки
+    в рабочую реализацию: `AsyncPostgresSaver.from_conn_string()` (как async cm) +
+    `await saver.setup()` (идемпотентное создание checkpoint-таблиц) + корректный
+    connection lifecycle в `__aexit__`. Fallback на `MemorySaver` при отсутствии DSN
+    или `langgraph-checkpoint-postgres`. `PersistenceError` (ABORT) при ошибке
+    подключения. Добавлены `from_env()` (DATABASE_URL) и `async health_check()`.
+  - `packages/orchestrator/src/orchestrator/state.py` — `schema_version: int = Field(default=1, ge=1)` в TaskState (ADR-0018).
+  - `packages/agent/src/agent/cli_commands/generate.py` — `_run_pipeline` обёрнут в
+    `async with PersistenceManager.from_env() as pm:`; checkpointer передаётся в
+    `build_graph`. Production (DATABASE_URL) → Postgres; dev/tests → MemorySaver.
+  - Миграции (ADR-0018, D-2026-07-13-05): `migrations/` — Alembic scaffolding
+    (`alembic.ini` + `migrations/alembic/` + baseline `0001_baseline`) +
+    TaskState pickle-миграции (`migrations/state/0001_initial.py`). Разделение
+    schema-owner'ов: LangGraph ↔ своё (setup()), Alembic ↔ приложенческие таблицы.
+  - `docker/postgres/init.sql` — комментарий актуализирован (setup() управляет
+    checkpoint-таблицами).
+  - `tests/orchestrator/test_persistence.py` — 21 unit-тест + 3 integration
+    (skip-if TEST_POSTGRES_DSN not set). Integration доказывает «рестарт контейнера
+    не теряет state» (checkpoint переживает новый PersistenceManager, тот же DSN).
+  - `alembic` добавлен в dev-зависимости.
+  - Тесты: 801 проходят + 6 skipped (3 BSL LS + 3 Postgres integration).
+  - См. D-2026-07-13-04 (реализация), D-2026-07-13-05 (миграции).
 
 ### TD-S5-02: Facade handlers (8 lifecycle tools)
 - **Этап:** 3 (Sprint 5)
@@ -207,9 +221,10 @@
 | В работе (Этап 1) | 0 (Этап 1 завершён) |
 | Этап 2 — открыто | 0 (**Этап 2 ЗАВЕРШЁН**) |
 | Этап 2 — закрыто | 7 (TD-S4.2-01/02/03/04/05/06/07) |
-| Этап 3 | 4 (TD-S5-01..04) |
+| Этап 3 — открыто | 3 (TD-S5-02/03/04) |
+| Этап 3 — закрыто | 1 (TD-S5-01) |
 | Когда-нибудь | 4 (TD-005..011) |
-| Закрыто | 13 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01..07) |
+| Закрыто | 14 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01..07, TD-S5-01) |
 | **Всего** | **21** |
 
 ---
