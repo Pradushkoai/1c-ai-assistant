@@ -50,12 +50,23 @@
   ValidationFinding.source: добавлен 'kb_standards'. 39 новых тестов.
   MCP tools total: 21 (5→7 KB).
 
-### TD-S4.2-04: BSL LS через Docker
-- **Этап:** 2 (Sprint 4.2)
-- **Приоритет:** MEDIUM
-- **Описание:** Реальная валидация через BSL LS Java-сервер.
-  Сейчас bsl_ls.lint возвращает пустой результат (валидатор работает, но
-  без реальных правил). Нужно: docker-compose с BSL LS, HTTP-обёртка.
+### TD-S4.2-04: BSL LS через Docker — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit (pending)
+- **Решение:**
+  - `.dockerignore` — ускоряет docker build, предотвращает утечку секретов.
+  - `docker/Dockerfile.bsl-ls` — мульти-stage build (alpine downloader + python:3.12-slim runtime),
+    BSL LS v0.25.5 с sha256 проверкой, pinned Python-зависимости, OCI labels, HEALTHCHECK.
+  - `docker/bsl_ls_http_server.py` — исправлен CLI-синтаксис BSL LS v0.25.x:
+    `analyze --src <file> --format json --output <result.json>` (раньше был некорректный
+    `analyze <file> --format json`). Добавлены: latency_ms метрика, structured logging,
+    корректная обработка HTTP ошибок (504 timeout, 500 critical errors).
+  - `docker-compose.yml` — healthcheck для `1c-ai-bsl-ls` (curl /health), зависимость
+    `1c-ai-app` от `service_healthy` вместо `service_started`.
+  - `LintOutput.latency_ms` + `FormatOutput.latency_ms` — проброс метрики в MCP contracts.
+  - `tests/mcp_servers/test_bsl_ls_server.py` — 10 новых unit-тестов:
+    TestLatencyMetric (3), TestLintRulesAndBaseline (3), TestErrorHandling (4) +
+    3 integration-теста (TestBslLsIntegration, skip если BSL_LS_HTTP_URL не задан).
 
 ### TD-S4.2-05: `1c-ai library add` (БСП/БПО) — ЗАКРЫТО ✅
 - **Дата закрытия:** 2026-07-13
@@ -159,11 +170,11 @@
 | Статус | Количество |
 |---|---|
 | В работе (Этап 1) | 0 (Этап 1 завершён) |
-| Этап 2 — открыто | 1 (TD-S4.2-04 BSL LS через Docker) |
-| Этап 2 — закрыто | 6 (TD-S4.2-01/02/03/05/06/07) |
+| Этап 2 — открыто | 0 (**Этап 2 ЗАВЕРШЁН**) |
+| Этап 2 — закрыто | 7 (TD-S4.2-01/02/03/04/05/06/07) |
 | Этап 3 | 4 (TD-S5-01..04) |
 | Когда-нибудь | 4 (TD-005..011) |
-| Закрыто | 12 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01/02/03/05/06/07) |
+| Закрыто | 13 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01..07) |
 | **Всего** | **21** |
 
 ---

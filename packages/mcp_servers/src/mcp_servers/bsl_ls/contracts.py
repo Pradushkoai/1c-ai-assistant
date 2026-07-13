@@ -50,6 +50,7 @@ class LintOutput(BaseModel):
     total: int
     by_code: dict[str, int] = Field(description="{'BSL-WS-001': 3, 'BSL-NAMESPACE-001': 1}")
     diagnostics: list[dict[str, Any]] = Field(description="[{code, severity, line, column, message}]")
+    latency_ms: int = Field(default=0, description="Время выполнения BSL LS, миллисекунды (TD-S4.2-04)")
 
 
 class FormatOutput(BaseModel):
@@ -57,6 +58,7 @@ class FormatOutput(BaseModel):
 
     formatted_code: str
     changes_made: bool
+    latency_ms: int = Field(default=0, description="Время выполнения BSL LS, миллисекунды (TD-S4.2-04)")
 
 
 # ─── Tool contracts ──────────────────────────────────────────────────────────

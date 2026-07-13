@@ -12,6 +12,60 @@
 
 ## Записи (новые сверху)
 
+### D-2026-07-13-03: BSL LS Docker — мульти-stage build + HTTP API v0.2.0
+
+**Дата:** 2026-07-13
+**Тип:** architecture + infrastructure
+**Контекст:** TD-S4.2-04 — последняя задача Этапа 2. В проекте уже была основа
+(Dockerfile.bsl-ls, bsl_ls_http_server.py, BslLsServer, тесты), но:
+- CLI-синтаксис BSL LS в `bsl_ls_http_server.py` был некорректный:
+  `java -jar bsl-ls.jar analyze <file>` вместо правильного
+  `analyze --src <file> --format json --output <result.json>`.
+- Не было healthcheck для `1c-ai-bsl-ls` сервиса в docker-compose.
+- Не было `.dockerignore` (медленный build context, риск утечки секретов).
+- Dockerfile был одно-stage (большой образ), без pinned версий, без OCI labels.
+- Не было integration-тестов с реальным контейнером.
+
+**Решение:**
+1. **Мульти-stage Dockerfile** (alpine downloader + python:3.12-slim runtime):
+   - BSL LS v0.25.5 с sha256 проверкой (пока placeholder, нужно обновить при реальном релизе).
+   - Pinned Python-зависимости (fastapi==0.115.0, uvicorn==0.30.6, httpx==0.27.2, pydantic==2.9.2).
+   - OCI labels (org.opencontainers.image.*).
+   - HEALTHCHECK на /health endpoint.
+2. **Исправлен CLI-синтаксис BSL LS v0.25.x** в `bsl_ls_http_server.py`:
+   - `analyze --src <file> --format json --output <result.json>` — детерминированный парсинг.
+   - `format --src <file>` — модифицирует файл in-place.
+   - Корректная обработка stderr (Exception/OutOfMemoryError = критическая ошибка).
+3. **Healthcheck в docker-compose** для `1c-ai-bsl-ls`: curl /health,
+   start_period=15s, retries=3. Зависимость `1c-ai-app` изменена на `service_healthy`.
+4. **`.dockerignore`** — исключает секреты, данные, __pycache__, тесты, IDE файлы.
+5. **latency_ms метрика** пробрасывается из BSL LS HTTP response в MCP contracts
+   (LintOutput, FormatOutput) — для мониторинга производительности.
+6. **10 новых unit-тестов** + 3 integration-теста (skip если BSL_LS_HTTP_URL не задан).
+
+**Альтернативы:**
+- A) Long-running JVM с stdin/stdout протоколом (быстрее, но сложнее реализация).
+- B) Subprocess для каждого запроса (выбрано, +1-2с на Java startup, но stateless).
+- C) Native Python BSL LS (не существует, bsl-ls только на Java).
+
+**Повлияло на:**
+- BACKLOG.md — TD-S4.2-04 закрыт, Этап 2 полностью завершён
+- CURRENT_FOCUS.md — Этап 2: 7/7
+- `.dockerignore` (НОВЫЙ)
+- `docker/Dockerfile.bsl-ls` (полностью переписан)
+- `docker/bsl_ls_http_server.py` (полностью переписан, v0.2.0)
+- `docker-compose.yml` (healthcheck + service_healthy)
+- `packages/mcp_servers/src/mcp_servers/bsl_ls/contracts.py` (latency_ms в outputs)
+- `packages/mcp_servers/src/mcp_servers/bsl_ls/server.py` (проброс latency_ms)
+- `tests/mcp_servers/test_bsl_ls_server.py` (+10 unit + 3 integration тестов)
+- `docs/process/worklog.md` (запись о TD-S4.2-04)
+
+**Этап 2 ЗАВЕРШЁН.** Следующий шаг — Stage 3 (Production-readiness):
+TD-S5-01 PostgresSaver persistence → TD-S5-02 Facade handlers →
+TD-S5-03 git MCP → TD-S5-04 Docker production.
+
+---
+
 ### D-2026-07-13-02: Стандарты 1С (СТО + БСП) как 3-й тип KB-сущностей
 
 **Дата:** 2026-07-13

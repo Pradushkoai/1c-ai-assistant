@@ -1,0 +1,74 @@
+# .dockerignore — не копировать в build context Docker'а.
+# Ускоряет docker build и предотвращает утечку секретов в образ.
+
+# ─── Секреты (критично) ────────────────────────────────────────────────────
+.github-token
+*.token
+*.key
+*.pem
+.env
+.env.local
+.env.*.local
+.secrets.baseline
+.git-credentials
+
+# ─── Данные пользователя (gitignored по архитектуре) ───────────────────────
+data/
+derived/
+runtime/
+testdata/
+*.testdata
+
+# ─── Python артефакты ──────────────────────────────────────────────────────
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# ─── Git ───────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# ─── IDE ───────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ─── Документация и медиа (не нужны в runtime) ─────────────────────────────
+*.md
+!README.md
+!CONTRIBUTING.md
+docs/
+adr/
+images/
+*.png
+*.jpg
+*.gif
+*.svg
+
+# ─── Docker (предотвращает рекурсию) ───────────────────────────────────────
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# ─── Тесты (не нужны в runtime образе) ─────────────────────────────────────
+tests/
+
+# ─── Временные файлы ───────────────────────────────────────────────────────
+*.log
+*.tmp
+*.bak
+tmp/
+*.lock

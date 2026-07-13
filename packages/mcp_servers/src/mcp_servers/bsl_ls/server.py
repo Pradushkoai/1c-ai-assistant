@@ -81,6 +81,7 @@ class BslLsServer:
             total=data.get("total", 0),
             by_code=data.get("by_code", {}),
             diagnostics=data.get("diagnostics", []),
+            latency_ms=data.get("latency_ms", 0),
         )
 
     async def format(
@@ -116,6 +117,7 @@ class BslLsServer:
         return FormatOutput(
             formatted_code=data.get("formatted_code", code),
             changes_made=data.get("changes_made", False),
+            latency_ms=data.get("latency_ms", 0),
         )
 
     async def health_check(self) -> bool:

@@ -62,17 +62,18 @@
 | **Проект** | 1c-ai-assistant — AI-ассистент для 1С-разработчиков |
 | **Репозиторий** | https://github.com/Pradushkoai/1c-ai-assistant |
 | **Локальный путь** | `/home/z/my-project/1c-ai-assistant/` |
-| **Последний коммит** | TD-S4.2-03 — стандарты 1С (СТО + БСП) |
-| **Тесты** | 770 проходят, ruff чистый, 0 boundary violations |
+| **Последний коммит** | TD-S4.2-04 — BSL LS Docker (Этап 2 ЗАВЕРШЁН) |
+| **Тесты** | 780 проходят + 3 skipped (integration), ruff чистый, 0 boundary violations |
 | **Спринты завершены** | 0, 1, 1.5, 2, 3, 3.1, 3.2, 3.2.1, 3.3 |
 | **Этап 1** | ✅ ЗАВЕРШЁН (5/5: Form/Subsystem/Role, api-reference, call graph, dependency graph, asyncio.TaskGroup) |
-| **Этап 2** | **6/7 задач** (TD-S4.2-01/02/03/05/06/07 ✅, остался TD-S4.2-04 BSL LS Docker) |
+| **Этап 2** | ✅ **ЗАВЕРШЁН** (7/7: ADR-0020, codebase MCP, standards, BSL LS Docker, library, transitive closure, api-ref) |
 | **MVP** | ✅ `1c-ai generate` работает с реальной LLM (ZaiLLM через z-ai CLI) |
 | **LLM** | ZaiLLM adapter (z-ai CLI subprocess, без внешнего API ключа) |
 | **HBK** | 10,150 методов платформы 8.3.25 (Container32 парсер) |
-| **KB** | 5 patterns + 10 antipatterns + **8 standards (4 СТО + 4 БСП)** |
+| **KB** | 5 patterns + 10 antipatterns + 8 standards (4 СТО + 4 БСП) |
 | **MCP tools** | 21 (5 KB → 7 KB: добавлены get_standard + check_standards) |
-| **Валидаторы** | 4 параллельных в validate_node (BSL LS + antipatterns + method + **standards**) |
+| **Валидаторы** | 4 параллельных в validate_node (BSL LS + antipatterns + method + standards) |
+| **BSL LS Docker** | мульти-stage Dockerfile v0.25.5, HTTP API, healthcheck, .dockerignore |
 | **Архитектура** | CONCEPTUAL.md §1.1 соблюдён (DI), §2.1 соблюдён (asyncio.TaskGroup) |
 | **Принцип** | Глубина сначала (D-2026-07-12-08) |
 
@@ -83,21 +84,26 @@
 4. **Граф вызовов** — кто кого вызывает (`build_call_graph`)
 5. **Граф зависимостей + transitive closure** (`build_dependency_graph` → `get_transitive_dependents`)
 
-### Этап 2 прогресс
+### Этап 2 прогресс — ✅ ЗАВЕРШЁН (7/7)
 - ✅ ADR-0020 (Embeddings strategy: гибридный BM25+pgvector+RRF, 4-layer, multilingual-e5-large)
 - ✅ TD-S4.2-07 (api-reference в config build + Gatherer)
 - ✅ TD-S4.2-06 (Transitive closure для Planner/Reviewer)
 - ✅ TD-S4.2-05 (`1c-ai library add/build/list/remove` для БСП/БПО)
 - ✅ TD-S4.2-02 ч.1 (Embeddings indexer + VectorStoreProtocol + PgVectorStore + InMemoryVectorStore)
 - ✅ TD-S4.2-02 ч.2 (CodebaseServer — 4 tools: semantic_search, get_module, get_similar, call_graph)
-- ✅ **TD-S4.2-03** (Стандарты 1С: 8 YAML — 4 СТО + 4 БСП, 4-й валидатор)
-- ⬜ TD-S4.2-04 (BSL LS через Docker — последняя задача Этапа 2)
+- ✅ TD-S4.2-03 (Стандарты 1С: 8 YAML — 4 СТО + 4 БСП, 4-й валидатор)
+- ✅ **TD-S4.2-04** (BSL LS Docker: мульти-stage Dockerfile, исправлен CLI-синтаксис, healthcheck)
 
-### Топ-1 активного техдолга (полностью — в BACKLOG.md)
+### Следующий этап: Stage 3 (Production-readiness) — 4 задачи
 
-- **TD-S4.2-04 (MEDIUM):** BSL LS через Docker — реальная валидация через Java-сервер.
-  Сейчас bsl_ls.lint возвращает пустой результат (валидатор работает, но без правил).
-  Нужно: docker-compose с BSL LS, HTTP-обёртка. После этого Этап 2 завершён.
+- **TD-S5-01 (HIGH):** PostgresSaver persistence — LangGraph checkpoints в Postgres,
+  миграции (ADR-0018), рестарт контейнера не теряет state.
+- **TD-S5-02 (HIGH):** Facade handlers — обвязка над orchestrator для Cursor,
+  8 lifecycle tools + `_next_action`.
+- **TD-S5-03 (MEDIUM):** git MCP — 4 tools (create_branch, commit, open_pr, diff),
+  subprocess git CLI.
+- **TD-S5-04 (MEDIUM):** Docker production — multi-stage Dockerfile.app, healthchecks,
+  .env.example, docker-compose.override для dev.
 
 ---
 

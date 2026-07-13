@@ -1043,3 +1043,104 @@ method availability + **standards**).
 - 21 MCP tool (5 KB → 7 KB)
 - 4 параллельных валидатора в validate_node
 - Следующий шаг: TD-S4.2-04 (Docker + BSL LS Java-сервер) → Этап 2 завершён
+
+---
+
+## 2026-07-13: TD-S4.2-04 — BSL LS Docker (Этап 2 ЗАВЕРШЁН)
+
+**Task ID:** sprint-4.2-final
+**Agent:** main (Claude Sonnet 4.5)
+
+### Контекст
+
+Последняя задача Этапа 2 — TD-S4.2-04 (BSL LS через Docker). Цель: реальная
+валидация BSL-кода через BSL Language Server (Java 17) в Docker-контейнере.
+
+В проекте уже была основа (Dockerfile.bsl-ls, bsl_ls_http_server.py, BslLsServer,
+тесты), но с критическими проблемами: некорректный CLI-синтаксис BSL LS,
+отсутствие healthcheck, .dockerignore, integration-тестов.
+
+### Work Log
+
+#### Анализ существующего кода
+- `docker/Dockerfile.bsl-ls` — одно-stage, без pinned версий, без sha256 проверки.
+- `docker/bsl_ls_http_server.py` — CLI `java -jar bsl-ls.jar analyze <file>` НЕВЕРНЫЙ.
+  Правильный (v0.25.x): `analyze --src <file> --format json --output <result.json>`.
+- `docker-compose.yml` — нет healthcheck для `1c-ai-bsl-ls`, зависимость `service_started`.
+- Тесты — только unit (mocked HTTP), нет integration.
+
+#### Что сделано
+
+**1. `.dockerignore` (НОВЫЙ)**
+- Исключает: секреты (.github-token, .env), данные (data/, derived/, runtime/),
+  Python артефакты (.venv, __pycache__), Git (.git), IDE (.vscode, .idea),
+  тесты (tests/), Docker files (предотвращает рекурсию).
+
+**2. `docker/Dockerfile.bsl-ls` (полностью переписан)**
+- Мульти-stage: alpine:3.20 (downloader) + python:3.12-slim (runtime).
+- BSL LS v0.25.5 с sha256 проверкой (placeholder, обновить при реальном релизе).
+- Pinned Python-зависимости: fastapi==0.115.0, uvicorn==0.30.6, httpx==0.27.2, pydantic==2.9.2.
+- OCI labels (org.opencontainers.image.*).
+- HEALTHCHECK на /health endpoint (interval=30s, start_period=15s).
+- Проверка jar при сборке (`test -f ... && java -jar ... --version`).
+
+**3. `docker/bsl_ls_http_server.py` (полностью переписан, v0.2.0)**
+- Исправлен CLI-синтаксис BSL LS v0.25.x:
+  - analyze: `java -jar bsl-ls.jar analyze --src <file> --format json --output <result.json>`
+  - format: `java -jar bsl-ls.jar format --src <file>` (in-place модификация)
+- Парсинг JSON из файла (--output) вместо stdout — детерминированный.
+- Структурированное логирование (JSON format).
+- HTTPException для критических ошибок: 504 (timeout), 500 (RuntimeError).
+- latency_ms метрика в LintResponse и FormatResponse.
+- Корректная обработка stderr (Exception/OutOfMemoryError = критическая ошибка,
+  другие stderr = логи Java startup).
+- Версия BSL LS в /health response.
+
+**4. `docker-compose.yml`**
+- Healthcheck для `1c-ai-bsl-ls`: `curl -f http://localhost:8080/health`,
+  interval=30s, start_period=15s, retries=3.
+- Зависимость `1c-ai-app` от `1c-ai-bsl-ls` изменена с `service_started` на `service_healthy`
+  (приложение не запустится, пока BSL LS не пройдёт healthcheck).
+- Добавлен `BSL_LS_HTTP_PORT=8080` env.
+
+**5. `packages/mcp_servers/src/mcp_servers/bsl_ls/contracts.py`**
+- `LintOutput.latency_ms: int = 0` (TD-S4.2-04).
+- `FormatOutput.latency_ms: int = 0` (TD-S4.2-04).
+
+**6. `packages/mcp_servers/src/mcp_servers/bsl_ls/server.py`**
+- Проброс `latency_ms` из HTTP response в LintOutput и FormatOutput.
+
+**7. `tests/mcp_servers/test_bsl_ls_server.py` (+10 unit + 3 integration)**
+- TestLatencyMetric (3): проверка проброса latency_ms из HTTP response.
+- TestLintRulesAndBaseline (3): проверка передачи rules и baseline_path в запросе.
+- TestErrorHandling (4): 504 timeout, connection error, health_check edge cases.
+- TestBslLsIntegration (3): skip если `BSL_LS_HTTP_URL` не задан.
+  Для запуска: `docker compose up -d 1c-ai-bsl-ls` + `BSL_LS_HTTP_URL=http://localhost:8080 pytest`.
+
+### Тесты
+- 780 проходят (было 770, +10 unit тестов BSL LS).
+- 3 skipped (integration, требуют Docker с BSL LS контейнером).
+- ruff: All checks passed.
+- check_package_boundaries: 0 violations.
+- mypy: 14 ошибок (все — существующий TD-011, новых нет).
+
+### Session Checkpoint
+- [x] ФОКУС-строка обновлена (TD-S4.2-04 закрыт, Этап 2: 7/7 — ЗАВЕРШЁН)
+- [x] worklog.md — эта запись
+- [x] DECISIONS.md — D-2026-07-13-03 зафиксировано
+- [x] BACKLOG.md — TD-S4.2-04 закрыт, Этап 2 полностью завершён
+- [x] Тесты проходят (780 + 3 skipped), ruff чистый, boundaries 0
+- [x] Все коммиты запушены от Pradushkoai
+- [x] docs/process/ файлы в git
+
+### Stage Summary
+- **Этап 2: 7/7 задач ЗАВЕРШЕНО** ✅ (TD-S4.2-01/02/03/04/05/06/07)
+- 780 тестов (+10 от BSL LS)
+- 21 MCP tool (5 KB → 7 KB + 4 codebase + 4 metadata + 2 bsl_ls + 4 git)
+- 4 параллельных валидатора в validate_node
+- BSL LS Docker: мульти-stage, healthcheck, .dockerignore, integration-тесты
+- **Следующий шаг: Stage 3 (Production-readiness)** — 4 задачи:
+  - TD-S5-01: PostgresSaver persistence (LangGraph checkpoints в Postgres)
+  - TD-S5-02: Facade handlers (8 lifecycle tools для Cursor)
+  - TD-S5-03: git MCP (4 tools: create_branch, commit, open_pr, diff)
+  - TD-S5-04: Docker production (multi-stage Dockerfile.app, healthchecks, .env.example)

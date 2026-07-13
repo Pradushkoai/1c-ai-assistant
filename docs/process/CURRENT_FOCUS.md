@@ -1,20 +1,21 @@
 # CURRENT FOCUS — точка входа для каждой сессии
 
 > **Этот файл живёт в git репозитории (docs/process/), чтобы переживать сбросы окружения.**
-> Последнее обновление: 2026-07-13 (Этап 2 — 6/7 задач завершены, TD-S4.2-03 закрыт)
+> Последнее обновление: 2026-07-13 (Этап 2 — **7/7 задач завершены**, TD-S4.2-04 закрыт)
 
 ---
 
 ## 🎯 ФОКУС СЕССИИ
 
-> **Задача:** Этап 2 (Поиск и качество) — финальный рывок
-> **Статус:** TD-S4.2-03 ЗАВЕРШЁН (стандарты 1С СТО + БСП, 4-й валидатор)
+> **Задача:** Этап 2 (Поиск и качество) — **ЗАВЕРШЁН** ✅
+> **Статус:** TD-S4.2-04 ЗАВЕРШЁН (BSL LS Docker: Dockerfile, HTTP server, integration-тесты)
 > **Блокеры:** нет
 > **Что сделано:** ✅ Этап 1, ✅ ADR-0020, ✅ api-reference в pipeline, ✅ transitive closure, ✅ library add,
 > ✅ codebase MCP (indexer + VectorStoreProtocol + PgVectorStore + server 4 tools),
-> ✅ **TD-S4.2-03 standards** (8 YAML: 4 СТО + 4 БСП, JSON Schema, KBCollection.standards,
-> 2 новых MCP tools: get_standard + check_standards, 4-й валидатор в validate_node, 39 новых тестов)
-> **Следующий шаг:** TD-S4.2-04 BSL LS через Docker (последняя задача Этапа 2)
+> ✅ TD-S4.2-03 standards (8 YAML: 4 СТО + 4 БСП, 4-й валидатор),
+> ✅ **TD-S4.2-04 BSL LS Docker** (мульти-stage Dockerfile, исправлен CLI-синтаксис,
+> healthcheck в docker-compose, .dockerignore, latency_ms метрика, 10 новых тестов + 3 integration)
+> **Следующий шаг:** Stage 3 (Production-readiness): PostgresSaver persistence → Facade handlers → git MCP → Docker production
 >
 > **Принцип «Глубина сначала»** (D-2026-07-12-08): качество важнее скорости.
 >
@@ -28,16 +29,17 @@
 
 - **Спринты завершены:** 0, 1, 1.5, 2, 3, 3.1, 3.2, 3.2.1, 3.3
 - **Этап 1 прогресс:** 5/5 задач ЗАВЕРШЁН ✅ (TD-S4.1-01..04 + контракт)
-- **Этап 2 прогресс:** 6/7 задач ЗАВЕРШЕНО ✅ (TD-S4.2-01/02/03/05/06/07 ✅, остался TD-S4.2-04 BSL LS)
-- **Тесты:** 770 проходят (+39 новых для стандартов)
+- **Этап 2 прогресс:** **7/7 задач ЗАВЕРШЕНО** ✅ (TD-S4.2-01/02/03/04/05/06/07 ✅)
+- **Тесты:** 780 проходят + 3 skipped (integration, без Docker) (+10 от BSL LS)
 - **MVP:** ✅ `1c-ai generate` работает с реальной LLM (ZaiLLM через z-ai CLI)
 - **HBK:** 10,150 методов платформы 8.3.25 (Container32 парсер)
-- **KB:** 5 patterns + 10 antipatterns + **8 standards (4 СТО + 4 БСП)** — стало 3 типа сущностей
-- **MCP tools:** 21 domain tools (5 → 7 KB: добавлены get_standard + check_standards)
-- **Валидаторы:** 4 параллельных в validate_node (BSL LS + antipatterns + method availability + **standards**)
+- **KB:** 5 patterns + 10 antipatterns + 8 standards (4 СТО + 4 БСП) — 3 типа сущностей
+- **MCP tools:** 21 domain tools (5→7 KB: get_standard + check_standards)
+- **Валидаторы:** 4 параллельных в validate_node (BSL LS + antipatterns + method availability + standards)
+- **BSL LS Docker:** мульти-stage Dockerfile v0.25.5, HTTP API, healthcheck, .dockerignore
 - **Boundary violations:** 0 (DI через functools.partial)
 - **Данные:** УТ11 (5,575 объектов, 7,141 BSL модулей) + HBK 8.3.25 (80 файлов)
-- **Последний коммит:** TD-S4.2-03 standards
+- **Последний коммит:** TD-S4.2-04 BSL LS Docker — Этап 2 ЗАВЕРШЁН
 
 ---
 

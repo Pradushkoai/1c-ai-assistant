@@ -14,7 +14,7 @@ services:
       postgres:
         condition: service_healthy
       1c-ai-bsl-ls:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./data:/app/data
       - ./derived:/app/derived
@@ -40,8 +40,15 @@ services:
       - BSL_LS_JAR=/opt/bsl-ls/bsl-language-server.jar
       - BSL_LS_TIMEOUT=60
       - JAVA_OPTS=-Xmx512m
+      - BSL_LS_HTTP_PORT=8080
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
     restart: unless-stopped
 
   # ─── PostgreSQL 16 + pgvector: persistence + vector search ──────────────
