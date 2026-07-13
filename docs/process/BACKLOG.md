@@ -26,42 +26,53 @@
 
 ### TD-S4.2-01: ADR-0020 Embeddings strategy — ЗАКРЫТО ✅
 - **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit `e1c6330`
+- **Решение:** ADR-0020 — гибридный BM25+pgvector+RRF, multilingual-e5-large
+  1024 dim (BGE-M3 недоступен в fastembed), chunking по методам,
+  4-layer индексация (platform/library/config/KB).
+
+### TD-S4.2-02: codebase MCP (BM25 + pgvector) — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commits `0eaf241` (ч.1) + `08cd30f` (ч.2)
+- **Решение:**
+  - Часть 1: embeddings_indexer.py + vector_store.py (VectorStoreProtocol,
+    PgVectorStore, InMemoryVectorStore) — ADR-0017 compliance.
+  - Часть 2: codebase/server.py — 4 MCP tools (semantic_search, get_module,
+    get_similar, call_graph). 9 тестов с InMemoryVectorStore.
+
+### TD-S4.2-03: standards (1С СТО, БСП) — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
 - **Закрыто в:** commit (pending)
-- **Решение:** ADR-0020 — гибридный BM25+pgvector+RRF, BGE-M3 1024 dim,
-  chunking по методам, 4-layer индексация (platform/library/config/KB).
-
-### TD-S4.2-02: codebase MCP (BM25 + pgvector)
-- **Этап:** 2 (Sprint 4.2)
-- **Приоритет:** HIGH
-- **Описание:** pgvector + embeddings (по ADR-0020!). BM25+vector+RRF.
-  VectorStoreProtocol (ADR-0017). Multi-layer metadata.
-
-### TD-S4.2-03: standards (1С СТО, БСП)
-- **Этап:** 2 (Sprint 4.2)
-- **Приоритет:** MEDIUM
-- **Описание:** Перенос YAML из старого репо knowledge_base/standards/.
-  Validator будет проверять code на соответствие стандартам 1С.
+- **Решение:** knowledge-base/standards/ — 8 YAML-стандартов (4 СТО + 4 БСП).
+  JSON Schema standard.schema.json. KBCollection.standards (3-й тип сущностей).
+  2 новых MCP tools: kb.get_standard + kb.check_standards.
+  4-й параллельный валидатор в validate_node (_run_standards_validator).
+  ValidationFinding.source: добавлен 'kb_standards'. 39 новых тестов.
+  MCP tools total: 21 (5→7 KB).
 
 ### TD-S4.2-04: BSL LS через Docker
 - **Этап:** 2 (Sprint 4.2)
 - **Приоритет:** MEDIUM
 - **Описание:** Реальная валидация через BSL LS Java-сервер.
+  Сейчас bsl_ls.lint возвращает пустой результат (валидатор работает, но
+  без реальных правил). Нужно: docker-compose с BSL LS, HTTP-обёртка.
 
-### TD-S4.2-05: `1c-ai library add` (БСП/БПО)
-- **Этап:** 2 (Sprint 4.2)
-- **Приоритет:** HIGH
-- **Описание:** Команда для индексации библиотек (БСП, БПО) как отдельного
-  слоя (source_layer=library). Шарится между конфигами. Embeddings с тегом.
+### TD-S4.2-05: `1c-ai library add` (БСП/БПО) — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit `c756c74`
+- **Решение:** agent/cli_commands/library.py — add/build/list/remove.
+  Библиотеки индексируются как source_layer=library.
 
-### TD-S4.2-06: Transitive closure для Planner/Reviewer
-- **Этап:** 2 (Sprint 4.2)
-- **Приоритет:** MEDIUM
-- **Описание:** get_transitive_dependents для dependency graph (blast radius
-  для Planner). Transitive call count для Reviewer (impact). Coder — 1-hop только.
+### TD-S4.2-06: Transitive closure для Planner/Reviewer — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit `163cfc6`
+- **Решение:** parsers/xml/dependency_graph.py — get_transitive_dependents
+  (blast radius для Planner) + transitive call count для Reviewer.
+  Coder получает только 1-hop зависимости.
 
 ### TD-S4.2-07: api-reference в pipeline (Gatherer) — ЗАКРЫТО ✅
 - **Дата закрытия:** 2026-07-13
-- **Закрыто в:** commit (pending)
+- **Закрыто в:** commit `f53c21f`
 - **Решение:** `1c-ai config build` теперь строит api-reference.json, call-graph.json,
   dependency-graph.json. Gatherer загружает api-reference и передаёт Coder'у
   список существующих export-методов для целевого объекта.
@@ -147,12 +158,13 @@
 
 | Статус | Количество |
 |---|---|
-| В работе (Этап 1) | 1 (TD-S4.1-04) |
-| Этап 2 | 4 (TD-S4.2-01..04) |
+| В работе (Этап 1) | 0 (Этап 1 завершён) |
+| Этап 2 — открыто | 1 (TD-S4.2-04 BSL LS через Docker) |
+| Этап 2 — закрыто | 6 (TD-S4.2-01/02/03/05/06/07) |
 | Этап 3 | 4 (TD-S5-01..04) |
 | Когда-нибудь | 4 (TD-005..011) |
-| Закрыто | 6 (TD-000, TD-002, TD-004, TD-S4.1-01, TD-S4.1-02, TD-S4.1-03) |
-| **Всего** | **19** |
+| Закрыто | 12 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01/02/03/05/06/07) |
+| **Всего** | **21** |
 
 ---
 

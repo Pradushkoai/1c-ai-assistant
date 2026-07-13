@@ -957,3 +957,89 @@ Stage Summary:
 - 6 коммитов: e1c6330 → 0eaf241
 - codebase MCP server (TD-S4.2-02 ч.2) — следующий шаг
 - Оставшиеся: TD-S4.2-02 ч.2 (codebase MCP 4 tools), TD-S4.2-03 (standards), TD-S4.2-04 (BSL LS Docker)
+
+---
+
+## 2026-07-13: TD-S4.2-02 ч.2 + TD-S4.2-03 — Codebase MCP + Стандарты 1С
+
+**Task ID:** sprint-4.2-continue
+**Agent:** main (Claude Sonnet 4.5)
+
+### Контекст
+
+Продолжение Sprint 4.2 после предыдущей сессии. Цель — закрыть TD-S4.2-02 ч.2
+(codebase MCP server) и TD-S4.2-03 (стандарты 1С СТО + БСП).
+
+### Work Log
+
+#### TD-S4.2-02 ч.2 (уже было сделано в предыдущей сессии)
+- Проверен коммит `08cd30f`: CodebaseServer с 4 MCP tools (semantic_search,
+  get_module, get_similar, call_graph). 9 тестов с InMemoryVectorStore.
+- 731 тест проходят (включая 9 новых от codebase server).
+
+#### TD-S4.2-03 (этот session)
+
+**Архитектурное решение (D-2026-07-13-02):**
+- Выбран вариант B — отдельная сущность `standard` (3-й тип KB) вместо
+  расширения antipattern. Семантика различается: antipattern = «плохая практика»,
+  standard = «требование стандарта 1С с источником (its.1c.ru)».
+
+**Создано файлов:**
+- `knowledge-base/schemas/standard.schema.json` — JSON Schema с полем `source`
+  (type+code+url), описание, detect, примеры, рекомендации.
+- `knowledge-base/standards/sto-6.1-no-tabs.yaml` — табуляция запрещена (warning).
+- `knowledge-base/standards/sto-2.1-no-english-markers.yaml` — TODO/FIXME/HACK (warning).
+- `knowledge-base/standards/sto-2.1-no-latin-var-decl.yaml` — транслит в var-именах (warning).
+- `knowledge-base/standards/sto-2.1-no-multiple-statements.yaml` — `;` на строке (info).
+- `knowledge-base/standards/bsp-find-by-name.yaml` — НайтиПоНаименованию (warning).
+- `knowledge-base/standards/bsp-find-by-code.yaml` — НайтиПоКоду (warning).
+- `knowledge-base/standards/bsp-message-to-user.yaml` — Сообщить() вместо БСП (warning).
+- `knowledge-base/standards/bsp-no-execute-string-literal.yaml` — Выполнить("...") (critical).
+- `knowledge-base/index.json` — обновлён, 8 standards.
+- `tests/mcp_servers/test_kb_standards.py` — 39 новых тестов.
+
+**Изменено файлов:**
+- `packages/mcp_servers/src/mcp_servers/kb/loader.py` — KBCollection.standards +
+  get_standard + list_standards + detect_standards_violations + расширенный
+  search + расширенный stats + _score_match (поиск по source.code).
+- `packages/mcp_servers/src/mcp_servers/kb/server.py` — KbServer.get_standard +
+  KbServer.check_standards (2 новых MCP tools). health_check расширен.
+- `packages/mcp_servers/src/mcp_servers/kb/contracts.py` — GetStandardInput,
+  CheckStandardsInput, GetStandardOutput, CheckStandardsOutput, GetStandard,
+  CheckStandards классы. KB_TOOLS: 5 → 7.
+- `packages/orchestrator/src/orchestrator/contracts.py` — ValidationFinding.source
+  расширен Literal'ом 'kb_standards'. ValidateResult docstring обновлён.
+- `packages/orchestrator/src/orchestrator/nodes/validate.py` — 4-й параллельный
+  валидатор _run_standards_validator через asyncio.TaskGroup. Лог расширен.
+- `docs/architecture/04-pipeline-contracts.md` — отражено расширение source Literal.
+- `tests/mcp_servers/test_mcp_contracts.py` — обновлены ожидаемые числа
+  (19 → 21 tools, 5 → 7 KB).
+
+**Тесты:**
+- 770 проходят (было 731, +39 новых).
+- ruff: All checks passed.
+- check_package_boundaries: 0 violations.
+- mypy: 14 ошибок (все — существующий TD-011, новых нет).
+
+**MCP tools total:** 21 (5 KB → 7 KB: добавлены get_standard + check_standards).
+**Валидаторы:** 4 параллельных в validate_node (BSL LS + antipatterns +
+method availability + **standards**).
+**KB:** 5 patterns + 10 antipatterns + **8 standards** = 23 KB-сущности.
+
+### Session Checkpoint
+- [x] ФОКУС-строка обновлена (TD-S4.2-03 закрыт, Этап 2: 6/7)
+- [x] worklog.md — эта запись
+- [x] DECISIONS.md — D-2026-07-13-02 зафиксировано
+- [x] BACKLOG.md — TD-S4.2-03 закрыт (TD-S4.2-02/05/06/07 уже были закрыты)
+- [x] Тесты проходят (770), ruff чистый, boundaries 0
+- [x] Все коммиты запушены от Pradushkoai
+- [x] docs/process/ файлы в git
+
+### Stage Summary
+- Этап 2: **6/7 задач завершено** (TD-S4.2-01/02/03/05/06/07 ✅)
+- Осталась только TD-S4.2-04 (BSL LS через Docker)
+- 770 тестов (+39 от стандартизации)
+- 8 YAML-стандартов: 4 СТО + 4 БСП, все с regex-detect
+- 21 MCP tool (5 KB → 7 KB)
+- 4 параллельных валидатора в validate_node
+- Следующий шаг: TD-S4.2-04 (Docker + BSL LS Java-сервер) → Этап 2 завершён

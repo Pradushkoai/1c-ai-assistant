@@ -1,17 +1,20 @@
 # CURRENT FOCUS — точка входа для каждой сессии
 
 > **Этот файл живёт в git репозитории (docs/process/), чтобы переживать сбросы окружения.**
-> Последнее обновление: 2026-07-12 (Этап 1 — 4/5 задач завершены, checkpoint перед перерывом)
+> Последнее обновление: 2026-07-13 (Этап 2 — 6/7 задач завершены, TD-S4.2-03 закрыт)
 
 ---
 
 ## 🎯 ФОКУС СЕССИИ
 
-> **Задача:** Этап 2 (Поиск и качество) — в работе
-> **Статус:** TD-S4.2-02 ЗАВЕРШЁН (embeddings + vector_store + codebase MCP server)
+> **Задача:** Этап 2 (Поиск и качество) — финальный рывок
+> **Статус:** TD-S4.2-03 ЗАВЕРШЁН (стандарты 1С СТО + БСП, 4-й валидатор)
 > **Блокеры:** нет
-> **Что сделано:** ✅ Этап 1, ✅ ADR-0020, ✅ api-reference в pipeline, ✅ transitive closure, ✅ library add, ✅ codebase MCP (indexer + VectorStoreProtocol + PgVectorStore + server 4 tools)
-> **Следующий шаг:** TD-S4.2-03 standards → TD-S4.2-04 BSL LS
+> **Что сделано:** ✅ Этап 1, ✅ ADR-0020, ✅ api-reference в pipeline, ✅ transitive closure, ✅ library add,
+> ✅ codebase MCP (indexer + VectorStoreProtocol + PgVectorStore + server 4 tools),
+> ✅ **TD-S4.2-03 standards** (8 YAML: 4 СТО + 4 БСП, JSON Schema, KBCollection.standards,
+> 2 новых MCP tools: get_standard + check_standards, 4-й валидатор в validate_node, 39 новых тестов)
+> **Следующий шаг:** TD-S4.2-04 BSL LS через Docker (последняя задача Этапа 2)
 >
 > **Принцип «Глубина сначала»** (D-2026-07-12-08): качество важнее скорости.
 >
@@ -24,13 +27,17 @@
 ## 📊 Текущий статус
 
 - **Спринты завершены:** 0, 1, 1.5, 2, 3, 3.1, 3.2, 3.2.1, 3.3
-- **Этап 1 прогресс:** 5/5 задач ЗАВЕРШЁН ✅ (TD-S4.1-01 ✅, TD-S4.1-02 ✅, TD-S4.1-03 ✅, TD-S4.1-04 ✅, контракт ✅)
-- **Тесты:** 722 проходят
+- **Этап 1 прогресс:** 5/5 задач ЗАВЕРШЁН ✅ (TD-S4.1-01..04 + контракт)
+- **Этап 2 прогресс:** 6/7 задач ЗАВЕРШЕНО ✅ (TD-S4.2-01/02/03/05/06/07 ✅, остался TD-S4.2-04 BSL LS)
+- **Тесты:** 770 проходят (+39 новых для стандартов)
 - **MVP:** ✅ `1c-ai generate` работает с реальной LLM (ZaiLLM через z-ai CLI)
 - **HBK:** 10,150 методов платформы 8.3.25 (Container32 парсер)
+- **KB:** 5 patterns + 10 antipatterns + **8 standards (4 СТО + 4 БСП)** — стало 3 типа сущностей
+- **MCP tools:** 21 domain tools (5 → 7 KB: добавлены get_standard + check_standards)
+- **Валидаторы:** 4 параллельных в validate_node (BSL LS + antipatterns + method availability + **standards**)
 - **Boundary violations:** 0 (DI через functools.partial)
 - **Данные:** УТ11 (5,575 объектов, 7,141 BSL модулей) + HBK 8.3.25 (80 файлов)
-- **Последний коммит:** `ccf158a` — call graph builder
+- **Последний коммит:** TD-S4.2-03 standards
 
 ---
 

@@ -13,8 +13,10 @@ from pathlib import Path
 from .contracts import (
     CheckAntipatternsOutput,
     CheckMethodAvailabilityOutput,
+    CheckStandardsOutput,
     GetAntipatternOutput,
     GetPatternOutput,
+    GetStandardOutput,
     SearchKbOutput,
 )
 from .loader import KBCollection
@@ -175,6 +177,79 @@ class KbServer:
         )
         return CheckAntipatternsOutput(findings=findings)
 
+    async def get_standard(self, standard_id: str) -> GetStandardOutput:
+        """Получить стандарт 1С (СТО/БСП) по id.
+
+        Args:
+            standard_id: например, 'sto-6.1-no-tabs' или 'bsp-find-by-name'.
+
+        Returns:
+            GetStandardOutput с описанием стандарта, источником, примерами.
+
+        Raises:
+            ValueError: если стандарт не найден.
+        """
+        std = self.kb.get_standard(standard_id)
+        if std is None:
+            raise ValueError(f"Standard not found: {standard_id}")
+
+        source = std.get("source", {})
+        detect = std.get("detect", {})
+        if "regex" in detect:
+            detect_method = "regex"
+        elif "ast_pattern" in detect:
+            detect_method = "ast_pattern"
+        elif "bsl_ls_rule" in detect:
+            detect_method = "bsl_ls_rule"
+        else:
+            detect_method = "unknown"
+
+        return GetStandardOutput(
+            standard_id=std["id"],
+            title=std.get("title", ""),
+            source_type=source.get("type", ""),
+            source_code=source.get("code", ""),
+            source_url=source.get("url", ""),
+            severity=std.get("severity", "info"),
+            detect_method=detect_method,
+            description=std.get("description", ""),
+            recommendation_for_llm=std.get("recommendation_for_llm", ""),
+            example_bad=std.get("example_bad", ""),
+            example_good=std.get("example_good", ""),
+        )
+
+    async def check_standards(
+        self,
+        code: str,
+        severity_filter: list[str] | None = None,
+        source_type_filter: list[str] | None = None,
+        category_filter: list[str] | None = None,
+    ) -> CheckStandardsOutput:
+        """Проверить BSL-код на соответствие стандартам 1С (СТО/БСП).
+
+        Args:
+            code: BSL-код для проверки.
+            severity_filter: фильтр по severity (['critical', 'warning', 'info']).
+                По умолчанию ['critical', 'warning', 'info'] — все.
+            source_type_filter: фильтр по типу источника (['СТО', 'БСП']).
+                По умолчанию None — все источники.
+            category_filter: фильтр по category.
+
+        Returns:
+            CheckStandardsOutput со списком findings (нарушенные стандарты).
+        """
+        findings = self.kb.detect_standards_violations(
+            code=code,
+            severity_filter=severity_filter,
+            source_type_filter=source_type_filter,
+            category_filter=category_filter,
+        )
+        return CheckStandardsOutput(findings=findings)
+
     def health_check(self) -> bool:
         """Проверить, что KB загружена."""
-        return len(self.kb.patterns) > 0 or len(self.kb.antipatterns) > 0
+        return (
+            len(self.kb.patterns) > 0
+            or len(self.kb.antipatterns) > 0
+            or len(self.kb.standards) > 0
+        )

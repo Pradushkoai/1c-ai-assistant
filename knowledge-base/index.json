@@ -110,5 +110,78 @@
     {"role": "REVIEWER", "file": "prompts/reviewer.system.j2"},
     {"role": "PLANNER", "file": "prompts/planner.system.j2"}
   ],
-  "standards": []
+  "standards": [
+    {
+      "id": "sto-6.1-no-tabs",
+      "title": "СТО 6.1: Отступы — 4 пробела, без табуляции",
+      "category": "style",
+      "severity": "warning",
+      "source_type": "СТО",
+      "source_code": "6.1",
+      "file": "standards/sto-6.1-no-tabs.yaml"
+    },
+    {
+      "id": "sto-2.1-no-english-markers",
+      "title": "СТО 2.1: Комментарии на русском — без английских маркеров",
+      "category": "comments",
+      "severity": "warning",
+      "source_type": "СТО",
+      "source_code": "2.1",
+      "file": "standards/sto-2.1-no-english-markers.yaml"
+    },
+    {
+      "id": "sto-2.1-no-latin-var-decl",
+      "title": "СТО 2.1: Имена переменных на русском — запрет транслитерации",
+      "category": "naming",
+      "severity": "warning",
+      "source_type": "СТО",
+      "source_code": "2.1",
+      "file": "standards/sto-2.1-no-latin-var-decl.yaml"
+    },
+    {
+      "id": "sto-2.1-no-multiple-statements",
+      "title": "СТО 2.1: Один оператор на строку — без нескольких через ';'",
+      "category": "style",
+      "severity": "info",
+      "source_type": "СТО",
+      "source_code": "2.1",
+      "file": "standards/sto-2.1-no-multiple-statements.yaml"
+    },
+    {
+      "id": "bsp-find-by-name",
+      "title": "БСП: Не использовать НайтиПоНаименованию — используйте запрос",
+      "category": "performance",
+      "severity": "warning",
+      "source_type": "БСП",
+      "source_code": "common-modules-search",
+      "file": "standards/bsp-find-by-name.yaml"
+    },
+    {
+      "id": "bsp-find-by-code",
+      "title": "БСП: Не использовать НайтиПоКоду — используйте запрос",
+      "category": "performance",
+      "severity": "warning",
+      "source_type": "БСП",
+      "source_code": "common-modules-search",
+      "file": "standards/bsp-find-by-code.yaml"
+    },
+    {
+      "id": "bsp-message-to-user",
+      "title": "БСП: СообщитьПользователю вместо Сообщить",
+      "category": "client_server",
+      "severity": "warning",
+      "source_type": "БСП",
+      "source_code": "user-messages",
+      "file": "standards/bsp-message-to-user.yaml"
+    },
+    {
+      "id": "bsp-no-execute-string-literal",
+      "title": "БСП: Запрет Выполнить() со строковым литералом — SQL/BSL injection",
+      "category": "security",
+      "severity": "critical",
+      "source_type": "БСП",
+      "source_code": "security-execute",
+      "file": "standards/bsp-no-execute-string-literal.yaml"
+    }
+  ]
 }

@@ -302,12 +302,13 @@ class ValidationFinding(_ResultBase):
     message: str
     line: int | None = None
     column: int | None = None
-    source: Literal["bsl_ls", "kb_antipatterns", "custom_rules"]
+    # TD-S4.2-03: добавлен 'kb_standards' для 4-го валидатора (СТО/БСП).
+    source: Literal["bsl_ls", "kb_antipatterns", "kb_standards", "custom_rules"]
     fix_hint: str | None = None
 
 
 class ValidateResult(_ResultBase):
-    """Результат Validate subgraph — fan-out/fan-in 3 валидаторов."""
+    """Результат Validate subgraph — fan-out/fan-in 4 валидаторов (TD-S4.2-03: добавлен standards)."""
     subtask_id: str
     iteration_number: int
     findings: list[ValidationFinding]

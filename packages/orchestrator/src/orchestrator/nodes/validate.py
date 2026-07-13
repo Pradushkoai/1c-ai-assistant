@@ -1,12 +1,14 @@
 """validate node — детерминированный gate (parallel fan-out через asyncio.TaskGroup).
 
 CONCEPTUAL.md §2.1: «Внутри Validate — parallel fan-out без supervisor
-(3 валидатора параллельно через asyncio.TaskGroup)»
+(4 валидатора параллельно через asyncio.TaskGroup)»
 
-3 валидатора:
+4 валидатора:
   1. bsl_ls.lint — статический анализатор BSL LS (через HTTP)
   2. kb.check_antipatterns — regex-проверка на антипаттерны из YAML
   3. kb.check_method_availability — вызовы серверных методов на клиенте
+  4. kb.check_standards — проверка на соответствие стандартам 1С (СТО/БСП)
+     (TD-S4.2-03, добавлен в Sprint 4.2)
 
 См. ADR-0004, ADR-0009, CONCEPTUAL.md §2.1.
 """
@@ -105,13 +107,20 @@ async def validate_node(
                 platform_version=state.platform_version,
             )
         )
+        task_standards = tg.create_task(
+            _run_standards_validator(
+                kb_server=kb_server,
+                code=code,
+            )
+        )
 
     bsl_ls_findings = task_bsl_ls.result()
     kb_findings = task_kb.result()
     method_findings = task_methods.result()
+    standards_findings = task_standards.result()
 
     # ─── Fan-in: объединяем findings ─────────────────────────────────────────
-    findings: list[ValidationFinding] = bsl_ls_findings + kb_findings + method_findings
+    findings: list[ValidationFinding] = bsl_ls_findings + kb_findings + method_findings + standards_findings
 
     failed_checks: list[dict[str, Any]] = []
     for f in findings:
@@ -155,6 +164,7 @@ async def validate_node(
         bsl_ls_findings=len(bsl_ls_findings),
         kb_findings=len(kb_findings),
         method_findings=len(method_findings),
+        standards_findings=len(standards_findings),
     )
 
     return {
@@ -287,4 +297,48 @@ def _check_methods_availability_sync(
         except Exception as exc:
             log.warning("validate_method_availability_error: method=%s error=%s", method_name, str(exc)[:100])
 
+    return findings
+
+
+async def _run_standards_validator(
+    kb_server: Any,
+    code: str,
+) -> list[ValidationFinding]:
+    """Валидатор 4: проверка соответствия стандартам 1С (СТО/БСП).
+
+    TD-S4.2-03: 4-й параллельный валидатор, добавлен в Sprint 4.2.
+    Использует kb.check_standards (через KBCollection.detect_standards_violations).
+
+    Возвращает findings с source='kb_standards' и кодом стандарта в поле `code`.
+    """
+    if kb_server is None:
+        return []
+
+    findings: list[ValidationFinding] = []
+    try:
+        std_result = await kb_server.check_standards(
+            code=code,
+            severity_filter=["critical", "warning", "info"],
+        )
+        for finding_dict in std_result.findings:
+            source_info = finding_dict.get("source", {})
+            source_code = source_info.get("code", "")
+            source_type = source_info.get("type", "")
+            source_url = source_info.get("url", "")
+            fix_hint = (
+                f"{source_type} {source_code}: см. {source_url}"
+                if source_url
+                else f"{source_type} {source_code}"
+            )
+            findings.append(ValidationFinding(
+                severity=finding_dict.get("severity", "info"),
+                code=finding_dict.get("standard_id", "UNKNOWN-STANDARD"),
+                message=finding_dict.get("message", ""),
+                line=finding_dict.get("line"),
+                column=None,
+                source="kb_standards",
+                fix_hint=fix_hint,
+            ))
+    except Exception as exc:
+        log.warning("validate_standards_error: %s", exc)
     return findings

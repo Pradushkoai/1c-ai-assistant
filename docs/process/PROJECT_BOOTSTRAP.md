@@ -62,14 +62,17 @@
 | **Проект** | 1c-ai-assistant — AI-ассистент для 1С-разработчиков |
 | **Репозиторий** | https://github.com/Pradushkoai/1c-ai-assistant |
 | **Локальный путь** | `/home/z/my-project/1c-ai-assistant/` |
-| **Последний коммит** | `5154e5e` — Sprint 4.2 session record |
-| **Тесты** | 722 проходят, ruff чистый, 0 boundary violations |
+| **Последний коммит** | TD-S4.2-03 — стандарты 1С (СТО + БСП) |
+| **Тесты** | 770 проходят, ruff чистый, 0 boundary violations |
 | **Спринты завершены** | 0, 1, 1.5, 2, 3, 3.1, 3.2, 3.2.1, 3.3 |
 | **Этап 1** | ✅ ЗАВЕРШЁН (5/5: Form/Subsystem/Role, api-reference, call graph, dependency graph, asyncio.TaskGroup) |
-| **Этап 2** | 5/7 задач (ADR-0020, api-ref в pipeline, transitive closure, library add, embeddings indexer + vector store) |
+| **Этап 2** | **6/7 задач** (TD-S4.2-01/02/03/05/06/07 ✅, остался TD-S4.2-04 BSL LS Docker) |
 | **MVP** | ✅ `1c-ai generate` работает с реальной LLM (ZaiLLM через z-ai CLI) |
 | **LLM** | ZaiLLM adapter (z-ai CLI subprocess, без внешнего API ключа) |
 | **HBK** | 10,150 методов платформы 8.3.25 (Container32 парсер) |
+| **KB** | 5 patterns + 10 antipatterns + **8 standards (4 СТО + 4 БСП)** |
+| **MCP tools** | 21 (5 KB → 7 KB: добавлены get_standard + check_standards) |
+| **Валидаторы** | 4 параллельных в validate_node (BSL LS + antipatterns + method + **standards**) |
 | **Архитектура** | CONCEPTUAL.md §1.1 соблюдён (DI), §2.1 соблюдён (asyncio.TaskGroup) |
 | **Принцип** | Глубина сначала (D-2026-07-12-08) |
 
@@ -86,15 +89,15 @@
 - ✅ TD-S4.2-06 (Transitive closure для Planner/Reviewer)
 - ✅ TD-S4.2-05 (`1c-ai library add/build/list/remove` для БСП/БПО)
 - ✅ TD-S4.2-02 ч.1 (Embeddings indexer + VectorStoreProtocol + PgVectorStore + InMemoryVectorStore)
-- ⬜ TD-S4.2-02 ч.2 (codebase MCP server — 4 tools)
-- ⬜ TD-S4.2-03 (standards — 1С СТО, БСП)
-- ⬜ TD-S4.2-04 (BSL LS через Docker)
+- ✅ TD-S4.2-02 ч.2 (CodebaseServer — 4 tools: semantic_search, get_module, get_similar, call_graph)
+- ✅ **TD-S4.2-03** (Стандарты 1С: 8 YAML — 4 СТО + 4 БСП, 4-й валидатор)
+- ⬜ TD-S4.2-04 (BSL LS через Docker — последняя задача Этапа 2)
 
-### Топ-3 активного техдолга (полностью — в BACKLOG.md)
+### Топ-1 активного техдолга (полностью — в BACKLOG.md)
 
-- **TD-S4.2-02 ч.2 (HIGH):** codebase MCP server — 4 tools (semantic_search, get_module, get_similar, call_graph)
-- **TD-S4.2-03 (MEDIUM):** standards (1С СТО, БСП) — перенос YAML из старого репо
-- **TD-S4.2-04 (MEDIUM):** BSL LS через Docker — реальная валидация
+- **TD-S4.2-04 (MEDIUM):** BSL LS через Docker — реальная валидация через Java-сервер.
+  Сейчас bsl_ls.lint возвращает пустой результат (валидатор работает, но без правил).
+  Нужно: docker-compose с BSL LS, HTTP-обёртка. После этого Этап 2 завершён.
 
 ---
 
@@ -116,17 +119,17 @@
 | Роль | Инструменты |
 |---|---|
 | Planner | metadata.get_dependency_graph, kb.search_kb |
-| Gatherer | metadata (3), codebase (3), kb (2) |
+| Gatherer | metadata (3), codebase (3), kb (3) |
 | Coder | **НИКАКИХ** — критично (ADR-0005) |
-| Validator | bsl_ls (2), kb.check_antipatterns, kb.check_method_availability |
-| Reviewer | kb.get_antipattern, kb.check_antipatterns, codebase.get_similar |
+| Validator | bsl_ls (2), kb.check_antipatterns, kb.check_method_availability, **kb.check_standards** |
+| Reviewer | kb.get_antipattern, kb.get_standard, kb.check_antipatterns, kb.check_standards, codebase.get_similar |
 | Committer | git (4) |
 
-**Всего: 19 инструментов в 5 MCP-серверах.**
+**Всего: 21 инструмент в 5 MCP-серверах.**
 
 ### 4 принципа взаимодействия
 
-1. **Иерархическая оркестрация:** pipeline (preflight → plan → gather → code → validate → review → commit). Validate — parallel fan-out через **asyncio.TaskGroup** (3 валидатора параллельно).
+1. **Иерархическая оркестрация:** pipeline (preflight → plan → gather → code → validate → review → commit). Validate — parallel fan-out через **asyncio.TaskGroup** (4 валидатора параллельно: BSL LS + antipatterns + method availability + standards).
 2. **Фокус-контроль:** Coder видит ТОЛЬКО собранный Gather'ом контекст.
 3. **Контракты — Pydantic v2 frozen + JSON Schema.**
 4. **Управление ошибками:** 14 классов AgentError. `with_retry()` — backoff.

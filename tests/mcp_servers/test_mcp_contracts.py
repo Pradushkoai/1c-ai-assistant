@@ -1,4 +1,4 @@
-"""Тесты для mcp_servers контрактов — 19 tools + Facade."""
+"""Тесты для mcp_servers контрактов — 21 tools + Facade (5 KB + 2 standards TD-S4.2-03)."""
 
 from __future__ import annotations
 
@@ -40,13 +40,13 @@ class TestToolError:
         assert isinstance(err, Exception)
 
 
-# ─── 19 domain tools — CI-проверки ─────────────────────────────────────────
+# ─── 21 domain tools — CI-проверки ─────────────────────────────────────────
 
 
 class TestDomainToolsCount:
     @pytest.mark.smoke
-    def test_total_19_tools(self):
-        assert len(ALL_DOMAIN_TOOLS) == 19
+    def test_total_21_tools(self):
+        assert len(ALL_DOMAIN_TOOLS) == 21
 
     def test_metadata_4(self):
         assert len(METADATA_TOOLS) == 4
@@ -54,8 +54,9 @@ class TestDomainToolsCount:
     def test_codebase_4(self):
         assert len(CODEBASE_TOOLS) == 4
 
-    def test_kb_5(self):
-        assert len(KB_TOOLS) == 5
+    def test_kb_7(self):
+        # 5 базовых + 2 standards (TD-S4.2-03): get_standard, check_standards
+        assert len(KB_TOOLS) == 7
 
     def test_bsl_ls_2(self):
         assert len(BSL_LS_TOOLS) == 2
@@ -93,6 +94,8 @@ class TestToolNames:
             "kb.search_kb",
             "kb.check_method_availability",
             "kb.check_antipatterns",
+            "kb.get_standard",
+            "kb.check_standards",
             "bsl_ls.lint",
             "bsl_ls.format",
             "git.create_branch",

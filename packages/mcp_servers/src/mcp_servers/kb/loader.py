@@ -26,18 +26,23 @@ log = logging.getLogger(__name__)
 
 
 class KBCollection:
-    """Коллекция загруженных паттернов и антипаттернов.
+    """Коллекция загруженных паттернов, антипаттернов и стандартов.
 
-    Загружает YAML из knowledge-base/{patterns,antipatterns}/,
+    Загружает YAML из knowledge-base/{patterns,antipatterns,standards}/,
     валидирует по JSON Schema, предоставляет методы для поиска и детекции.
 
     Опционально подключается к platform-methods.db (SQLite из .hbk) —
     если БД передана и существует, check_method_availability использует её.
     Иначе — fallback на хардкод-список (Sprint 3 логика).
 
+    Sprint 4.2 (TD-S4.2-03): добавлены стандарты 1С (СТО + БСП) —
+    третий тип KB-сущностей наравне с patterns и antipatterns.
+    Используются Validator'ом как 4-й параллельный валидатор.
+
     Attributes:
         patterns: {pattern_id: dict} — все паттерны.
         antipatterns: {antipattern_id: dict} — все антипаттерны.
+        standards: {standard_id: dict} — все стандарты (СТО/БСП).
         platform_methods_db: путь к SQLite или None.
     """
 
@@ -52,6 +57,7 @@ class KBCollection:
         self.kb_dir = kb_dir
         self.patterns: dict[str, dict[str, Any]] = {}
         self.antipatterns: dict[str, dict[str, Any]] = {}
+        self.standards: dict[str, dict[str, Any]] = {}
         self.platform_methods_db: Path | None = platform_methods_db
         self._platform_methods_cache: dict[str, dict[str, Any]] | None = None
         self._schemas = self._load_schemas()
@@ -104,10 +110,25 @@ class KBCollection:
                 except Exception as exc:
                     log.warning("Failed to load antipattern %s: %s", yaml_path, exc)
 
+        # Standards (TD-S4.2-03: СТО 1С + БСП)
+        standards_dir = self.kb_dir / "standards"
+        if standards_dir.exists():
+            for yaml_path in sorted(standards_dir.glob("*.yaml")):
+                try:
+                    data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+                    if data and "id" in data:
+                        if "standard" in self._schemas:
+                            validate_schema(instance=data, schema=self._schemas["standard"])
+                        self.standards[data["id"]] = data
+                        log.debug("Loaded standard: %s", data["id"])
+                except Exception as exc:
+                    log.warning("Failed to load standard %s: %s", yaml_path, exc)
+
         log.info(
-            "KB loaded: %d patterns, %d antipatterns",
+            "KB loaded: %d patterns, %d antipatterns, %d standards",
             len(self.patterns),
             len(self.antipatterns),
+            len(self.standards),
         )
 
     # ─── Patterns ────────────────────────────────────────────────────────────
@@ -145,6 +166,38 @@ class KBCollection:
             result = [ap for ap in result if ap.get("severity") == severity]
         if applicable_to:
             result = [ap for ap in result if applicable_to in ap.get("applicable_to", [])]
+        return result
+
+    # ─── Standards (TD-S4.2-03) ──────────────────────────────────────────────
+
+    def get_standard(self, standard_id: str) -> dict[str, Any] | None:
+        """Получить стандарт по id."""
+        return self.standards.get(standard_id)
+
+    def list_standards(
+        self,
+        category: str | None = None,
+        severity: str | None = None,
+        source_type: str | None = None,
+        applicable_to: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Список стандартов с опциональной фильтрацией.
+
+        Args:
+            category: фильтр по category (style, security, performance, ...).
+            severity: фильтр по severity (critical, warning, info).
+            source_type: фильтр по типу источника (СТО, БСП, 1C-EDT, internal).
+            applicable_to: фильтр по применимости к типу модуля.
+        """
+        result = list(self.standards.values())
+        if category:
+            result = [s for s in result if s.get("category") == category]
+        if severity:
+            result = [s for s in result if s.get("severity") == severity]
+        if source_type:
+            result = [s for s in result if s.get("source", {}).get("type") == source_type]
+        if applicable_to:
+            result = [s for s in result if applicable_to in s.get("applicable_to", [])]
         return result
 
     # ─── Search ──────────────────────────────────────────────────────────────
@@ -194,6 +247,19 @@ class KBCollection:
                         }
                     )
 
+        if category in ("standard", "all"):
+            for s in self.standards.values():
+                score = self._score_match(s, query_lower)
+                if score > 0:
+                    results.append(
+                        {
+                            "id": s["id"],
+                            "type": "standard",
+                            "title": s.get("title", ""),
+                            "score": score,
+                        }
+                    )
+
         results.sort(key=lambda x: x["score"], reverse=True)
         return results[:top_k]
 
@@ -211,11 +277,20 @@ class KBCollection:
         for tag in tags:
             if query_lower in tag:
                 score += 0.5
-        # Проверка в recommendation/when_to_use
-        for field in ("recommendation_for_llm", "when_to_use", "category"):
+        # Проверка в recommendation/when_to_use/description/source_code
+        for field in ("recommendation_for_llm", "when_to_use", "category", "description"):
             text = item.get(field, "").lower() if isinstance(item.get(field), str) else ""
             if query_lower in text:
                 score += 0.3
+        # Для стандартов — дополнительный поиск по source.code (например, "2.1", "6.1")
+        source = item.get("source")
+        if isinstance(source, dict):
+            src_code = str(source.get("code", "")).lower()
+            if query_lower in src_code:
+                score += 0.7
+            src_type = str(source.get("type", "")).lower()
+            if query_lower in src_type:
+                score += 0.4
         return score
 
     # ─── Detect antipatterns ─────────────────────────────────────────────────
@@ -281,6 +356,91 @@ class KBCollection:
                     log.warning("Regex error in antipattern %s: %s", ap_id, exc)
 
             # bsl_ls_rule detect — делегируется BSL LS (не здесь)
+            # ast_pattern detect — требует tree-sitter (опционально)
+
+        return findings
+
+    # ─── Detect standards violations (TD-S4.2-03) ───────────────────────────
+
+    def detect_standards_violations(
+        self,
+        code: str,
+        severity_filter: list[str] | None = None,
+        source_type_filter: list[str] | None = None,
+        category_filter: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Проверить BSL-код на соответствие стандартам 1С (СТО/БСП).
+
+        Аналогично detect_antipatterns, но для стандартов. Возвращает findings
+        с информацией о нарушенном стандарте и ссылкой на источник.
+
+        Args:
+            code: BSL-код для проверки.
+            severity_filter: фильтр по severity (['critical', 'warning', 'info']).
+                По умолчанию ['critical', 'warning', 'info'] — все.
+            source_type_filter: фильтр по типу источника (['СТО', 'БСП']).
+            category_filter: фильтр по category.
+
+        Returns:
+            Список findings:
+            [{standard_id, severity, source, line, message, match, url}].
+        """
+        if severity_filter is None:
+            severity_filter = ["critical", "warning", "info"]
+
+        findings: list[dict[str, Any]] = []
+
+        for std_id, std in self.standards.items():
+            # Фильтр по severity
+            if std.get("severity") not in severity_filter:
+                continue
+
+            # Фильтр по source type
+            std_source_type = std.get("source", {}).get("type")
+            if source_type_filter and std_source_type not in source_type_filter:
+                continue
+
+            # Фильтр по category
+            if category_filter and std.get("category") not in category_filter:
+                continue
+
+            detect = std.get("detect", {})
+            source = std.get("source", {})
+
+            # Regex detect
+            if "regex" in detect:
+                pattern_str = detect["regex"]["pattern"]
+                flags_str = detect["regex"].get("flags", "m")
+                flags = 0
+                if "m" in flags_str:
+                    flags |= re.MULTILINE
+                if "s" in flags_str:
+                    flags |= re.DOTALL
+                if "i" in flags_str:
+                    flags |= re.IGNORECASE
+
+                try:
+                    for match in re.finditer(pattern_str, code, flags):
+                        line = code[: match.start()].count("\n") + 1
+                        findings.append(
+                            {
+                                "standard_id": std_id,
+                                "severity": std.get("severity", "info"),
+                                "category": std.get("category", ""),
+                                "source": {
+                                    "type": source.get("type", ""),
+                                    "code": source.get("code", ""),
+                                    "url": source.get("url", ""),
+                                },
+                                "line": line,
+                                "message": std.get("title", ""),
+                                "match": match.group(0)[:100],
+                            }
+                        )
+                except re.error as exc:
+                    log.warning("Regex error in standard %s: %s", std_id, exc)
+
+            # bsl_ls_rule detect — делегируется BSL LS (TD-S4.2-04)
             # ast_pattern detect — требует tree-sitter (опционально)
 
         return findings
@@ -431,4 +591,9 @@ class KBCollection:
             "antipatterns": len(self.antipatterns),
             "critical_antipatterns": sum(1 for ap in self.antipatterns.values() if ap.get("severity") == "critical"),
             "warning_antipatterns": sum(1 for ap in self.antipatterns.values() if ap.get("severity") == "warning"),
+            "standards": len(self.standards),
+            "standards_sto": sum(1 for s in self.standards.values() if s.get("source", {}).get("type") == "СТО"),
+            "standards_bsp": sum(1 for s in self.standards.values() if s.get("source", {}).get("type") == "БСП"),
+            "critical_standards": sum(1 for s in self.standards.values() if s.get("severity") == "critical"),
+            "warning_standards": sum(1 for s in self.standards.values() if s.get("severity") == "warning"),
         }

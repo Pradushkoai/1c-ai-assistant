@@ -12,6 +12,45 @@
 
 ## Записи (новые сверху)
 
+### D-2026-07-13-02: Стандарты 1С (СТО + БСП) как 3-й тип KB-сущностей
+
+**Дата:** 2026-07-13
+**Тип:** architecture
+**Контекст:** TD-S4.2-03 требует проверки кода на соответствие стандартам 1С
+(СТО — Стандарты Технологического Обмена, БСП — Библиотека Стандартных Подсистем).
+Было два пути:
+- A) Расширить существующую сущность antipattern полем `source` (СТО/БСП).
+- B) Создать отдельную сущность `standard` (3-й тип KB).
+
+**Решение:** Вариант B — отдельная сущность `standard`.
+
+**Обоснование:**
+- Семантика: antipattern = «плохая практика», standard = «требование стандарта 1С».
+- У стандарта есть `source` (type+code+url) — у антипаттерна нет.
+- Стандарты имеют более длинные description и url-ссылки на its.1c.ru.
+- В поиске (search_kb) — отдельная категория 'standard'.
+- В валидаторе — отдельный source='kb_standards' (4-й параллельный валидатор).
+
+**Что сделано:**
+- knowledge-base/standards/ — 8 YAML (4 СТО + 4 БСП), все с regex-detect.
+- knowledge-base/schemas/standard.schema.json — JSON Schema.
+- KBCollection.standards + get_standard + list_standards + detect_standards_violations.
+- KbServer.get_standard + check_standards — 2 новых MCP tools (KB: 5→7).
+- validate_node: 4-й параллельный валидатор (_run_standards_validator).
+- ValidationFinding.source: Literal расширен до {"bsl_ls", "kb_antipatterns",
+  "kb_standards", "custom_rules"}.
+- 39 новых тестов в test_kb_standards.py.
+
+**Повлияло на:**
+- BACKLOG.md — TD-S4.2-03 закрыт
+- CURRENT_FOCUS.md — Этап 2: 6/7 задач завершено
+- packages/mcp_servers/src/mcp_servers/kb/ (loader.py, server.py, contracts.py)
+- packages/orchestrator/src/orchestrator/nodes/validate.py + contracts.py
+- knowledge-base/index.json + schemas/standard.schema.json + standards/*.yaml
+- tests/mcp_servers/test_kb_standards.py + test_mcp_contracts.py
+
+---
+
 ### D-2026-07-13-01: ADR-0020 — гибридный поиск + multi-layer индексация
 
 **Дата:** 2026-07-13
