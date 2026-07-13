@@ -3,9 +3,9 @@
 > **Это активационный пакет.** Вставь содержимое этого файла первым сообщением
 > в новый чат — агент активируется с полным контекстом проекта 1c-ai-assistant.
 >
-> **Дата генерации:** 2026-07-12
-> **Последний коммит в репозитории:** `ccf158a` (call graph builder)
-> **Версия файла:** 2.1
+> **Дата генерации:** 2026-07-13
+> **Последний коммит в репозитории:** `5154e5e` (Sprint 4.2 session record)
+> **Версия файла:** 3.0
 
 ---
 
@@ -62,10 +62,11 @@
 | **Проект** | 1c-ai-assistant — AI-ассистент для 1С-разработчиков |
 | **Репозиторий** | https://github.com/Pradushkoai/1c-ai-assistant |
 | **Локальный путь** | `/home/z/my-project/1c-ai-assistant/` |
-| **Последний коммит** | `ccf158a` — call graph builder |
-| **Тесты** | 707 проходят, ruff чистый, 0 boundary violations |
+| **Последний коммит** | `5154e5e` — Sprint 4.2 session record |
+| **Тесты** | 722 проходят, ruff чистый, 0 boundary violations |
 | **Спринты завершены** | 0, 1, 1.5, 2, 3, 3.1, 3.2, 3.2.1, 3.3 |
-| **Этап 1 прогресс** | 4/5 задач (Form ✅, Subsystem ✅, Role ✅, api-reference ✅, call graph ✅) |
+| **Этап 1** | ✅ ЗАВЕРШЁН (5/5: Form/Subsystem/Role, api-reference, call graph, dependency graph, asyncio.TaskGroup) |
+| **Этап 2** | 5/7 задач (ADR-0020, api-ref в pipeline, transitive closure, library add, embeddings indexer + vector store) |
 | **MVP** | ✅ `1c-ai generate` работает с реальной LLM (ZaiLLM через z-ai CLI) |
 | **LLM** | ZaiLLM adapter (z-ai CLI subprocess, без внешнего API ключа) |
 | **HBK** | 10,150 методов платформы 8.3.25 (Container32 парсер) |
@@ -75,14 +76,25 @@
 ### Что Coder получает (контекст для генерации)
 1. **Структуру формы** — элементы, события, реквизиты (`parse_form`)
 2. **Объекты подсистемы** — что с чем связано (`parse_subsystem`)
-3. **Export-методы** — список доступных функций (`build_api_reference`)
+3. **Export-методы** — список доступных функций (`build_api_reference` → Gatherer)
 4. **Граф вызовов** — кто кого вызывает (`build_call_graph`)
+5. **Граф зависимостей + transitive closure** (`build_dependency_graph` → `get_transitive_dependents`)
+
+### Этап 2 прогресс
+- ✅ ADR-0020 (Embeddings strategy: гибридный BM25+pgvector+RRF, 4-layer, multilingual-e5-large)
+- ✅ TD-S4.2-07 (api-reference в config build + Gatherer)
+- ✅ TD-S4.2-06 (Transitive closure для Planner/Reviewer)
+- ✅ TD-S4.2-05 (`1c-ai library add/build/list/remove` для БСП/БПО)
+- ✅ TD-S4.2-02 ч.1 (Embeddings indexer + VectorStoreProtocol + PgVectorStore + InMemoryVectorStore)
+- ⬜ TD-S4.2-02 ч.2 (codebase MCP server — 4 tools)
+- ⬜ TD-S4.2-03 (standards — 1С СТО, БСП)
+- ⬜ TD-S4.2-04 (BSL LS через Docker)
 
 ### Топ-3 активного техдолга (полностью — в BACKLOG.md)
 
-- **TD-S4.1-04 (MEDIUM):** Dependency graph builder — последняя задача Этапа 1
-- **TD-S4.2-01 (CRITICAL):** ADR-0020 Embeddings strategy — блокирует codebase MCP
-- **TD-011 (LOW):** ZaiLLM mypy cleanup — 9 ошибок LangChain strict typing
+- **TD-S4.2-02 ч.2 (HIGH):** codebase MCP server — 4 tools (semantic_search, get_module, get_similar, call_graph)
+- **TD-S4.2-03 (MEDIUM):** standards (1С СТО, БСП) — перенос YAML из старого репо
+- **TD-S4.2-04 (MEDIUM):** BSL LS через Docker — реальная валидация
 
 ---
 
