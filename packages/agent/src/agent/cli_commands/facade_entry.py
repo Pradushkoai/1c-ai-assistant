@@ -60,25 +60,11 @@ def create_facade_handlers() -> FacadeHandlers:
         validate_node,
     )
 
-    # ─── kb_server (опц.) ───────────────────────────────────────────────────
-    kb_server = _try_create_kb_server()
+    # ─── Stage 6 (TD-S8-01): ToolProvider — единая точка создания servers ──
+    from .tool_provider import make_tool_provider
 
-    # ─── bsl_ls_server (опц.) ───────────────────────────────────────────────
-    bsl_ls_server = _try_create_bsl_ls_server()
-
-    # ─── metadata_server (опц., Stage 4 TD-S6-01) ───────────────────────────
-    metadata_server = _try_create_metadata_server()
-
-    # ─── git_server + repo_path (опц., Stage 4 TD-S6-02) ────────────────────
-    git_server = _try_create_git_server()
-    repo_path = _get_repo_path()
-
-    # ─── llm (опц.) ─────────────────────────────────────────────────────────
-    llm = _try_create_llm()
-
-    # ─── path_manager + config_registry (для data_status) ───────────────────
-    path_manager = _try_create_path_manager()
-    config_registry = _try_create_config_registry(path_manager)
+    provider = make_tool_provider()
+    servers = provider.create_servers()
 
     # ─── state_store (Stage 5 TD-S7-01, survival-restart) ───────────────────
     # PersistenceManager + FacadeStateStore. Если DATABASE_URL задан — PostgresSaver
@@ -94,69 +80,15 @@ def create_facade_handlers() -> FacadeHandlers:
         node_review=review_node,
         node_commit=commit_node,
         state_store=state_store,
-        kb_server=kb_server,
-        bsl_ls_server=bsl_ls_server,
-        llm=llm,
-        path_manager=path_manager,
-        config_registry=config_registry,
-        metadata_server=metadata_server,
-        git_server=git_server,
-        repo_path=repo_path,
+        kb_server=servers.kb_server,
+        bsl_ls_server=servers.bsl_ls_server,
+        llm=servers.llm,
+        path_manager=servers.path_manager,
+        config_registry=servers.config_registry,
+        metadata_server=servers.metadata_server,
+        git_server=servers.git_server,
+        repo_path=servers.repo_path,
     )
-
-
-def _try_create_kb_server() -> Any:
-    """Создать KbServer, если доступно."""
-    try:
-        from mcp_servers.kb.server import KbServer
-
-        return KbServer()
-    except Exception as exc:  # noqa: BLE001
-        log.warning("facade_entry: kb_server init failed: %s", exc)
-        return None
-
-
-def _try_create_bsl_ls_server() -> Any:
-    """Создать BslLsServer, если доступно."""
-    try:
-        from mcp_servers.bsl_ls.server import BslLsServer
-
-        return BslLsServer()
-    except Exception as exc:  # noqa: BLE001
-        log.warning("facade_entry: bsl_ls_server init failed: %s", exc)
-        return None
-
-
-def _try_create_metadata_server() -> Any:
-    """Создать MetadataServer, если доступно (Stage 4 TD-S6-01)."""
-    try:
-        from mcp_servers.metadata.server import MetadataServer
-
-        return MetadataServer()
-    except FileNotFoundError as exc:
-        log.warning("facade_entry: metadata_server init failed (paths.env?): %s", exc)
-        return None
-    except Exception as exc:  # noqa: BLE001
-        log.warning("facade_entry: metadata_server init failed: %s", exc)
-        return None
-
-
-def _try_create_git_server() -> Any:
-    """Создать GitServer, если доступно (Stage 4 TD-S6-02)."""
-    try:
-        from mcp_servers.git.server import GitServer
-
-        return GitServer()
-    except Exception as exc:  # noqa: BLE001
-        log.warning("facade_entry: git_server init failed: %s", exc)
-        return None
-
-
-def _get_repo_path() -> str | None:
-    """Путь к git-репозиторию для коммитов (env 1C_AI_REPO_PATH)."""
-    import os
-
-    return os.environ.get("1C_AI_REPO_PATH")
 
 
 def _try_create_state_store() -> Any:
@@ -230,41 +162,3 @@ def _open_persistence_manager_sync() -> Any:
         return pm
 
     return asyncio.run(_open())
-
-
-def _try_create_llm() -> Any:
-    """Создать LLM, если доступно."""
-    try:
-        from orchestrator.llm import create_llm
-
-        return create_llm()
-    except Exception as exc:  # noqa: BLE001
-        log.warning("facade_entry: llm init failed: %s", exc)
-        return None
-
-
-def _try_create_path_manager() -> Any:
-    """Создать PathManager, если paths.env существует."""
-    try:
-        from data_layer import PathManager
-
-        return PathManager()
-    except FileNotFoundError as exc:
-        log.warning("facade_entry: path_manager init failed (paths.env?): %s", exc)
-        return None
-    except Exception as exc:  # noqa: BLE001
-        log.warning("facade_entry: path_manager init failed: %s", exc)
-        return None
-
-
-def _try_create_config_registry(path_manager: Any) -> Any:
-    """Создать ConfigRegistry, если path_manager задан."""
-    if path_manager is None:
-        return None
-    try:
-        from data_layer import ConfigRegistry
-
-        return ConfigRegistry(path_manager.config_registry_path())
-    except Exception as exc:  # noqa: BLE001
-        log.warning("facade_entry: config_registry init failed: %s", exc)
-        return None

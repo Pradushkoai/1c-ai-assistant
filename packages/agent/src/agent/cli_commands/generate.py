@@ -115,64 +115,23 @@ async def _run_pipeline(
         fsm_state=FSMState.INIT,
     )
 
-    # Sprint 3.2.1: создаем MCP servers в agent-слое (вне orchestrator).
-    bsl_ls_server = None
-    try:
-        from mcp_servers.bsl_ls.server import BslLsServer
+    # Stage 6 (TD-S8-01): ToolProvider — единая точка создания servers.
+    # InProcessToolProvider создаёт Python-объекты напрямую (режим "без MCP").
+    from .tool_provider import make_tool_provider
 
-        bsl_ls_server = BslLsServer()
-    except Exception as exc:
-        import logging
-
-        logging.getLogger(__name__).warning("bsl_ls_server_init_failed: %s", exc)
-
-    kb_server = None
-    try:
-        from mcp_servers.kb.server import KbServer
-
-        kb_server = KbServer()
-    except Exception as exc:
-        import logging
-
-        logging.getLogger(__name__).warning("kb_server_init_failed: %s", exc)
-
-    # Stage 4 (TD-S6-01): metadata server для gather (api-reference) + plan (dep graph).
-    metadata_server = None
-    try:
-        from mcp_servers.metadata.server import MetadataServer
-
-        metadata_server = MetadataServer()
-    except Exception as exc:
-        import logging
-
-        logging.getLogger(__name__).warning("metadata_server_init_failed: %s", exc)
-
-    # Stage 4 (TD-S6-02): git server для commit (real git flow).
-    git_server = None
-    try:
-        from mcp_servers.git.server import GitServer
-
-        git_server = GitServer()
-    except Exception as exc:
-        import logging
-
-        logging.getLogger(__name__).warning("git_server_init_failed: %s", exc)
-
-    # repo_path: env 1C_AI_REPO_PATH (путь к git-репозиторию для коммитов).
-    import os
-
-    repo_path = os.environ.get("1C_AI_REPO_PATH")
+    provider = make_tool_provider()
+    servers = provider.create_servers()
 
     # Stage 3 (TD-S5-01): persistence. PostgresSaver (production) или MemorySaver.
     async with PersistenceManager.from_env() as pm:
         # Собираем граф с DI + checkpointer из PersistenceManager.
         graph = build_graph(
             checkpointer=pm.get_checkpointer(),
-            bsl_ls_server=bsl_ls_server,
-            kb_server=kb_server,
-            metadata_server=metadata_server,
-            git_server=git_server,
-            repo_path=repo_path,
+            bsl_ls_server=servers.bsl_ls_server,
+            kb_server=servers.kb_server,
+            metadata_server=servers.metadata_server,
+            git_server=servers.git_server,
+            repo_path=servers.repo_path,
         )
 
         config: dict[str, Any] = {"configurable": {"thread_id": initial_state.task_id}}
