@@ -106,30 +106,28 @@ def run_bsl_ls(
         f.write(code)
         temp_path = f.name
 
-    # Для analyze — отдельный файл с результатами (детерминированный парсинг).
-    output_path: str | None = None
+    # Для analyze — temp директория для output (BSL LS v1.0.x пишет bsl-json.json в -o dir).
+    output_dir: str | None = None
     if mode == "analyze":
-        output_fd, output_path = tempfile.mkstemp(suffix=".json", text=True)
-        os.close(output_fd)
+        output_dir = tempfile.mkdtemp(prefix="bsl_ls_output_")
 
     try:
-        # Команда запуска BSL LS v0.25.x
-        # CLI: java -jar bsl-ls.jar <command> --src <file> [--format json --output <file>]
+        # BSL LS v1.0.x CLI syntax:
+        # analyze: java -jar bsl-ls.jar analyze -s <srcDir> -r json -o <outputDir>
+        # format:  java -jar bsl-ls.jar format -s <srcDir>
         cmd: list[str] = [
             "java",
             *java_opts.split(),
             "-jar",
             jar_path,
             mode,  # 'analyze' или 'format'
-            "--src",
+            "-s",  # --srcDir (short form)
             temp_path,
         ]
 
         if mode == "analyze":
-            assert output_path is not None  # set above in analyze mode
-            cmd.extend(["--format", "json", "--output", output_path])
-            if baseline_path:
-                cmd.extend(["--baseline", baseline_path])
+            assert output_dir is not None
+            cmd.extend(["-r", "json", "-o", output_dir])
 
         log.info("bsl_ls_run_start mode=%s file_size=%d", mode, len(code))
 
@@ -161,7 +159,10 @@ def run_bsl_ls(
                 or "java.lang.Error" in result.stderr
             ):
                 raise RuntimeError(f"BSL LS critical error: {result.stderr[:500]}")
-            return parse_lint_output(output_path, file_path)
+            # BSL LS v1.0.x writes bsl-json.json to output dir.
+            assert output_dir is not None
+            json_path = Path(output_dir) / "bsl-json.json"
+            return parse_lint_output(str(json_path) if json_path.exists() else None, file_path)
         else:
             # Для format — читаем результат из файла (BSL LS модифицирует in-place).
             formatted_code = Path(temp_path).read_text(encoding="utf-8")
@@ -172,28 +173,39 @@ def run_bsl_ls(
 
     finally:
         Path(temp_path).unlink(missing_ok=True)
-        if output_path:
-            Path(output_path).unlink(missing_ok=True)
+        if output_dir:
+            import shutil
+
+            shutil.rmtree(output_dir, ignore_errors=True)
 
 
 def parse_lint_output(
     output_path: str | None,
     file_path: str,
 ) -> dict[str, Any]:
-    """Парсить вывод BSL LS из JSON файла (--output).
+    """Парсить вывод BSL LS из JSON файла.
 
-    BSL LS v0.25.x выводит JSON массив issues в файл, указанный через --output.
-    Структура каждого issue::
+    BSL LS v1.0.x выводит JSON в файл ``bsl-json.json`` в директории, указанной
+    через ``-o``. Структура::
 
         {
-          "code": "BSL-WS-001",
-          "severity": "Error" | "Warning" | "Info" | "Hint",
-          "range": {
-            "start": {"line": 0, "character": 0},
-            "end": {"line": 0, "character": 10}
-          },
-          "message": "Описание",
-          "source": "module.bsl"
+          "date": "...",
+          "fileinfos": [
+            {
+              "path": "file:///...",
+              "diagnostics": [
+                {
+                  "code": "DeprecatedMessage",
+                  "severity": "Information",
+                  "range": {"start": {"line": 5, "character": 4}, "end": {...}},
+                  "message": "Не следует использовать...",
+                  "source": "test.bsl"
+                }
+              ],
+              "metrics": {...}
+            }
+          ],
+          "sourceDir": "..."
         }
 
     Args:
@@ -217,15 +229,18 @@ def parse_lint_output(
 
         data = json.loads(text)
 
-        # BSL LS выводит массив issues.
+        # BSL LS v1.0.x: {fileinfos: [{diagnostics: [...]}]}
         issues: list[dict[str, Any]] = []
-        if isinstance(data, list):
+        if isinstance(data, dict):
+            fileinfos = data.get("fileinfos", [])
+            for fi in fileinfos:
+                if isinstance(fi, dict):
+                    fi_diags = fi.get("diagnostics", [])
+                    if isinstance(fi_diags, list):
+                        issues.extend(fi_diags)
+        elif isinstance(data, list):
+            # Legacy v0.25.x: array of issues.
             issues = data
-        elif isinstance(data, dict):
-            raw_issues: Any = data.get("issues", data.get("diagnostics", []))
-            issues = raw_issues if isinstance(raw_issues, list) else []
-            if not issues and "code" in data:
-                issues = [data]
 
         for issue in issues:
             code = issue.get("code", "UNKNOWN")

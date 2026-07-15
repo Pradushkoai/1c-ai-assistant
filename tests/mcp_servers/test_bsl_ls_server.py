@@ -88,10 +88,11 @@ class TestBslLsServerCreation:
 
     def test_create_from_env(self, monkeypatch):
         # Legacy: BSL_LS_HTTP_URL env → HttpBslLsBackend via auto mode.
+        # But only if jar doesn't exist (auto mode prefers subprocess).
         monkeypatch.setenv("BSL_LS_HTTP_URL", "http://custom:8080")
         monkeypatch.setenv("BSL_LS_TIMEOUT", "120")
         monkeypatch.delenv("1C_AI_BSL_LS_MODE", raising=False)
-        monkeypatch.delenv("BSL_LS_JAR", raising=False)
+        monkeypatch.setenv("BSL_LS_JAR", "/nonexistent/jar.jar")  # force no jar → HTTP fallback
         server = BslLsServer()
         assert hasattr(server, "backend")
         # Auto mode: no jar → fallback to HTTP (BSL_LS_HTTP_URL set).

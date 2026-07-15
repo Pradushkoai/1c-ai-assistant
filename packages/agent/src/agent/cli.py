@@ -213,8 +213,8 @@ def bsl_ls() -> None:
 @click.option(
     "--version",
     "-v",
-    default="0.25.5",
-    help="Версия BSL LS (default: 0.25.5).",
+    default="1.0.4",
+    help="Версия BSL LS (default: 1.0.4).",
 )
 @click.option(
     "--force",

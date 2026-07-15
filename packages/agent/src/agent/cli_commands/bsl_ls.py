@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 
 # BSL LS releases: https://github.com/1c-syntax/bsl-language-server/releases
 BSL_LS_GITHUB = "1c-syntax/bsl-language-server"
-DEFAULT_VERSION = "0.25.5"
+DEFAULT_VERSION = "1.0.4"
 DEFAULT_VENDOR_DIR = "vendor/bsl-ls"
 JAR_NAME = "bsl-language-server.jar"
 
@@ -50,8 +50,8 @@ def cmd_bsl_ls_download(version: str, force: bool) -> int:
         click.echo("❌ Java не установлена. Установите Java 17+ (openjdk-17-jre-headless).", err=True)
         return 1
 
-    # URL: https://github.com/1c-syntax/bsl-language-server/releases/download/v0.25.5/bsl-language-server_nix_0.25.5.zip
-    zip_name = f"bsl-language-server_nix_{version}.zip"
+    # URL: https://github.com/1c-syntax/bsl-language-server/releases/download/v1.0.4/bsl-language-server_nix.zip
+    zip_name = "bsl-language-server_nix.zip"
     url = f"https://github.com/{BSL_LS_GITHUB}/releases/download/v{version}/{zip_name}"
 
     click.echo(f"⬇️  Скачивание BSL LS v{version}...")
@@ -79,14 +79,18 @@ def cmd_bsl_ls_download(version: str, force: bool) -> int:
 
         try:
             with zipfile.ZipFile(tmp_zip) as zf:
-                # Ищем .jar в архиве.
+                # Ищем главный .jar в архиве (с "exec" или "bsl" в имени, самый большой).
                 jar_entries = [n for n in zf.namelist() if n.endswith(".jar")]
                 if not jar_entries:
                     click.echo("❌ .jar файл не найден в архиве.", err=True)
                     return 1
 
-                click.echo(f"   Распаковка: {jar_entries[0]} → {jar_path}")
-                with zf.open(jar_entries[0]) as jar_src:
+                # Prefer exec jar, fallback to largest jar.
+                exec_jars = [n for n in jar_entries if "exec" in n.lower()]
+                jar_entry = exec_jars[0] if exec_jars else max(jar_entries, key=lambda n: zf.getinfo(n).file_size)
+
+                click.echo(f"   Распаковка: {jar_entry} → {jar_path}")
+                with zf.open(jar_entry) as jar_src:
                     jar_path.write_bytes(jar_src.read())
         except zipfile.BadZipFile as exc:
             click.echo(f"❌ Невалидный ZIP: {exc}", err=True)
