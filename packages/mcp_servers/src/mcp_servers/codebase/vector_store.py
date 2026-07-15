@@ -465,19 +465,42 @@ def make_vector_store(backend: str | None = None) -> VectorStoreProtocol:
     """Создать VectorStore по env var или аргументу.
 
     Args:
-        backend: 'pgvector' | 'memory'. Если None — из env VECTOR_STORE.
+        backend: ``'pgvector'`` | ``'memory'`` | ``'auto'``. Если None — из env
+            ``VECTOR_STORE`` (default: ``'auto'``).
+
+            - ``'auto'`` (default, TD-S8-03): pgvector если DATABASE_URL задан,
+              иначе InMemoryVectorStore (no Postgres fallback).
+            - ``'pgvector'``: принудительно PgVectorStore (production, Docker).
+            - ``'memory'``: принудительно InMemoryVectorStore (tests/dev).
 
     Returns:
         VectorStoreProtocol реализация.
     """
     import os
 
-    backend = backend or os.environ.get("VECTOR_STORE", "pgvector")
+    backend = backend or os.environ.get("VECTOR_STORE", "auto")
+
+    if backend == "memory":
+        return InMemoryVectorStore()
 
     if backend == "pgvector":
         return PgVectorStore()
-    if backend == "memory":
+
+    if backend == "auto":
+        # TD-S8-03: auto-detect — pgvector if DATABASE_URL set, else memory.
+        if os.environ.get("DATABASE_URL"):
+            try:
+                return PgVectorStore()
+            except Exception as exc:  # noqa: BLE001
+                log.warning(
+                    "vector_store: pgvector init failed (%s), falling back to InMemoryVectorStore",
+                    exc,
+                )
+                return InMemoryVectorStore()
+        # No DATABASE_URL — InMemoryVectorStore (no Postgres needed).
+        log.info("vector_store: auto mode — InMemoryVectorStore (no DATABASE_URL)")
         return InMemoryVectorStore()
+
     raise ValueError(f"Unknown vector store backend: {backend}")
 
 
