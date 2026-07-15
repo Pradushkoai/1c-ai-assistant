@@ -12,6 +12,86 @@
 
 ## Записи (новые сверху)
 
+### D-2026-07-13-16: TD-S8-02 — BSL LS backends (3 стратегии: subprocess/http/stub)
+
+**Дата:** 2026-07-13
+**Тип:** architecture + implementation (TD-S8-02, Stage 6 задача 2/3)
+**Контекст:** BSL LS — единственный компонент, требующий Docker (Java JVM).
+Пользователь хочет сохранить BSL LS функционал, но не использовать Docker для
+основного режима (я как LLM через CLI). Java 21 уже установлена в окружении.
+
+Текущая цепочка избыточна для solo-use:
+```
+BslLsServer (Python, HTTP client)
+  → HTTP POST /lint → bsl_ls_http_server.py (Python, в Docker)
+    → subprocess.run(['java', '-jar', 'bsl-ls.jar', 'analyze', ...])
+```
+3 слоя для того, что делается одним subprocess. `_run_bsl_ls()` (docker/bsl_ls_http_server.py:131-238)
+— standalone-функция, ~100 строк, самодостаточна (запись во temp файл, subprocess,
+парсинг JSON).
+
+**Решение: Strategy pattern — BslLsBackend (3 стратегии), не ломая BslLsServer API.**
+
+1. **`packages/mcp_servers/src/mcp_servers/bsl_ls/runner.py`** (новый) — перенос
+   `_run_bsl_ls` + `_parse_lint_output` + `_map_severity` + `_check_bsl_ls` +
+   `_get_bsl_ls_version` из `docker/bsl_ls_http_server.py`. Функции принимают
+   `jar_path`, `java_opts`, `timeout` как параметры (не глобальные env vars).
+   `docker/bsl_ls_http_server.py` импортирует из `bsl_ls.runner` (DRY — без дубляжа).
+
+2. **`packages/mcp_servers/src/mcp_servers/bsl_ls/backends.py`** (новый) —
+   `BslLsBackend` Protocol + 3 реализации:
+   - `SubprocessBslLsBackend` — прямой `java -jar` subprocess (без HTTP, без Docker).
+     Перенос логики из `runner.py` в async-методы (`asyncio.create_subprocess_exec`).
+   - `HttpBslLsBackend` — HTTP к Docker/standalone server (текущий behavior).
+     Перенос логики из `BslLsServer.lint()/format()/health_check()`.
+   - `StubBslLsBackend` — заглушка (нет Java/jar — warning, lint возвращает 0
+     diagnostics с warning в log).
+   - `make_bsl_ls_backend()` factory по env `1C_AI_BSL_LS_MODE=auto|subprocess|http|stub`:
+     - `auto` (default): subprocess если jar есть, fallback на HTTP если
+       `BSL_LS_HTTP_URL` задан, fallback на stub.
+     - `subprocess`: принудительно subprocess (jar path из `BSL_LS_JAR`).
+     - `http`: принудительно HTTP (текущий behavior, для Docker deployment).
+     - `stub`: принудительно stub (для CI/tests без Java).
+
+3. **`BslLsServer`** — принимает `backend: BslLsBackend | None = None`. Если None —
+   `make_bsl_ls_backend()`. Методы `lint()/format()/health_check()` делегируют в
+   backend. `LintImplementation`/`FormatImplementation` не меняются (обёртки над
+   `BslLsServer`).
+
+4. **`1c-ai bsl-ls download [--version 0.25.5]`** — скачать `bsl-language-server.jar`
+   (zip с GitHub releases, sha256 verify, распаковка в `vendor/bsl-ls/`).
+   `1c-ai bsl-ls status` — проверить Java + jar + версию + текущий mode.
+
+5. **`.env.example`** — `1C_AI_BSL_LS_MODE=auto|subprocess|http|stub`,
+   `BSL_LS_JAR=vendor/bsl-ls/bsl-language-server.jar`.
+
+**ADR compliance:**
+- ADR-0010 (MCP tool contracts) — LintOutput/FormatOutput не меняются.
+- ADR-0003 (MCP-архитектура) — BslLsServer — тот же класс, backends — internal.
+- ADR-0015 (deployment) — Docker mode остаётся для production (HttpBslLsBackend).
+- CONCEPTUAL §1.1 — `bsl_ls.runner`/`backends` в `mcp_servers`, не импортирует `agent`/`orchestrator`.
+
+**3 режима BSL LS:**
+| Режим | Что нужно | BSL LS работает? |
+|---|---|---|
+| Subprocess (default, без Docker) | Java + jar (`1c-ai bsl-ls download`) | ✅ Полный lint (187 диагностик) |
+| HTTP (Docker, production) | Docker daemon | ✅ Полный lint (изолированный JVM) |
+| Stub (CI/tests без Java) | Ничего | ⚠️ Warning, 0 diagnostics |
+
+**Реализация:** commit (pending).
+
+**Последствия:**
+- Положительные: BSL LS работает без Docker (subprocess mode); тот же API для nodes;
+  Docker mode остаётся для production; stub для CI/tests; `1c-ai bsl-ls download`
+  для установки jar.
+- Отрицательные: subprocess mode — JVM cold start ~2-3 сек на lint (для CLI
+  приемлемо; для множественных запросов — future warm pool TD).
+
+**Связанные:** ADR-0010, ADR-0003, ADR-0015, D-2026-07-13-14 (REST API),
+BACKLOG TD-S8-02.
+
+---
+
 ### D-2026-07-13-14: TD-S7-02 — REST API HTTP server (`1c-ai serve`, FastAPI)
 
 **Дата:** 2026-07-13

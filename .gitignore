@@ -112,3 +112,6 @@ Thumbs.db
 *.bak
 *.orig
 *~
+
+# BSL LS jar (1c-ai bsl-ls download)
+vendor/bsl-ls/

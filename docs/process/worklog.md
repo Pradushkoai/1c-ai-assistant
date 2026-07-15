@@ -2165,3 +2165,80 @@ TD-011 (базовая линия mypy, 14 ошибок) висел с Sprint 3.
 - [x] ruff format применён ко всем файлам (включая tests/).
 
 **Сессия завершена корректно. Все 5 этапов закрыты. Готов к передаче.**
+
+---
+
+## 2026-07-13: TD-S8-02 — BSL LS backends (3 стратегии: subprocess/http/stub) (Stage 6, 2/3)
+
+**Task ID:** TD-S8-02
+**Agent:** main (GLM, продолжающая сессия)
+**Этап:** Stage 6 (Dual Mode: MCP + In-Process)
+
+### Контекст
+
+BSL LS — единственный компонент, требующий Docker (Java JVM). Пользователь хочет
+сохранить BSL LS функционал, но не использовать Docker для основного режима.
+Java 21 уже установлена в окружении. Текущая цепочка: BslLsServer (HTTP client)
+→ HTTP → bsl_ls_http_server.py (Docker) → subprocess.run(java -jar). 3 слоя для
+того, что делается одним subprocess.
+
+### Что сделано
+
+1. **DECISIONS.md** — D-2026-07-13-16: Strategy pattern — BslLsBackend (3 стратегии).
+
+2. **`packages/mcp_servers/src/mcp_servers/bsl_ls/runner.py`** (новый) — перенос
+   `run_bsl_ls` + `parse_lint_output` + `map_severity` + `check_bsl_ls` +
+   `get_bsl_ls_version` из `docker/bsl_ls_http_server.py`. Параметризованные
+   (jar_path, java_opts, timeout).
+
+3. **`packages/mcp_servers/src/mcp_servers/bsl_ls/backends.py`** (новый) —
+   `BslLsBackend` Protocol + 3 реализации:
+   - `SubprocessBslLsBackend` — прямой java -jar subprocess (без HTTP, без Docker).
+   - `HttpBslLsBackend` — HTTP client (текущий behavior, Docker production).
+   - `StubBslLsBackend` — заглушка (0 diagnostics, health False).
+   - `make_bsl_ls_backend()` factory по env `1C_AI_BSL_LS_MODE=auto|subprocess|http|stub`.
+
+4. **`BslLsServer`** — принимает `backend: BslLsBackend | None = None`. Делегирует
+   lint/format/health_check в backend. Legacy compat: `base_url`/`timeout` params
+   создают HttpBslLsBackend. `LintImplementation`/`FormatImplementation` не меняются.
+
+5. **`docker/bsl_ls_http_server.py`** — DRY: дублированные функции заменены на
+   thin wrappers, импортирующие из `bsl_ls.runner`. Файл сокращён с 444 до ~150 строк.
+
+6. **`1c-ai bsl-ls download [--version] [--force]`** — скачать jar с GitHub releases.
+   **`1c-ai bsl-ls status`** — проверить Java + jar + версию + mode + backend + health.
+
+7. **`.env.example`** — `1C_AI_BSL_LS_MODE`, `BSL_LS_JAR`, `JAVA_OPTS` добавлены.
+   **`.gitignore`** — `vendor/bsl-ls/` (jar — binary, не в git).
+
+8. **`tests/mcp_servers/test_bsl_ls_backends.py`** — 32 теста:
+   - `TestStubBackend` (3): 0 diagnostics, no-op format, health False.
+   - `TestSubprocessBackend` (5): mock run_bsl_ls, lint/format, health check.
+   - `TestHttpBackend` (4): mock httpx, lint/format/health.
+   - `TestMakeBackend` (8): factory по env (stub/http/subprocess/auto + fallbacks).
+   - `TestRunner` (8): parse_lint_output (empty/not-found/valid), map_severity, check_bsl_ls.
+   - `TestBslLsCliRegistration` (5): group exists, download/status subcommands, --help, status runs.
+
+9. **`tests/mcp_servers/test_bsl_ls_server.py`** — обновлён: creation tests
+   адаптированы для нового API (server.backend instead of server.base_url).
+
+### Проверки
+
+- [x] Тесты: **1064 проходят + 14 skipped** (было 1032+14, +32 от backends).
+- [x] ruff check + format: чистые.
+- [x] mypy: 0 ошибок.
+- [x] boundaries: 0 violations.
+
+### 3 режима BSL LS
+| Режим | Что нужно | BSL LS |
+|---|---|---|
+| Subprocess (default, без Docker) | Java + jar (`1c-ai bsl-ls download`) | ✅ Полный lint |
+| HTTP (Docker, production) | Docker daemon | ✅ Полный lint |
+| Stub (CI/tests) | Ничего | ⚠️ 0 diagnostics |
+
+### Stage Summary
+
+- BSL LS работает без Docker (subprocess mode).
+- Тот же API для nodes (validate_node не меняется).
+- Docker mode остаётся для production.
+- `1c-ai bsl-ls download/status` для управления jar.

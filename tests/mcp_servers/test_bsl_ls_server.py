@@ -70,22 +70,33 @@ def _patch_client(transport: httpx.MockTransport):
 
 class TestBslLsServerCreation:
     @pytest.mark.smoke
-    def test_create_default(self):
+    def test_create_default(self, monkeypatch):
+        # Default (auto mode, no jar, no HTTP URL) → StubBslLsBackend.
+        monkeypatch.delenv("1C_AI_BSL_LS_MODE", raising=False)
+        monkeypatch.delenv("BSL_LS_JAR", raising=False)
+        monkeypatch.delenv("BSL_LS_HTTP_URL", raising=False)
         server = BslLsServer()
-        assert "8080" in server.base_url
-        assert server.timeout == 60
+        # In auto mode without jar/HTTP → stub backend.
+        assert hasattr(server, "backend")
 
-    def test_create_custom(self):
+    def test_create_custom_http(self):
+        # Legacy: explicit base_url → HttpBslLsBackend.
         server = BslLsServer(base_url="http://localhost:9000", timeout=30)
-        assert server.base_url == "http://localhost:9000"
-        assert server.timeout == 30
+        assert hasattr(server, "backend")
+        assert server.backend.base_url == "http://localhost:9000"
+        assert server.backend.timeout == 30
 
     def test_create_from_env(self, monkeypatch):
+        # Legacy: BSL_LS_HTTP_URL env → HttpBslLsBackend via auto mode.
         monkeypatch.setenv("BSL_LS_HTTP_URL", "http://custom:8080")
         monkeypatch.setenv("BSL_LS_TIMEOUT", "120")
+        monkeypatch.delenv("1C_AI_BSL_LS_MODE", raising=False)
+        monkeypatch.delenv("BSL_LS_JAR", raising=False)
         server = BslLsServer()
-        assert server.base_url == "http://custom:8080"
-        assert server.timeout == 120
+        assert hasattr(server, "backend")
+        # Auto mode: no jar → fallback to HTTP (BSL_LS_HTTP_URL set).
+        assert server.backend.base_url == "http://custom:8080"
+        assert server.backend.timeout == 120
 
 
 # ─── lint() ─────────────────────────────────────────────────────────────────

@@ -1,42 +1,64 @@
-"""BslLsServer — HTTP клиент к 1c-ai-bsl-ls контейнеру.
+"""BslLsServer — обёртка над BSL LS backend (TD-S8-02).
 
-Реализует Lint и Format tools через HTTP API:
-  POST http://1c-ai-bsl-ls:8080/lint
-  POST http://1c-ai-bsl-ls:8080/format
+BslLsServer — public API для nodes (validate_node). Делегирует lint/format/health_check
+в backend стратегию (subprocess/http/stub). Выбор backend — через env
+``1C_AI_BSL_LS_MODE=auto|subprocess|http|stub``.
 
-См. ADR-0010 (MCP tool contracts) и ADR-0015 (3-container deployment).
+3 режима (D-2026-07-13-16):
+- Subprocess (default, без Docker): прямой ``java -jar`` subprocess.
+- HTTP (Docker, production): HTTP client к BSL LS container.
+- Stub (CI/tests): заглушка, 0 diagnostics.
+
+Tool implementations (LintImplementation/FormatImplementation) — не меняются.
+
+См. ADR-0010 (MCP tool contracts), ADR-0015 (3-container deployment),
+D-2026-07-13-16.
 """
 
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
 
-import httpx
-
+from .backends import BslLsBackend, make_bsl_ls_backend
 from .contracts import FormatInput, FormatOutput, LintInput, LintOutput
 
 log = logging.getLogger(__name__)
 
-DEFAULT_BSL_LS_URL = "http://1c-ai-bsl-ls:8080"
-
 
 class BslLsServer:
-    """HTTP клиент к BSL LS контейнеру.
+    """Обёртка над BSL LS backend.
 
     Attributes:
-        base_url: URL BSL LS HTTP сервера (по умолчанию из env BSL_LS_HTTP_URL).
-        timeout: timeout для HTTP запросов (секунды).
+        backend: BslLsBackend стратегия (subprocess/http/stub).
     """
 
     def __init__(
         self,
+        backend: BslLsBackend | None = None,
+        # Legacy params (backward compat — создают HttpBslLsBackend если заданы).
         base_url: str | None = None,
         timeout: int | None = None,
     ) -> None:
-        self.base_url = base_url or os.environ.get("BSL_LS_HTTP_URL", DEFAULT_BSL_LS_URL)
-        self.timeout = timeout or int(os.environ.get("BSL_LS_TIMEOUT", "60"))
+        """Инициализация BslLsServer.
+
+        Args:
+            backend: BslLsBackend стратегия. Если None — ``make_bsl_ls_backend()``
+                по env ``1C_AI_BSL_LS_MODE``.
+            base_url: (legacy) URL BSL LS HTTP сервера. Если задан — принудительно
+                HttpBslLsBackend. Игнорируется если backend задан.
+            timeout: (legacy) timeout для HTTP. Игнорируется если backend задан.
+        """
+        if backend is not None:
+            self.backend = backend
+        elif base_url is not None or timeout is not None:
+            # Legacy: explicit HTTP params → HttpBslLsBackend.
+            from .backends import HttpBslLsBackend
+
+            self.backend = HttpBslLsBackend(base_url=base_url, timeout=timeout)
+        else:
+            # Default: auto-detect by env.
+            self.backend = make_bsl_ls_backend()
 
     async def lint(
         self,
@@ -55,33 +77,12 @@ class BslLsServer:
 
         Returns:
             LintOutput с total, by_code, diagnostics.
-
-        Raises:
-            httpx.HTTPError: при ошибке HTTP.
-            RuntimeError: при timeout.
         """
-        request_data: dict[str, Any] = {
-            "code": code,
-            "file_path": file_path,
-        }
-        if rules is not None:
-            request_data["rules"] = rules
-        if baseline_path is not None:
-            request_data["baseline_path"] = baseline_path
-
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(
-                f"{self.base_url}/lint",
-                json=request_data,
-            )
-            response.raise_for_status()
-            data = response.json()
-
-        return LintOutput(
-            total=data.get("total", 0),
-            by_code=data.get("by_code", {}),
-            diagnostics=data.get("diagnostics", []),
-            latency_ms=data.get("latency_ms", 0),
+        return await self.backend.lint(
+            code=code,
+            file_path=file_path,
+            rules=rules,
+            baseline_path=baseline_path,
         )
 
     async def format(
@@ -97,44 +98,16 @@ class BslLsServer:
 
         Returns:
             FormatOutput с formatted_code и changes_made.
-
-        Raises:
-            httpx.HTTPError: при ошибке HTTP.
         """
-        request_data = {
-            "code": code,
-            "style": style,
-        }
-
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(
-                f"{self.base_url}/format",
-                json=request_data,
-            )
-            response.raise_for_status()
-            data = response.json()
-
-        return FormatOutput(
-            formatted_code=data.get("formatted_code", code),
-            changes_made=data.get("changes_made", False),
-            latency_ms=data.get("latency_ms", 0),
-        )
+        return await self.backend.format(code=code, style=style)
 
     async def health_check(self) -> bool:
-        """Проверить доступность BSL LS сервера.
+        """Проверить доступность BSL LS backend.
 
         Returns:
-            True если сервер отвечает и BSL LS jar доступна.
+            True если backend может анализировать код.
         """
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.get(f"{self.base_url}/health")
-                if response.status_code == 200:
-                    data = response.json()
-                    return bool(data.get("bsl_ls_available", False))
-        except Exception as exc:
-            log.warning("BSL LS health check failed: %s", exc)
-        return False
+        return await self.backend.health_check()
 
 
 # ─── Tool implementations (для MCP server) ─────────────────────────────────

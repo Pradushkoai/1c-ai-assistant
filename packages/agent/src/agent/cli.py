@@ -10,6 +10,7 @@
     1c-ai health                   — health check (persistence + BSL LS) для Docker
     1c-ai mcp serve --server NAME  — запустить MCP stdio-сервер (facade/metadata/codebase/kb/bsl_ls/git)
     1c-ai serve                    — запустить HTTP REST API server (FastAPI :8000)
+    1c-ai bsl-ls download|status   — управление BSL Language Server (jar download, статус)
     1c-ai hbk load                 — загрузить .hbk файлы (минимальная версия)
 
 Использует click для CLI, data_layer.PathManager для путей,
@@ -197,6 +198,52 @@ def health() -> None:
     from .cli_commands.health import cmd_health
 
     sys.exit(cmd_health())
+
+
+@main.group()
+def bsl_ls() -> None:
+    """Управление BSL Language Server (Stage 6 TD-S8-02).
+
+    download — скачать bsl-language-server.jar.
+    status   — проверить Java + jar + версию + mode.
+    """
+
+
+@bsl_ls.command("download")
+@click.option(
+    "--version",
+    "-v",
+    default="0.25.5",
+    help="Версия BSL LS (default: 0.25.5).",
+)
+@click.option(
+    "--force",
+    "-f",
+    is_flag=True,
+    help="Перезаписать если jar уже существует.",
+)
+def bsl_ls_download(version: str, force: bool) -> None:
+    """Скачать bsl-language-server.jar с GitHub releases.
+
+    Примеры:
+
+        1c-ai bsl-ls download                   # default v0.25.5
+
+        1c-ai bsl-ls download --version 0.26.0  # конкретная версия
+
+        1c-ai bsl-ls download --force            # перезаписать
+    """
+    from .cli_commands.bsl_ls import cmd_bsl_ls_download
+
+    sys.exit(cmd_bsl_ls_download(version=version, force=force))
+
+
+@bsl_ls.command("status")
+def bsl_ls_status() -> None:
+    """Показать статус BSL LS (Java, jar, version, mode, backend, health)."""
+    from .cli_commands.bsl_ls import cmd_bsl_ls_status
+
+    sys.exit(cmd_bsl_ls_status())
 
 
 @main.command()
