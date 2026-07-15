@@ -130,6 +130,7 @@ async def _run_pipeline(
             bsl_ls_server=servers.bsl_ls_server,
             kb_server=servers.kb_server,
             metadata_server=servers.metadata_server,
+            codebase_server=servers.codebase_server,
             git_server=servers.git_server,
             repo_path=servers.repo_path,
         )

@@ -81,6 +81,7 @@ def build_graph(
     bsl_ls_server: Any = None,
     kb_server: Any = None,
     metadata_server: Any = None,
+    codebase_server: Any = None,
     git_server: Any = None,
     repo_path: Any = None,
     llm: Any = None,
@@ -93,6 +94,7 @@ def build_graph(
 
     Stage 4 (TD-S6-01): + metadata_server DI для plan/gather (ADR-0003/0005/0010).
     Stage 4 (TD-S6-02): + git_server + repo_path DI для commit (ADR-0004/0005/0010).
+    Stage 7 (TD-S9-03): + codebase_server DI для gather/review.
     """
     from functools import partial
 
@@ -107,12 +109,17 @@ def build_graph(
         "plan",
         partial(plan_node, llm=llm, metadata_server=metadata_server) if llm or metadata_server else plan_node,
     )
-    graph.add_node("gather", partial(gather_node, kb_server=kb_server, metadata_server=metadata_server))
+    graph.add_node(
+        "gather",
+        partial(gather_node, kb_server=kb_server, metadata_server=metadata_server, codebase_server=codebase_server),
+    )
     graph.add_node("code", partial(code_node, llm=llm) if llm else code_node)
     graph.add_node("validate", partial(validate_node, bsl_ls_server=bsl_ls_server, kb_server=kb_server))
     graph.add_node(
         "review",
-        partial(review_node, llm=llm, kb_server=kb_server) if llm else partial(review_node, kb_server=kb_server),
+        partial(review_node, llm=llm, kb_server=kb_server, codebase_server=codebase_server)
+        if llm
+        else partial(review_node, kb_server=kb_server, codebase_server=codebase_server),
     )
     graph.add_node("retry", retry_node)
     # Stage 4 (TD-S6-02): commit_node получает git_server + repo_path (ADR-0005 COMMITTER).

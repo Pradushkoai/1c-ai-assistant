@@ -99,6 +99,12 @@ class InProcessToolProvider(ToolProvider):
             lambda: self._create_git_server(),
         )
 
+        # ─── CodebaseServer (Stage 7 TD-S9-03) ──────────────────────────────
+        bundle.codebase_server = self._try_create(
+            "codebase_server",
+            lambda: self._create_codebase_server(),
+        )
+
         # ─── repo_path (env 1C_AI_REPO_PATH) ────────────────────────────────
         bundle.repo_path = os.environ.get("1C_AI_REPO_PATH")
 
@@ -157,6 +163,12 @@ class InProcessToolProvider(ToolProvider):
         from mcp_servers.git.server import GitServer
 
         return GitServer()
+
+    @staticmethod
+    def _create_codebase_server() -> Any:
+        from mcp_servers.codebase.server import CodebaseServer
+
+        return CodebaseServer()  # auto vector_store (InMemoryVectorStore if no DATABASE_URL)
 
     @staticmethod
     def _create_llm() -> Any:

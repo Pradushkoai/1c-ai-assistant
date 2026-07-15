@@ -97,10 +97,10 @@ async def validate_node(
     bsl_ls_server: Any = None,
     kb_server: Any = None,
 ) -> dict[str, Any]:
-    """Запустить 3 валидатора параллельно через asyncio.TaskGroup.
+    """Запустить 4 валидатора параллельно через asyncio.TaskGroup.
 
     Соответствует CONCEPTUAL.md §2.1: parallel fan-out без supervisor.
-    Параллельное выполнение: max(t1, t2, t3) вместо sum(t1, t2, t3).
+    Параллельное выполнение: max(t1, t2, t3, t4) вместо sum(t1, t2, t3, t4).
     """
     subtask = state.current_subtask
     assert subtask is not None

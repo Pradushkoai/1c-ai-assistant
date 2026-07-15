@@ -23,8 +23,9 @@ async def gather_node(
     state: TaskState,
     kb_server: Any = None,
     metadata_server: Any = None,
+    codebase_server: Any = None,
 ) -> dict[str, Any]:
-    """Собрать контекст: KB паттерны + антипаттерны + metadata (API reference).
+    """Собрать контекст: KB паттерны + антипаттерны + metadata + codebase search.
 
     Stage 3: KB context (patterns + antipatterns) через kb_server.
     Stage 4 (TD-S6-01): + metadata (api-reference) через metadata_server.
@@ -114,6 +115,30 @@ async def gather_node(
                         summary_lines.append(f"... и ещё {len(available_methods) - 10} методов")
         except Exception as exc:
             log.warning("gather_api_reference_error: %s", exc)
+
+    # ─── Stage 7 (TD-S9-03): codebase semantic search ──────────────────────
+    # Ищем похожие модули по описанию подзадачи для примера Coder'у.
+    similar_code: list[dict[str, Any]] = []
+    if codebase_server is not None:
+        try:
+            search_result = await codebase_server.semantic_search(
+                query=subtask.description,
+                config_name=state.config_name,
+                config_version=state.config_version,
+                top_k=3,
+            )
+            similar_code = [r.model_dump() if hasattr(r, "model_dump") else dict(r) for r in search_result.results]
+            mcp_calls_made.append("codebase.semantic_search")
+
+            if similar_code:
+                summary_lines.append("\n## Похожий код в конфигурации:")
+                for r in similar_code[:3]:
+                    obj_ref = r.get("object_ref", r.get("chunk_id", "?"))
+                    score = r.get("score", 0)
+                    code_preview = r.get("code_text", "")[:150]
+                    summary_lines.append(f"- **{obj_ref}** (score={score:.2f}): {code_preview}...")
+        except Exception as exc:
+            log.warning("gather_codebase_search_error: %s", exc)
 
     if patterns:
         summary_lines.append("\n## Релевантные паттерны:")

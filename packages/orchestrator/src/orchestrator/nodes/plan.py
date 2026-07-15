@@ -63,13 +63,32 @@ async def plan_node(
 
             llm = create_llm()
 
-        # Stage 4 (TD-S6-01): dep_graph_summary через metadata_server.
-        # Пока None — planner не знает target object на этом этапе.
-        # Future: LLM tool calling или pre-parsing description для object_ref.
+        # Stage 7 (TD-S9-03): dep_graph_summary через metadata_server.
+        # Получаем весь граф зависимостей конфигурации (без object_ref) для
+        # структурного контекста planner'а.
         dep_graph_summary: str | None = None
         if metadata_server is not None:
-            # Заглушка: signature контракт-совместим, реальный вызов — future.
-            log.debug("plan_metadata_available", hint="metadata_server ready for future use")
+            try:
+                dep_result = await metadata_server.get_dependency_graph(
+                    config_name=state.config_name,
+                    config_version=state.config_version,
+                    object_ref=None,  # весь граф
+                )
+                edges = dep_result.edges
+                if edges:
+                    summary_lines: list[str] = [f"Всего зависимостей: {len(edges)}"]
+                    for edge in edges[:15]:  # топ-15 рёбер
+                        summary_lines.append(f"  {edge.source} → {edge.target} ({edge.edge_type})")
+                    if len(edges) > 15:
+                        summary_lines.append(f"  ... и ещё {len(edges) - 15}")
+                    dep_graph_summary = "\n".join(summary_lines)
+                    log.info(
+                        "plan_dep_graph_loaded",
+                        task_id=state.task_id,
+                        edges_count=len(edges),
+                    )
+            except Exception as exc:
+                log.warning("plan_dep_graph_error: %s", exc)
 
         # Рендерим промпт
         from ..llm import render_prompt

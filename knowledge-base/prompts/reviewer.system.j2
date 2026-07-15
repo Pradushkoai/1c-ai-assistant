@@ -27,6 +27,14 @@
 {% endfor %}
 {% endif %}
 
+{% if similar_modules %}
+## Похожие модули в кодовой базе (для сравнения)
+{% for sm in similar_modules %}
+- **{{ sm.get("object_ref", sm.get("chunk_id", "?")) }}** (score={{ "%.2f"|format(sm.get("score", 0)) }})
+  {{ sm.get("code_text", "")[:200] }}
+{% endfor %}
+{% endif %}
+
 ## Критерии решения
 - `proceed` — нет critical findings, код следует паттернам 1С
 - `retry` — есть findings, но они исправимы (warning/info + <3 critical)

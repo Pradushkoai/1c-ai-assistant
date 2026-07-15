@@ -26,16 +26,19 @@ async def review_node(
     state: TaskState,
     llm: Any = None,
     kb_server: Any = None,
+    codebase_server: Any = None,
 ) -> dict[str, Any]:
     """LLM-рецензент: проверить код и решить proceed/retry/escalate.
 
     Sprint 3: LLM review с антипаттернами.
+    Stage 7 (TD-S9-03): + codebase get_similar для сравнения с существующим кодом.
     Если LLM недоступен — fallback на auto-proceed/retry (Sprint 2 логика).
 
     Args:
         state: текущее состояние pipeline.
         llm: LLM инстанс. Если None — пытается создать из env.
         kb_server: KbServer для получения описаний антипаттернов.
+        codebase_server: CodebaseServer для поиска похожих модулей.
 
     Returns:
         dict с review_result, review_passed, critical_findings, fsm_state.
@@ -84,6 +87,20 @@ async def review_node(
 
             llm = create_llm()
 
+        # Stage 7 (TD-S9-03): codebase get_similar — похожие модули для контекста.
+        similar_modules: list[dict[str, Any]] = []
+        if codebase_server is not None:
+            try:
+                sim_result = await codebase_server.get_similar(
+                    object_ref=str(subtask.target_module),
+                    config_name=state.config_name,
+                    config_version=state.config_version,
+                    top_k=3,
+                )
+                similar_modules = [r.model_dump() if hasattr(r, "model_dump") else dict(r) for r in sim_result.results]
+            except Exception as exc:
+                log.warning("review_codebase_similar_error: %s", exc)
+
         # Рендерим промпт
         from ..llm import render_prompt
 
@@ -94,6 +111,7 @@ async def review_node(
             code=current_iteration.code,
             validate_result=validate_result,
             relevant_antipatterns=relevant_antipatterns,
+            similar_modules=similar_modules,
         )
 
         # Вызов LLM с structured_output
