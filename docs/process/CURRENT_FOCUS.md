@@ -1,7 +1,7 @@
 # CURRENT FOCUS — точка входа для каждой сессии
 
 > **Этот файл живёт в git репозитории (docs/process/), чтобы переживать сбросы окружения.**
-> Последнее обновление: 2026-07-13 (**Stage 5 ЗАВЕРШЁН** — 4/4 задачи, TD-S7-01/02/03/04 закрыты; mypy 0 ошибок; ruff format чист)
+> Последнее обновление: 2026-07-13 (**Stage 6 ЗАВЕРШЁН** — 3/3, TD-S8-01/02/03 закрыты; Stage 7 планируется)
 
 ---
 
@@ -11,10 +11,61 @@
 
 ### Текущее состояние (snapshot на 2026-07-13)
 - **Этап 1:** ✅ ЗАВЕРШЁН (5/5 задач)
-- **Этап 2:** ✅ **ЗАВЕРШЁН** (7/7 задач) — TD-S4.2-01..07 все закрыты
-- **Stage 3 (Production-readiness):** ✅ **ЗАВЕРШЁН** (4/4) — TD-S5-01/02/03/04 все закрыты
-- **Stage 4 (Contract Compliance):** ✅ **ЗАВЕРШЁН** (4/4) — TD-S6-01/02/03/04 все закрыты
-- **Stage 5 (Production Hardening):** ✅ **ЗАВЕРШЁН** (4/4) — TD-S7-01/02/03/04 все закрыты
+- **Этап 2:** ✅ **ЗАВЕРШЁН** (7/7 задач)
+- **Stage 3 (Production-readiness):** ✅ **ЗАВЕРШЁН** (4/4)
+- **Stage 4 (Contract Compliance):** ✅ **ЗАВЕРШЁН** (4/4)
+- **Stage 5 (Production Hardening):** ✅ **ЗАВЕРШЁН** (4/4)
+- **Stage 6 (Dual Mode):** ✅ **ЗАВЕРШЁН** (3/3) — ToolProvider + BSL LS backends + vector store auto
+- **Stage 7 (E2E Validation & Activation):** ⬜ НЕ НАЧАТ — следующий этап
+
+### Контекст Stage 7 (новые вводные 2026-07-13)
+- **Основной пользователь — я (GLM через CLI).** MCP servers не разворачиваются для
+  внешних агентов (Cursor) в ближайшее время. Функционал MCP сохраняется для future.
+- **BSL LS нужен.** Subprocess mode (без Docker) — реализован (TD-S8-02).
+- **Pipeline никогда не запускался end-to-end** с реальными данными + реальной LLM.
+  Golden tests используют mock LLM. Архитектура завершена, но не "заведена".
+
+### Что прочитать в порядке приоритета (первые 5 минут сессии)
+1. **Этот файл** (CURRENT_FOCUS.md) — целиком, до конца
+2. **`docs/process/PROJECT_BOOTSTRAP.md`** — точка входа, snapshot, архитектура
+3. **`docs/process/BACKLOG.md`** — Stage 7 план (TD-S9-01..04)
+4. **`docs/process/worklog.md`** — последняя запись (Stage 6 завершён)
+5. **`docs/architecture/CONCEPTUAL.md`** §2.1 (asyncio.TaskGroup) — если работаешь с validate_node
+
+### Следующий этап: Stage 7 — E2E Validation & Activation (4 задачи)
+
+**TD-S9-01: BSL LS activation + config data loading** (HIGH)
+- `1c-ai bsl-ls download` — скачать jar (subprocess mode активируется автоматически).
+- Загрузить мини-конфигурацию: `1c-ai config add --name mini --version 1.0 --zip tests/fixtures/mini_config.zip`.
+- `1c-ai config build` — построить индексы (metadata, api-reference, call-graph, dependency-graph).
+- `1c-ai bsl-ls status` — подтвердить что BSL LS готов.
+
+**TD-S9-02: First real `1c-ai generate` end-to-end** (HIGH)
+- Запустить `1c-ai generate --task "..." --config-name mini --version 1.0 --platform-version 8.3.25`.
+- Pipeline: preflight → plan (LLM) → gather (KB + metadata) → code (LLM) → validate (BSL LS + 3) → review (LLM) → commit.
+- Debug: промпты, structured output, серилизация, edge cases.
+- Зафиксировать найденные баги → fix → тесты.
+
+**TD-S9-03: Planner dependency graph integration + CodebaseServer in ToolProvider** (MEDIUM)
+- `plan_node`: реализовать вызов `metadata_server.get_dependency_graph()` для структурного анализа (сейчас `dep_graph_summary=None`).
+- `ToolProvider`: добавить `codebase_server` creation (InMemoryVectorStore auto mode).
+- `gather_node`: подключить codebase semantic_search (сейчас нет).
+- `review_node`: подключить codebase get_similar (сейчас нет).
+
+**TD-S9-04: Real e2e smoke test + validate_node doc fix** (MEDIUM)
+- `tests/golden/test_real_e2e.py` — `@pytest.mark.integration`, skip-if-no-z-ai-CLI.
+  Реальный pipeline run с mini_config + real LLM. Проверка: fsm_state == "done", code non-empty.
+- `validate_node` docstring: "3 валидатора" → "4 валидатора" (standards добавлен в TD-S4.2-03).
+
+### Ключевые принципы (без знания которых нельзя работать)
+- **«Глубина сначала»** (D-2026-07-12-08): качество важнее скорости, никаких временных решений.
+- **«Всегда готов к завершению»**: после КАЖДОЙ задачи — коммит + push + обновление ВСЕХ
+  state-файлов (CURRENT_FOCUS, BACKLOG, DECISIONS, worklog, PROJECT_BOOTSTRAP). Сессия
+  может прерваться в любой момент.
+- **DI через functools.partial** — 0 boundary violations (см. `scripts/check_package_boundaries.py`).
+- **asyncio.TaskGroup** для parallel fan-out в validate_node (CONCEPTUAL.md §2.1).
+- **2 режима** (Stage 6): с MCP / без MCP. ToolProvider — единая точка. BSL LS — 3 backend стратегии.
+  Vector store — auto (pgvector/memory). Pipeline работает без Docker/Postgres.
 
 ### Что прочитать в порядке приоритета (первые 5 минут сессии)
 1. **Этот файл** (CURRENT_FOCUS.md) — целиком, до конца

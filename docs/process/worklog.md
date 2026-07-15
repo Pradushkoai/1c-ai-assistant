@@ -2242,3 +2242,54 @@ Java 21 уже установлена в окружении. Текущая це
 - Тот же API для nodes (validate_node не меняется).
 - Docker mode остаётся для production.
 - `1c-ai bsl-ls download/status` для управления jar.
+
+---
+
+## 2026-07-13: Stage 6 завершён + Stage 7 план (анализ проекта)
+
+**Task ID:** stage6-complete-stage7-plan
+**Agent:** main (GLM, Super Z)
+**Этап:** Stage 6 (Dual Mode) завершён, Stage 7 (E2E Validation) запланирован
+
+### Stage 6 — финальный summary (3/3)
+
+| Задача | Commit | Что |
+|---|---|---|
+| TD-S8-01 | c26149c | ToolProvider — единая точка создания servers. generate.py: 4 try/except → 1 строка. facade_entry.py: 8 функций → 1 call. -100 строк DRY. |
+| TD-S8-02 | 516637d | BSL LS backends (subprocess/http/stub). runner.py (перенос из docker/). 1c-ai bsl-ls download/status CLI. docker/ DRY (444→150 строк). |
+| TD-S8-03 | 2e7b596 | make_vector_store() auto mode — pgvector/memory auto-detect. Pipeline без Postgres. |
+
+### Анализ проекта (комплексный)
+
+**Что работает (архитектурно завершено):**
+- LangGraph pipeline (10 nodes, все реальные реализации)
+- LLM integration (ZaiLLM via z-ai CLI — available)
+- 4 параллельных валидатора (asyncio.TaskGroup)
+- KB (23 сущности: 5 patterns + 10 antipatterns + 8 standards)
+- Prompts (3 Jinja2: planner/coder/reviewer с structured_output)
+- ToolProvider + BSL LS backends + vector store auto
+- Persistence (PostgresSaver + FacadeStateStore survival-restart)
+- 1064 теста, mypy 0, ruff чист, 0 boundaries
+
+**Что НЕ работает (пробелы для Stage 7):**
+1. Pipeline никогда не запускался end-to-end с реальными данными + реальной LLM
+2. BSL LS jar не скачан (vendor/bsl-ls/ пуст)
+3. Нет данных конфигурации (data/configs/ пуст, runtime/config-registry.json нет)
+4. Planner не использует dependency graph (dep_graph_summary всегда None)
+5. CodebaseServer не в ToolProvider (codebase_server = None)
+6. Нет real e2e smoke test (golden tests mock LLM)
+7. validate_node docstring: "3 валидатора" но их 4
+
+### Stage 7 план (4 задачи)
+
+- TD-S9-01 (HIGH): BSL LS activation + config data loading
+- TD-S9-02 (HIGH): First real `1c-ai generate` end-to-end
+- TD-S9-03 (MEDIUM): Planner dependency graph + CodebaseServer in ToolProvider
+- TD-S9-04 (MEDIUM): Real e2e smoke test + validate_node doc fix
+
+### Проверки перед завершением
+- [x] Все Stage 6 коммиты запушены (2e7b596 в origin/main).
+- [x] CURRENT_FOCUS.md обновлён (Stage 6 завершён, Stage 7 план).
+- [x] BACKLOG.md — Stage 7 добавлен, сводка актуализирована (25 закрыто, 4 открыто).
+- [x] worklog.md — эта запись.
+- [x] Токен не утёк.

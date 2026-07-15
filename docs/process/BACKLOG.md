@@ -215,6 +215,52 @@
 
 ---
 
+## 🟤 Stage 7 (E2E Validation & Activation) — ПЛАН
+
+> **Статус:** НЕ НАЧАТ (после завершения Stage 6, 2026-07-13).
+> **Цель этапа:** "завести двигатель" — pipeline end-to-end с реальными данными + реальной LLM.
+> **Контекст:** Архитектура завершена (Stage 1-6), но `1c-ai generate` никогда не запускался
+> с реальной конфигурацией и реальной LLM. Golden tests используют mock LLM.
+
+### TD-S9-01: BSL LS activation + config data loading (HIGH)
+- **Описание:** Скачать BSL LS jar, загрузить мини-конфигурацию, построить индексы.
+- **Шаги:**
+  1. `1c-ai bsl-ls download` — скачать bsl-language-server.jar v0.25.5.
+  2. `1c-ai bsl-ls status` — подтвердить: Java ✅, jar ✅, backend=subprocess, health ✅.
+  3. `1c-ai config add --name mini --version 1.0 --zip tests/fixtures/mini_config.zip`.
+  4. `1c-ai config build --name mini --version 1.0` — построить индексы.
+  5. `1c-ai validate` — preflight check.
+- **Оценка:** 0.5 дня (если нет багов в config add/build).
+
+### TD-S9-02: First real `1c-ai generate` end-to-end (HIGH)
+- **Описание:** Запустить pipeline с реальной LLM (z-ai CLI) на мини-конфигурации.
+- **Шаги:**
+  1. `1c-ai generate --task "Добавить экспортную функцию в общий модуль ОбщегоНазначения" --config-name mini --version 1.0 --platform-version 8.3.25`.
+  2. Pipeline: preflight → plan (LLM) → gather (KB + metadata) → code (LLM) → validate (BSL LS + 3) → review (LLM) → commit.
+  3. Debug: промпты (planner/coder/reviewer), structured output (PlanOutput/CodeResult/ReviewResult), серилизация TaskState, edge cases.
+  4. Зафиксировать найденные баги → fix → тесты.
+- **Оценка:** 1-2 дня (зависит от количества багов).
+
+### TD-S9-03: Planner dependency graph + CodebaseServer in ToolProvider (MEDIUM)
+- **Описание:** Подключить незадействованные компоненты.
+- **Шаги:**
+  1. `plan_node`: реализовать вызов `metadata_server.get_dependency_graph()` для `dep_graph_summary` (сейчас None).
+  2. `ToolProvider`: добавить `codebase_server` creation (InMemoryVectorStore auto mode).
+  3. `gather_node`: подключить codebase semantic_search (TOOL_GROUPS[GATHERER] включает codebase.semantic_search, но node не вызывает).
+  4. `review_node`: подключить codebase get_similar (TOOL_GROUPS[REVIEWER] включает codebase.get_similar, но node не вызывает).
+- **Оценка:** 1 день.
+
+### TD-S9-04: Real e2e smoke test + validate_node doc fix (MEDIUM)
+- **Описание:** Тест с реальной LLM + исправление документации.
+- **Шаги:**
+  1. `tests/golden/test_real_e2e.py` — `@pytest.mark.integration`, skip-if-no-z-ai-CLI.
+     Реальный pipeline run с mini_config + real LLM. Проверка: fsm_state == "done", code non-empty.
+  2. `validate_node` docstring: "3 валидатора" → "4 валидатора" (standards добавлен в TD-S4.2-03, но docstring не обновлён).
+  3. `validate_node` docstring line 100: "Запустить 3 валидатора" → "4 валидатора".
+- **Оценка:** 0.5 дня.
+
+---
+
 ## 🟣 Когда-нибудь (Post-MVP)
 
 ### TD-005: Streaming responses (astream_events в LangGraph)
@@ -369,10 +415,14 @@
 | Stage 4 — закрыто | 4 (TD-S6-01/02/03/04) |
 | Stage 5 — открыто | 0 (**Stage 5 ЗАВЕРШЁН**) |
 | Stage 5 — закрыто | 4 (TD-S7-01/02/03/04) |
+| Stage 6 — открыто | 0 (**Stage 6 ЗАВЕРШЁН**) |
+| Stage 6 — закрыто | 3 (TD-S8-01/02/03) |
+| Stage 7 — открыто | 4 (TD-S9-01/02/03/04) |
+| Stage 7 — закрыто | 0 |
 | Когда-нибудь — открыто | 3 (TD-005, TD-006, TD-007) |
 | Когда-нибудь — закрыто | 1 (TD-011) |
-| Закрыто | 22 (TD-000, TD-002, TD-004, TD-011, TD-S4.1-01..04, TD-S4.2-01..07, TD-S5-01..04, TD-S6-01..04, TD-S7-01..04) |
-| **Всего** | **25** (22 закрыто + 3 post-MVP открыто) |
+| Закрыто | 25 (TD-000, TD-002, TD-004, TD-011, TD-S4.1-01..04, TD-S4.2-01..07, TD-S5-01..04, TD-S6-01..04, TD-S7-01..04, TD-S8-01/02/03) |
+| **Всего** | **29** (25 закрыто + 4 Stage 7 открыто) |
 
 ---
 
