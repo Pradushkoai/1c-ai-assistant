@@ -245,6 +245,83 @@
 
 ---
 
+## 🟠 Stage 4 (Contract Compliance) — ЗАКРЫТ ✅
+
+> **Статус:** ✅ ЗАВЕРШЁН (4/4) — TD-S6-01/02/03/04 все закрыты (2026-07-13).
+> **Цель этапа:** закрыть 3 архитектурных пробела (metadata MCP, commit→git, mcp serve).
+
+### TD-S6-01: metadata MCP server + orchestrator wiring — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit `0dc3d47`
+- **Решение:** `MetadataServer` с 4 tools (get_metadata, get_form_structure,
+  get_api_reference, get_dependency_graph). `gather_node` убран прямой FS-доступ,
+  ходит через metadata_server (DI). `plan_node` — metadata_server DI (ADR-0005).
+  Facade `run_cli` proxy поддерживает metadata.*. 24 теста. Архитектурный пробел #1
+  закрыт (ADR-0003/0005/0010). См. D-2026-07-13-10.
+
+### TD-S6-02: commit_node → git MCP интеграция — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit `25ef38f`
+- **Решение:** `commit_node` переписан: real git flow (create_branch + commit + опц.
+  open_pr через GitServer) если `git_server` + `1C_AI_REPO_PATH` заданы; fallback
+  file save иначе. Facade `handle_review → proceed` реально коммитит. 14 тестов.
+  Архитектурный пробел #2 закрыт (ADR-0004/0005/0010). См. D-2026-07-13-11.
+
+### TD-S6-03: `1c-ai mcp serve` CLI + режим C — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit `c0d6658`
+- **Решение:** `server_factory.py` единая factory: `create_domain_server(name)` для
+  6 серверов (facade/metadata/codebase/kb/bsl_ls/git). `1c-ai mcp serve --server NAME`
+  (stdio). `--list` показывает серверы + tools count. Cursor может подключиться к
+  любому MCP напрямую (режим C, CONCEPTUAL §1.2). 29 тестов. Архитектурный пробел #3
+  закрыт (ADR-0003). См. D-2026-07-13-12.
+
+### TD-S6-04: Integration tests + docs sync — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit `23613bb`
+- **Решение:** `tests/integration/` с smoke tests (Postgres, BSL LS, git, metadata).
+  CI workflow обновлён (env vars + temp git repo). AGENTS.md, CHANGELOG.md,
+  INTERNAL_ROADMAP.md, CONTRIBUTING.md актуализированы.
+
+---
+
+## 🔵 Stage 5 (Production Hardening) — ЗАКРЫТ ✅
+
+> **Статус:** ✅ ЗАВЕРШЁН (4/4) — TD-S7-01/02/03/04 все закрыты (2026-07-13).
+> **Цель этапа:** production hardening (survival-restart, REST API, mypy cleanup, CI).
+
+### TD-S7-01: Production survival-restart для Facade — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit `1a20095`
+- **Решение:** `FacadeStateStore` через LangGraph checkpointer (aput/aget_tuple).
+  State по plan_id переживает рестарт контейнера (PostgresSaver). In-memory fallback.
+  `_subtask_to_plan` cache. 19 тестов. Архитектурный пробел #4 закрыт.
+  См. D-2026-07-13-13.
+
+### TD-S7-02: REST API HTTP server — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit `288e1fb`
+- **Решение:** `1c-ai serve` (FastAPI :8000). GET /health (Docker/k8s probe),
+  GET /servers, GET /tools/{server}, POST /facade/{tool}, POST /domain/{server}/{tool}.
+  Stateless через store. Dockerfile healthcheck обновлён (curl /health). 19 тестов.
+  См. D-2026-07-13-14.
+
+### TD-S7-03: ZaiLLM mypy cleanup (TD-011) — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit `4bd9db9`
+- **Решение:** все 14 mypy ошибок закрыты (zai_llm.py, vector_store.py, form.py,
+  library.py, codebase/server.py). **mypy: 0 ошибок** (TD-011 закрыт).
+  См. D-2026-07-13-15.
+
+### TD-S7-04: Real integration tests run в CI + ruff format — ЗАКРЫТО ✅
+- **Дата закрытия:** 2026-07-13
+- **Закрыто в:** commit `849765c`
+- **Решение:** `ruff format` применён ко всем файлам (CI `--check` зелёный).
+  integration.yml: `docker compose up --build`. 4 новых integration test
+  (REST API smoke + FacadeStateStore survive-restart с Postgres).
+
+---
+
 ## ✅ Закрыто
 
 ### TD-S4.1-03: api-reference indexer — ЗАКРЫТО ✅
@@ -286,11 +363,16 @@
 | В работе (Этап 1) | 0 (Этап 1 завершён) |
 | Этап 2 — открыто | 0 (**Этап 2 ЗАВЕРШЁН**) |
 | Этап 2 — закрыто | 7 (TD-S4.2-01/02/03/04/05/06/07) |
-| Этап 3 — открыто | 0 (**Этап 3 ЗАВЕРШЁН**) |
-| Этап 3 — закрыто | 4 (TD-S5-01, TD-S5-02, TD-S5-03, TD-S5-04) |
-| Когда-нибудь | 4 (TD-005..011) |
-| Закрыто | 17 (TD-000, TD-002, TD-004, TD-S4.1-01..04, TD-S4.2-01..07, TD-S5-01, TD-S5-02, TD-S5-03, TD-S5-04) |
-| **Всего** | **21** |
+| Stage 3 — открыто | 0 (**Stage 3 ЗАВЕРШЁН**) |
+| Stage 3 — закрыто | 4 (TD-S5-01/02/03/04) |
+| Stage 4 — открыто | 0 (**Stage 4 ЗАВЕРШЁН**) |
+| Stage 4 — закрыто | 4 (TD-S6-01/02/03/04) |
+| Stage 5 — открыто | 0 (**Stage 5 ЗАВЕРШЁН**) |
+| Stage 5 — закрыто | 4 (TD-S7-01/02/03/04) |
+| Когда-нибудь — открыто | 3 (TD-005, TD-006, TD-007) |
+| Когда-нибудь — закрыто | 1 (TD-011) |
+| Закрыто | 22 (TD-000, TD-002, TD-004, TD-011, TD-S4.1-01..04, TD-S4.2-01..07, TD-S5-01..04, TD-S6-01..04, TD-S7-01..04) |
+| **Всего** | **25** (22 закрыто + 3 post-MVP открыто) |
 
 ---
 
